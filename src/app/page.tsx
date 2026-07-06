@@ -24,7 +24,14 @@ import {
 } from "lucide-react";
 import { channels, inboxItems, quickReplies } from "@/lib/demo-data";
 import { createBrowserSupabaseClient, hasSupabaseConfig } from "@/lib/supabase";
-import type { InboxAction, InboxItem, InboxSource, Network, QuickReply } from "@/lib/types";
+import type {
+  ChannelConnection,
+  InboxAction,
+  InboxItem,
+  InboxSource,
+  Network,
+  QuickReply,
+} from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
 const sourceLabels: Record<InboxSource, string> = {
@@ -56,6 +63,50 @@ type QuickReplyDraft = {
   tagsText: string;
 };
 
+type ConnectedAccountRow = {
+  id: string;
+  network: Network;
+  provider_account_id: string;
+  name: string;
+  handle: string | null;
+  scopes: string[] | null;
+  updated_at: string | null;
+};
+
+type ContactRow = {
+  display_name: string;
+  handle: string | null;
+  is_blocked: boolean | null;
+};
+
+type InboxMessageRow = {
+  id: string;
+  author_type: "contact" | "agent";
+  body: string;
+  sent_at: string;
+};
+
+type InboxItemRow = {
+  id: string;
+  account_id: string;
+  source: InboxSource;
+  status: InboxItem["status"];
+  title: string;
+  preview: string;
+  is_liked: boolean;
+  is_hidden: boolean;
+  unread_count: number;
+  received_at: string;
+  connected_accounts: ConnectedAccountRow | ConnectedAccountRow[] | null;
+  contacts: ContactRow | ContactRow[] | null;
+  inbox_messages: InboxMessageRow[] | null;
+};
+
+type SupabaseInboxData = {
+  channels: ChannelConnection[];
+  items: InboxItem[];
+};
+
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
   category: "General",
@@ -66,6 +117,8 @@ const emptyQuickReplyDraft: QuickReplyDraft = {
 export default function Home() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [items, setItems] = useState(inboxItems);
+  const [channelList, setChannelList] = useState<ChannelConnection[]>(channels);
+  const [inboxSource, setInboxSource] = useState<"demo" | "supabase">("demo");
   const [replies, setReplies] = useState<QuickReply[]>(quickReplies);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authEmail, setAuthEmail] = useState("");
@@ -90,7 +143,7 @@ export default function Home() {
   const [notice, setNotice] = useState("Listo para conectar Meta cuando tengas permisos.");
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
-  const hiddenAccountCount = channels.length - visibleAccountIds.length;
+  const hiddenAccountCount = channelList.length - visibleAccountIds.length;
   const workspaceBootstrap = useRef<{
     userId: string;
     promise: Promise<string | null>;
@@ -142,7 +195,7 @@ export default function Home() {
         }
 
         const validIds = parsed.filter((id) =>
-          channels.some((channel) => channel.id === id),
+          channelList.some((channel) => channel.id === id),
         );
 
         setVisibleAccountIds(validIds);
@@ -152,7 +205,7 @@ export default function Home() {
         hasLoadedVisibleAccounts.current = true;
       }
     }, 0);
-  }, [currentUser]);
+  }, [channelList, currentUser]);
 
   useEffect(() => {
     if (currentUser) return;
@@ -227,6 +280,9 @@ export default function Home() {
     setActiveWorkspaceId(null);
     hasLoadedRemoteWorkspace.current = false;
     workspaceBootstrap.current = null;
+    setItems(inboxItems);
+    setChannelList(channels);
+    setInboxSource("demo");
     setReplies(quickReplies);
     setVisibleAccountIds(channels.map((channel) => channel.id));
     setAuthMessage("Sesion cerrada. La app vuelve a modo demo local.");
@@ -319,6 +375,204 @@ export default function Home() {
     return (data ?? []).map(mapQuickReplyRow);
   }, [supabase]);
 
+  const loadSupabaseInbox = useCallback(async (workspaceId: string): Promise<SupabaseInboxData> => {
+    if (!supabase) {
+      return {
+        channels,
+        items: inboxItems,
+      };
+    }
+
+    const accounts = await supabase
+      .from("connected_accounts")
+      .select("id,network,provider_account_id,name,handle,scopes,updated_at")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: true });
+
+    if (accounts.error) {
+      setNotice(`No se pudieron cargar cuentas: ${accounts.error.message}`);
+      return {
+        channels,
+        items: inboxItems,
+      };
+    }
+
+    const accountRows = (accounts.data ?? []) as ConnectedAccountRow[];
+
+    if (accountRows.length === 0) {
+      return {
+        channels: [],
+        items: [],
+      };
+    }
+
+    const inbox = await supabase
+      .from("inbox_items")
+      .select(`
+        id,
+        account_id,
+        source,
+        status,
+        title,
+        preview,
+        is_liked,
+        is_hidden,
+        unread_count,
+        received_at,
+        connected_accounts (
+          id,
+          network,
+          provider_account_id,
+          name,
+          handle,
+          scopes,
+          updated_at
+        ),
+        contacts (
+          display_name,
+          handle,
+          is_blocked
+        ),
+        inbox_messages (
+          id,
+          author_type,
+          body,
+          sent_at
+        )
+      `)
+      .eq("workspace_id", workspaceId)
+      .order("received_at", { ascending: false });
+
+    if (inbox.error) {
+      setNotice(`No se pudo cargar inbox Supabase: ${inbox.error.message}`);
+      return {
+        channels: accountRows.map(mapConnectedAccountRow),
+        items: [],
+      };
+    }
+
+    return {
+      channels: accountRows.map(mapConnectedAccountRow),
+      items: ((inbox.data ?? []) as InboxItemRow[]).map(mapInboxItemRow),
+    };
+  }, [supabase]);
+
+  const seedSupabaseInbox = useCallback(async (workspaceId: string) => {
+    if (!supabase) return;
+
+    const accountInsert = await supabase
+      .from("connected_accounts")
+      .insert(
+        channels.map((channel) => ({
+          workspace_id: workspaceId,
+          network: channel.network,
+          provider_account_id: channel.id,
+          name: channel.name,
+          handle: channel.handle,
+          scopes: channel.scopes,
+        })),
+      )
+      .select("id,network,provider_account_id");
+
+    if (accountInsert.error) {
+      setNotice(`No se pudieron crear cuentas demo: ${accountInsert.error.message}`);
+      return;
+    }
+
+    const accountByProviderId = new Map(
+      (accountInsert.data ?? []).map((account) => [
+        account.provider_account_id as string,
+        account.id as string,
+      ]),
+    );
+
+    const contactsByKey = new Map<string, {
+      workspace_id: string;
+      network: Network;
+      provider_user_id: string;
+      display_name: string;
+      handle: string;
+      is_blocked: boolean;
+    }>();
+
+    for (const item of inboxItems) {
+      contactsByKey.set(`${item.network}:${item.contactHandle}`, {
+        workspace_id: workspaceId,
+        network: item.network,
+        provider_user_id: item.contactHandle,
+        display_name: item.contactName,
+        handle: item.contactHandle,
+        is_blocked: item.blocked,
+      });
+    }
+
+    const contactInsert = await supabase
+      .from("contacts")
+      .insert([...contactsByKey.values()])
+      .select("id,network,provider_user_id");
+
+    if (contactInsert.error) {
+      setNotice(`No se pudieron crear contactos demo: ${contactInsert.error.message}`);
+      return;
+    }
+
+    const contactByKey = new Map(
+      (contactInsert.data ?? []).map((contact) => [
+        `${contact.network}:${contact.provider_user_id}`,
+        contact.id as string,
+      ]),
+    );
+
+    const baseTime = Date.now();
+    const itemInsert = await supabase
+      .from("inbox_items")
+      .insert(
+        inboxItems.map((item, index) => ({
+          workspace_id: workspaceId,
+          account_id: accountByProviderId.get(item.accountId),
+          contact_id: contactByKey.get(`${item.network}:${item.contactHandle}`),
+          source: item.source,
+          status: item.status,
+          provider_thread_id: item.id,
+          title: item.title,
+          preview: item.preview,
+          is_liked: item.liked,
+          is_hidden: item.hidden,
+          unread_count: item.unreadCount,
+          received_at: new Date(baseTime - index * 60000).toISOString(),
+        })),
+      )
+      .select("id,provider_thread_id");
+
+    if (itemInsert.error) {
+      setNotice(`No se pudieron crear conversaciones demo: ${itemInsert.error.message}`);
+      return;
+    }
+
+    const itemByProviderId = new Map(
+      (itemInsert.data ?? []).map((item) => [
+        item.provider_thread_id as string,
+        item.id as string,
+      ]),
+    );
+
+    const messageInsert = await supabase.from("inbox_messages").insert(
+      inboxItems.flatMap((item, itemIndex) =>
+        item.messages.map((message, messageIndex) => ({
+          inbox_item_id: itemByProviderId.get(item.id),
+          provider_message_id: message.id,
+          author_type: message.author,
+          body: message.body,
+          sent_at: new Date(baseTime - (itemIndex * 10 + messageIndex) * 60000).toISOString(),
+        })),
+      ),
+    );
+
+    if (messageInsert.error) {
+      setNotice(`No se pudieron crear mensajes demo: ${messageInsert.error.message}`);
+    }
+  }, [supabase]);
+
   const loadSupabasePreferences = useCallback(async (workspaceId: string) => {
     if (!supabase || !currentUser) return null;
 
@@ -379,6 +633,14 @@ export default function Home() {
 
       if (isCancelled) return;
 
+      let inboxData = await loadSupabaseInbox(workspaceId);
+      if (!isCancelled && inboxData.channels.length === 0) {
+        await seedSupabaseInbox(workspaceId);
+        inboxData = await loadSupabaseInbox(workspaceId);
+      }
+
+      if (isCancelled) return;
+
       if (replyRows.length > 0) {
         setReplies(replyRows);
       } else {
@@ -388,16 +650,27 @@ export default function Home() {
         }
       }
 
-      if (preferences?.visibleAccountIds) {
-        setVisibleAccountIds(
-          preferences.visibleAccountIds.filter((id) =>
-            channels.some((channel) => channel.id === id),
-          ),
-        );
+      if (inboxData.channels.length > 0) {
+        const remoteAccountIds = inboxData.channels.map((channel) => channel.id);
+
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+        setSelectedId(inboxData.items[0]?.id);
+
+        if (preferences?.visibleAccountIds) {
+          setVisibleAccountIds(
+            preferences.visibleAccountIds.filter((id) =>
+              remoteAccountIds.includes(id),
+            ),
+          );
+        } else {
+          setVisibleAccountIds(remoteAccountIds);
+        }
       }
 
       hasLoadedRemoteWorkspace.current = true;
-      setNotice("Supabase conectado. Respuestas rapidas y preferencias se guardan en tu cuenta.");
+      setNotice("Supabase conectado. Inbox, respuestas rapidas y preferencias usan tu cuenta.");
     }
 
     void loadWorkspaceData();
@@ -408,8 +681,10 @@ export default function Home() {
   }, [
     currentUser,
     ensurePersonalWorkspace,
+    loadSupabaseInbox,
     loadSupabasePreferences,
     loadSupabaseQuickReplies,
+    seedSupabaseInbox,
     seedSupabaseQuickReplies,
     supabase,
   ]);
@@ -489,7 +764,7 @@ export default function Home() {
   }
 
   function showAllAccounts() {
-    const next = channels.map((channel) => channel.id);
+    const next = channelList.map((channel) => channel.id);
     setVisibleAccountIds(next);
     void persistSupabasePreferences(next);
   }
@@ -696,8 +971,12 @@ export default function Home() {
             />
           </div>
 
+          <p className="mt-3 rounded-md bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600">
+            Inbox: {inboxSource === "supabase" ? "Supabase" : "demo local"}
+          </p>
+
           <div className="mt-6 space-y-3">
-            {channels.map((channel) => {
+            {channelList.map((channel) => {
               const Icon = networkIcon[channel.network];
               return (
                 <div
@@ -725,7 +1004,7 @@ export default function Home() {
               <div>
                 <p className="text-sm font-semibold">Cuentas visibles</p>
                 <p className="text-xs text-slate-500">
-                  {visibleAccountIds.length} de {channels.length} activas
+                  {visibleAccountIds.length} de {channelList.length} activas
                 </p>
               </div>
               {hiddenAccountCount > 0 ? (
@@ -739,7 +1018,7 @@ export default function Home() {
             </div>
 
             <div className="mt-3 space-y-2">
-              {channels.map((channel) => {
+              {channelList.map((channel) => {
                 const Icon = networkIcon[channel.network];
                 const isVisible = visibleAccountSet.has(channel.id);
                 const accountItems = items.filter((item) => item.accountId === channel.id).length;
@@ -1249,4 +1528,89 @@ function mapQuickReplyRow(row: {
     body: row.body,
     tags: row.tags ?? [],
   };
+}
+
+function mapConnectedAccountRow(row: ConnectedAccountRow): ChannelConnection {
+  return {
+    id: row.id,
+    network: row.network,
+    name: row.name,
+    handle: row.handle ?? "",
+    status: "demo",
+    scopes: row.scopes ?? [],
+    lastSync: `Supabase ${formatTimestamp(row.updated_at)}`,
+  };
+}
+
+function mapInboxItemRow(row: InboxItemRow): InboxItem {
+  const account = firstOrNull(row.connected_accounts);
+  const contact = firstOrNull(row.contacts);
+  const contactName = contact?.display_name ?? "Contacto";
+  const messages = [...(row.inbox_messages ?? [])].sort(
+    (left, right) => new Date(left.sent_at).getTime() - new Date(right.sent_at).getTime(),
+  );
+
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    network: account?.network ?? "facebook",
+    source: row.source,
+    status: row.status,
+    sentiment: "neutral",
+    accountName: account?.name ?? "Cuenta conectada",
+    contactName,
+    contactHandle: contact?.handle ?? "",
+    avatarInitials: getInitials(contactName),
+    title: row.title,
+    preview: row.preview,
+    receivedAt: formatTimestamp(row.received_at),
+    assignee: "Sin asignar",
+    unreadCount: row.unread_count,
+    liked: row.is_liked,
+    hidden: row.is_hidden,
+    blocked: Boolean(contact?.is_blocked),
+    messages: messages.map((message) => ({
+      id: message.id,
+      author: message.author_type,
+      body: message.body,
+      sentAt: formatTimestamp(message.sent_at),
+    })),
+  };
+}
+
+function firstOrNull<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "??";
+}
+
+function formatTimestamp(value: string | null) {
+  if (!value) {
+    return "Supabase";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Supabase";
+  }
+
+  return new Intl.DateTimeFormat("es", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

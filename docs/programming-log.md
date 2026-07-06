@@ -71,3 +71,10 @@
 - Areas tocadas: `src/app/page.tsx`, `supabase/schema.sql`, `supabase/fixes/2026-07-06-dedupe-personal-workspaces.sql`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `npm run check:supabase`; se limpio un workspace duplicado sin datos asociados en el proyecto Supabase real.
 - Pendiente: ejecutar `supabase/fixes/2026-07-06-dedupe-personal-workspaces.sql` en SQL Editor para crear el indice unico en la base real y confirmar siembra de respuestas rapidas luego de recargar sesion.
+
+### Inbox Supabase con seed demo
+
+- Resumen: se agrego carga autenticada de `connected_accounts`, `contacts`, `inbox_items` e `inbox_messages` desde Supabase, seed demo por workspace vacio, fallback local sin sesion y etiqueta visual de origen `Inbox: Supabase`/`Inbox: demo local`.
+- Areas tocadas: `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/account-filter-plan.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`; conteo Supabase real con `connected_accounts: 2`, `contacts: 4`, `inbox_items: 4`, `inbox_messages: 9`, `quick_replies: 1`.
+- Pendiente: persistir acciones de respuesta, like, ocultar/mostrar y bloquear sobre las tablas Supabase.

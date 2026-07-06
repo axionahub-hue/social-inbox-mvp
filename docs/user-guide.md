@@ -28,7 +28,7 @@ La pantalla principal muestra una bandeja unificada con:
 
 Si Supabase no esta configurado, el panel `Sesion` indica modo demo y la app guarda datos en el navegador.
 
-Si Supabase esta configurado, se puede ingresar un email y pedir un enlace de acceso. Al abrir ese enlace, la app guarda respuestas rapidas y preferencias en el workspace personal de la cuenta.
+Si Supabase esta configurado, se puede ingresar un email y pedir un enlace de acceso. Al abrir ese enlace, la app carga inbox, respuestas rapidas y preferencias desde el workspace personal de la cuenta.
 
 ## Filtros actuales
 
@@ -53,7 +53,7 @@ En una conversacion seleccionada se puede:
 - bloquear usuario;
 - archivar visualmente.
 
-En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local.
+En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, el inbox se lee desde la base; la persistencia completa de acciones sobre conversaciones queda como siguiente bloque.
 
 ## Respuestas rapidas
 
@@ -68,12 +68,13 @@ En modo demo, las respuestas quedan guardadas en el navegador. Con sesion Supaba
 
 ## Cuentas conectadas
 
-La app muestra cuentas conectadas demo en el panel izquierdo. Cada cuenta tiene un toggle para decidir si sus conversaciones aparecen en el inbox. La preferencia queda guardada en el navegador.
+La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del fixture local; con sesion activa salen de `connected_accounts` en Supabase. Cada cuenta tiene un toggle para decidir si sus conversaciones aparecen en el inbox.
+
+La preferencia queda guardada en el navegador sin sesion y en `user_preferences` con sesion Supabase.
 
 ## Limitaciones actuales
 
 - No hay OAuth real de Meta todavia.
-- Los datos del inbox son demo.
-- El login Supabase necesita credenciales y configuracion Auth real para operar fuera del modo demo.
+- Los datos del inbox autenticado todavia son seed demo en Supabase hasta conectar Meta real.
 - Las respuestas rapidas y preferencias se guardan en el navegador si no hay sesion Supabase.
 - Supabase registra acciones y webhooks solo cuando se configuran las variables de entorno.

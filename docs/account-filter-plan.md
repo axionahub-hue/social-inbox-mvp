@@ -2,7 +2,7 @@
 
 ## Estado
 
-Completado en el MVP demo. La persistencia actual es local en `localStorage`; la persistencia por usuario/workspace en Supabase queda preparada como siguiente evolucion.
+Completado en modo demo y modo Supabase autenticado. La persistencia es local en `localStorage` sin sesion y por usuario/workspace en `user_preferences` cuando hay sesion Supabase.
 
 ## Objetivo
 
@@ -23,7 +23,7 @@ El inbox no debe filtrar solamente por `facebook` o `instagram`. La unidad real 
 - [x] Permitir combinacion de filtros: busqueda textual + red + cuentas visibles.
 - [x] Evitar que el usuario deje el inbox en estado ambiguo: si no hay cuentas visibles, mostrar estado vacio claro y boton para mostrar todas.
 - [x] Persistir preferencia localmente en `localStorage` para modo demo.
-- [x] Preparar persistencia futura en Supabase por usuario/workspace, sin bloquear el MVP.
+- [x] Persistir preferencias en Supabase por usuario/workspace cuando hay sesion.
 - [x] Verificar desktop y mobile; la lista de cuentas no debe romper el ancho de pantalla.
 - [x] Ejecutar `npm run lint` y `npm run build`.
 - [x] Buscar referencias inconsistentes con `rg "accountId|visibleAccount|connected" src docs README.md`.
@@ -38,7 +38,7 @@ El inbox no debe filtrar solamente por `facebook` o `instagram`. La unidad real 
 
 ## Contrato tecnico aplicado
 
-`ChannelConnection` sigue representando cada cuenta conectada.
+`ChannelConnection` sigue representando cada cuenta conectada. En modo Supabase, `ChannelConnection.id` es el ID real de `connected_accounts`.
 
 `InboxItem` apunta a una cuenta concreta:
 
@@ -64,7 +64,7 @@ return matchesAccount && matchesNetwork && matchesQuery;
 
 - No duplicar estado de cuenta entre `accountName` y `accountId` como fuente de verdad.
 - No filtrar por texto del nombre de cuenta; usar IDs.
-- No mezclar cuentas demo con cuentas reales sin un campo claro de origen.
+- No mezclar cuentas demo locales con cuentas Supabase sin indicar origen de datos en UI.
 - No ocultar permanentemente una cuenta desde un filtro temporal.
 - No agregar permisos Meta nuevos solo por el filtro; esto es UI/datos internos.
 

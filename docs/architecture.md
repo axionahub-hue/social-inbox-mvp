@@ -26,6 +26,14 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 6. El agente responde desde la UI.
 7. `/api/inbox/action` ejecuta la accion en Meta y registra `action_log`.
 
+## Carga de inbox
+
+- Sin sesion Supabase, la app usa `src/lib/demo-data.ts`.
+- Con sesion Supabase, la app carga `connected_accounts`, `contacts`, `inbox_items` e `inbox_messages`.
+- Si el workspace autenticado no tiene cuentas conectadas, la app siembra las cuentas/conversaciones demo en Supabase para validar experiencia real sin permisos Meta.
+- La UI muestra `Inbox: Supabase` o `Inbox: demo local` para hacer visible el origen de datos.
+- `ChannelConnection.id` representa el ID real de `connected_accounts` cuando hay sesion Supabase; en modo demo representa el ID local del fixture.
+
 ## Auth y workspace
 
 - Si `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` existen, la UI activa login por email OTP de Supabase.
@@ -43,7 +51,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `InboxItem.accountName` es solo texto de presentacion.
 - El inbox combina busqueda textual, filtro por red y filtro por cuentas visibles.
 - La preferencia de cuentas visibles se guarda en `localStorage` en modo demo.
-- La evolucion natural es persistir esa preferencia por usuario/workspace en Supabase cuando exista autenticacion.
+- Con Supabase autenticado, la preferencia se guarda por usuario/workspace en `user_preferences`.
 
 ## Respuestas rapidas
 
