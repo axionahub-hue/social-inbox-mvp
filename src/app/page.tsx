@@ -1323,14 +1323,14 @@ export default function Home() {
                       </div>
                     ) : null}
 
-                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                    <div className="mt-3 grid gap-2 sm:flex sm:overflow-x-auto sm:pb-1">
                       {replies.map((reply) => (
                         <div
-                          className="shrink-0 rounded-md border border-slate-200 bg-white p-2"
+                          className="rounded-md border border-slate-200 bg-white p-2 sm:shrink-0"
                           key={reply.id}
                         >
                           <button
-                            className="block min-w-36 max-w-56 truncate text-left text-xs font-semibold text-slate-800"
+                            className="block w-full truncate text-left text-xs font-semibold text-slate-800 sm:min-w-36 sm:max-w-56"
                             onClick={() => insertQuickReply(reply)}
                           >
                             {reply.title}

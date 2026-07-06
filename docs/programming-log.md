@@ -99,3 +99,10 @@
 - Areas tocadas: `docs/work-directive.md`, `docs/programming-log.md`.
 - Validacion: `git diff --check`.
 - Pendiente: aplicar esta regla en todos los cierres siguientes.
+
+### Validacion mobile de archivados y respuestas rapidas
+
+- Resumen: se valido la vista movil de `Archivados` y del panel de respuestas rapidas; se ajusto la lista de respuestas para apilar tarjetas en mobile y evitar controles fuera del viewport.
+- Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, revision en viewport 390x844 sin overflow horizontal, boton `Archivados` visible, panel abierto desde icono y `outsideControlCount: 0`.
+- Pendiente: continuar con el siguiente bloque funcional de Meta OAuth o configuracion de cuentas conectadas.
