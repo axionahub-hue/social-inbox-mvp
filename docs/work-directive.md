@@ -13,6 +13,9 @@ Antes de cambiar codigo, leer el estado actual. No asumir que el ultimo comentar
 - [ ] Ejecutar `git status -sb`.
 - [ ] Leer `README.md`.
 - [ ] Leer `docs/architecture.md`.
+- [ ] Leer `docs/documentation-directive.md`.
+- [ ] Leer `docs/api.md` si el cambio toca endpoints, acciones, webhooks o integraciones.
+- [ ] Leer `docs/user-guide.md` si el cambio toca flujos de uso o UI.
 - [ ] Si el cambio toca filtros por cuenta, leer `docs/account-filter-plan.md`.
 - [ ] Buscar el area afectada con `rg` antes de editar.
 - [ ] Abrir los archivos reales que se van a modificar.
@@ -27,6 +30,8 @@ Antes de cambiar codigo, leer el estado actual. No asumir que el ultimo comentar
 - No usar nombres visibles como fuente de verdad cuando exista un ID.
 - No introducir librerias nuevas si el problema se resuelve bien con el stack actual.
 - No cambiar puertos sin actualizar `package.json`, `.env.example` y `README.md`.
+- No cerrar cambios con documentacion desactualizada.
+- Tratar la documentacion como parte del producto, no como apunte externo.
 - No tocar archivos ajenos al alcance del cambio.
 
 ## Verificacion obligatoria
@@ -38,6 +43,8 @@ Antes de cambiar codigo, leer el estado actual. No asumir que el ultimo comentar
 - [ ] Si se cambian endpoints, probarlos por HTTP.
 - [ ] Buscar textos o referencias viejas con `rg`.
 - [ ] Revisar `git diff --check`.
+- [ ] Actualizar `docs/programming-log.md` cuando el cambio sea relevante.
+- [ ] Confirmar si `docs/architecture.md`, `docs/api.md` o `docs/user-guide.md` necesitan cambios.
 
 ## GitHub
 
@@ -52,6 +59,7 @@ Un cambio esta hecho solo cuando:
 
 - el codigo esta implementado;
 - las docs afectadas estan actualizadas;
+- la bitacora registra cambios relevantes;
 - lint y build pasan;
 - el comportamiento principal fue verificado;
 - el commit esta en GitHub;

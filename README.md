@@ -14,8 +14,12 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 ## Documentacion operativa
 
 - `docs/architecture.md`: arquitectura y reglas de infraestructura.
+- `docs/api.md`: API propia de la app y contratos de endpoints.
+- `docs/user-guide.md`: guia de uso de la app.
+- `docs/programming-log.md`: bitacora de programacion y verificaciones.
 - `docs/account-filter-plan.md`: plan para filtrar por cuentas conectadas visibles/ocultas.
 - `docs/work-directive.md`: pautas para no trabajar de memoria.
+- `docs/documentation-directive.md`: directiva para mantener documentacion viva.
 
 ## Ejecutar local
 
