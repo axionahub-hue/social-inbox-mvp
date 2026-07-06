@@ -53,6 +53,15 @@ Antes de cambiar codigo, leer el estado actual. No asumir que el ultimo comentar
 - Usar mensajes de commit concretos y cortos.
 - Confirmar el estado final con `git status -sb`.
 
+## Cierre de cada entrega
+
+Cada respuesta final de cierre debe incluir dos bloques claros:
+
+- `Que haces tu`: acciones concretas que el usuario debe ejecutar o revisar, aunque sea "solo recargar y probar".
+- `Siguiente paso de Codex`: el proximo bloque de trabajo recomendado para avanzar sin que el usuario tenga que preguntar que sigue.
+
+Si no hay ninguna accion requerida del usuario, decirlo explicitamente. Si el siguiente paso depende de una decision del usuario, plantear la decision concreta.
+
 ## Definicion de hecho
 
 Un cambio esta hecho solo cuando:
@@ -63,4 +72,5 @@ Un cambio esta hecho solo cuando:
 - lint y build pasan;
 - el comportamiento principal fue verificado;
 - el commit esta en GitHub;
-- el resumen final dice exactamente que se cambio y que se valido.
+- el resumen final dice exactamente que se cambio y que se valido;
+- el resumen final indica que hace el usuario y cual es el siguiente paso de Codex.

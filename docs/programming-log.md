@@ -92,3 +92,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `README.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, prueba HTTP `archive`/`unarchive` con `persisted=true`, revision UI en `http://localhost:3100` confirmando boton `Archivados` y panel de respuestas rapidas oculto hasta tocar el icono.
 - Pendiente: validar ergonomia mobile del nuevo panel de respuestas rapidas.
+
+### Regla de cierre dinamico
+
+- Resumen: se agrego a la directiva operativa que cada entrega debe cerrar indicando que hace el usuario y cual es el siguiente paso recomendado de Codex.
+- Areas tocadas: `docs/work-directive.md`, `docs/programming-log.md`.
+- Validacion: `git diff --check`.
+- Pendiente: aplicar esta regla en todos los cierres siguientes.
