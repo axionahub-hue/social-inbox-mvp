@@ -48,6 +48,7 @@ Acciones soportadas:
 - `unhide`
 - `block`
 - `archive`
+- `unarchive`
 
 Respuesta demo:
 
@@ -66,6 +67,7 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 - `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
 - `block`: actualiza `contacts.is_blocked`.
 - `archive`: marca `inbox_items.status = archived` y limpia `unread_count`.
+- `unarchive`: marca `inbox_items.status = open` y limpia `unread_count`.
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 

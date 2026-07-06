@@ -107,6 +107,8 @@ type SupabaseInboxData = {
   items: InboxItem[];
 };
 
+type InboxView = "active" | "archived";
+
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
   category: "General",
@@ -129,12 +131,14 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
+  const [inboxView, setInboxView] = useState<InboxView>("active");
   const [visibleAccountIds, setVisibleAccountIds] = useState<string[]>(() =>
     channels.map((channel) => channel.id),
   );
   const hasLoadedVisibleAccounts = useRef(false);
   const hasLoadedQuickReplies = useRef(false);
   const hasLoadedRemoteWorkspace = useRef(false);
+  const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
   const [quickReplyDraft, setQuickReplyDraft] =
@@ -144,6 +148,8 @@ export default function Home() {
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
   const hiddenAccountCount = channelList.length - visibleAccountIds.length;
+  const archivedCount = items.filter((item) => item.status === "archived").length;
+  const activeCount = items.length - archivedCount;
   const workspaceBootstrap = useRef<{
     userId: string;
     promise: Promise<string | null>;
@@ -153,11 +159,13 @@ export default function Home() {
     return items.filter((item) => {
       const matchesAccount = visibleAccountSet.has(item.accountId);
       const matchesNetwork = network === "all" || item.network === network;
+      const matchesView =
+        inboxView === "archived" ? item.status === "archived" : item.status !== "archived";
       const text = `${item.contactName} ${item.contactHandle} ${item.title} ${item.preview}`;
       const matchesQuery = text.toLowerCase().includes(query.toLowerCase());
-      return matchesAccount && matchesNetwork && matchesQuery;
+      return matchesAccount && matchesNetwork && matchesQuery && matchesView;
     });
-  }, [items, network, query, visibleAccountSet]);
+  }, [inboxView, items, network, query, visibleAccountSet]);
 
   const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
 
@@ -770,12 +778,14 @@ export default function Home() {
   }
 
   function openNewQuickReply() {
+    setIsQuickReplyPanelOpen(true);
     setEditingQuickReplyId(null);
     setQuickReplyDraft(emptyQuickReplyDraft);
     setIsQuickReplyEditorOpen(true);
   }
 
   function openEditQuickReply(reply: QuickReply) {
+    setIsQuickReplyPanelOpen(true);
     setEditingQuickReplyId(reply.id);
     setQuickReplyDraft({
       title: reply.title,
@@ -838,6 +848,11 @@ export default function Home() {
     void deleteSupabaseQuickReply(replyId);
   }
 
+  function insertQuickReply(reply: QuickReply) {
+    setComposer(reply.body);
+    setIsQuickReplyPanelOpen(false);
+  }
+
   async function runAction(action: InboxAction, message?: string) {
     if (!selectedItem) return;
 
@@ -882,8 +897,10 @@ export default function Home() {
           liked: action === "like" ? true : action === "unlike" ? false : item.liked,
           hidden: action === "hide" ? true : action === "unhide" ? false : item.hidden,
           blocked: action === "block" ? true : item.blocked,
-          status: action === "archive" ? "archived" : item.status,
-          unreadCount: action === "archive" ? 0 : item.unreadCount,
+          status:
+            action === "archive" ? "archived" : action === "unarchive" ? "open" : item.status,
+          unreadCount:
+            action === "archive" || action === "unarchive" ? 0 : item.unreadCount,
         };
       }),
     );
@@ -1092,6 +1109,24 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {([
+                ["active", `Bandeja (${activeCount})`],
+                ["archived", `Archivados (${archivedCount})`],
+              ] as const).map(([value, label]) => (
+                <button
+                  className={`h-9 rounded-md border text-sm font-medium ${
+                    inboxView === value
+                      ? "border-slate-950 bg-slate-950 text-white"
+                      : "border-slate-200 bg-white text-slate-700"
+                  }`}
+                  key={value}
+                  onClick={() => setInboxView(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="max-h-[44vh] overflow-auto lg:max-h-[calc(100vh-141px)]">
@@ -1110,7 +1145,9 @@ export default function Home() {
                   No hay conversaciones visibles
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Ajusta busqueda, red o cuentas visibles para volver a mostrar items.
+                  {inboxView === "archived"
+                    ? "No hay conversaciones archivadas con estos filtros."
+                    : "Ajusta busqueda, red o cuentas visibles para volver a mostrar items."}
                 </p>
                 {hiddenAccountCount > 0 ? (
                   <button
@@ -1186,6 +1223,7 @@ export default function Home() {
 
               <div className="border-t border-slate-200 bg-white p-4">
                 <div className="mx-auto max-w-3xl">
+                  {isQuickReplyPanelOpen ? (
                   <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -1194,14 +1232,23 @@ export default function Home() {
                           {replies.length} guardadas
                         </p>
                       </div>
-                      <button
-                        className="grid size-9 place-items-center rounded-md bg-slate-950 text-white"
-                        data-testid="quick-reply-new"
-                        onClick={openNewQuickReply}
-                        title="Crear respuesta rapida"
-                      >
-                        <Plus size={17} />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700"
+                          onClick={() => setIsQuickReplyPanelOpen(false)}
+                          title="Cerrar respuestas rapidas"
+                        >
+                          <X size={17} />
+                        </button>
+                        <button
+                          className="grid size-9 place-items-center rounded-md bg-slate-950 text-white"
+                          data-testid="quick-reply-new"
+                          onClick={openNewQuickReply}
+                          title="Crear respuesta rapida"
+                        >
+                          <Plus size={17} />
+                        </button>
+                      </div>
                     </div>
 
                     {isQuickReplyEditorOpen ? (
@@ -1284,7 +1331,7 @@ export default function Home() {
                         >
                           <button
                             className="block min-w-36 max-w-56 truncate text-left text-xs font-semibold text-slate-800"
-                            onClick={() => setComposer(reply.body)}
+                            onClick={() => insertQuickReply(reply)}
                           >
                             {reply.title}
                           </button>
@@ -1311,6 +1358,7 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
+                  ) : null}
 
                   <div className="flex items-end gap-2">
                     <textarea
@@ -1319,6 +1367,17 @@ export default function Home() {
                       placeholder="Escribir respuesta"
                       className="min-h-24 flex-1 resize-none rounded-md border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-slate-400"
                     />
+                    <button
+                      className={`grid size-12 shrink-0 place-items-center rounded-md border ${
+                        isQuickReplyPanelOpen
+                          ? "border-slate-950 bg-slate-950 text-white"
+                          : "border-slate-200 bg-white text-slate-700"
+                      }`}
+                      onClick={() => setIsQuickReplyPanelOpen((current) => !current)}
+                      title="Respuestas rapidas"
+                    >
+                      <Sparkles size={19} />
+                    </button>
                     <button
                       onClick={sendReply}
                       className="grid size-12 shrink-0 place-items-center rounded-md bg-slate-950 text-white"
@@ -1349,8 +1408,12 @@ export default function Home() {
                       </ActionButton>
                       <ActionButton
                         active={selectedItem.status === "archived"}
-                        title="Archivar"
-                        onClick={() => void runAction("archive")}
+                        title={selectedItem.status === "archived" ? "Desarchivar" : "Archivar"}
+                        onClick={() =>
+                          void runAction(
+                            selectedItem.status === "archived" ? "unarchive" : "archive",
+                          )
+                        }
                       >
                         <Archive size={17} />
                       </ActionButton>

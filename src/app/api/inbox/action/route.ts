@@ -6,7 +6,16 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 const actionSchema = z.object({
   itemId: z.string().min(1),
   externalId: z.string().default("demo-external-id"),
-  action: z.enum(["reply", "like", "unlike", "hide", "unhide", "block", "archive"]),
+  action: z.enum([
+    "reply",
+    "like",
+    "unlike",
+    "hide",
+    "unhide",
+    "block",
+    "archive",
+    "unarchive",
+  ]),
   message: z.string().optional(),
 });
 
@@ -120,11 +129,11 @@ async function persistInboxAction({
     return !error;
   }
 
-  if (action === "archive") {
+  if (action === "archive" || action === "unarchive") {
     const { error } = await supabase
       .from("inbox_items")
       .update({
-        status: "archived",
+        status: action === "archive" ? "archived" : "open",
         unread_count: 0,
         updated_at: updatedAt,
       })

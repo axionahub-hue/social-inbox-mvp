@@ -52,11 +52,11 @@ export function verifyMetaWebhookChallenge(searchParams: URLSearchParams) {
 }
 
 export async function executeMetaAction(input: MetaActionInput) {
-  if (input.action === "archive") {
+  if (input.action === "archive" || input.action === "unarchive") {
     return {
       mode: "internal",
       ok: true,
-      message: "Conversacion archivada.",
+      message: input.action === "archive" ? "Conversacion archivada." : "Conversacion desarchivada.",
     };
   }
 
@@ -115,6 +115,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
     case "block":
       return `${input.externalId}/blocked`;
     case "archive":
+    case "unarchive":
       return input.externalId;
   }
 }

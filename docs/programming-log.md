@@ -85,3 +85,10 @@
 - Areas tocadas: `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `README.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, prueba HTTP de `like`, `unlike`, `hide`, `unhide`, `reply`, `archive` y `block` contra un `inbox_item` real; todas devolvieron `persisted=true`. Conteos posteriores: `inbox_items: 4`, `inbox_messages: 10`, `contacts: 4`, `action_log: 8`.
 - Pendiente: conectar acciones a Meta real cuando exista OAuth/tokens.
+
+### UX de archivados y respuestas rapidas
+
+- Resumen: se separo la bandeja principal de la vista `Archivados`, se agrego `unarchive` persistido y se oculto el panel de respuestas rapidas detras de un boton con icono junto al composer.
+- Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `README.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, prueba HTTP `archive`/`unarchive` con `persisted=true`, revision UI en `http://localhost:3100` confirmando boton `Archivados` y panel de respuestas rapidas oculto hasta tocar el icono.
+- Pendiente: validar ergonomia mobile del nuevo panel de respuestas rapidas.

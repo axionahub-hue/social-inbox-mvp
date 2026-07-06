@@ -51,13 +51,16 @@ En una conversacion seleccionada se puede:
 - dar o quitar like;
 - ocultar o mostrar;
 - bloquear usuario;
-- archivar.
+- archivar;
+- desarchivar desde la vista `Archivados`.
 
-En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear y archivar tambien actualizan las tablas del workspace.
+En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear, archivar y desarchivar tambien actualizan las tablas del workspace.
+
+Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.
 
 ## Respuestas rapidas
 
-El bloque `Respuestas rapidas` aparece sobre el composer. Permite:
+El boton con icono de destellos junto al composer abre el panel `Respuestas rapidas`. Permite:
 
 - insertar una respuesta guardada en el composer;
 - crear una respuesta con titulo, categoria, texto y tags;
