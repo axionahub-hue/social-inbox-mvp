@@ -101,10 +101,14 @@ async function main() {
   }
 
   if (supabaseUrl && anonKey) {
-    const restResult = await checkHttp(`${supabaseUrl}/rest/v1`, `${supabaseUrl}/rest/v1/`, {
+    const restResult = await checkHttp(
+      `${supabaseUrl}/rest/v1/workspaces`,
+      `${supabaseUrl}/rest/v1/workspaces?select=id&limit=1`,
+      {
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
-    });
+      },
+    );
 
     console.log(`- ${restResult.message}`);
 

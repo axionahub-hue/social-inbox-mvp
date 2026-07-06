@@ -78,7 +78,7 @@ Supabase config check
 - .env.local: found
 - client vars: present
 - server vars: present
-- https://...supabase.co/rest/v1: OK
+- https://...supabase.co/rest/v1/workspaces: OK
 - https://...supabase.co/auth/v1/settings: OK
 Result: Supabase config is reachable and ready for app validation.
 ```

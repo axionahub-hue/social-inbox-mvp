@@ -57,3 +57,10 @@
 - Areas tocadas: `scripts/check-supabase-config.mjs`, `package.json`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run check:supabase` confirma que faltan credenciales locales, `npm run lint`, `npm run build`, `git diff --check`.
 - Pendiente: cargar credenciales Supabase reales, aplicar `supabase/schema.sql` y probar email OTP.
+
+### Ajuste de validacion Supabase real
+
+- Resumen: se ajusto `npm run check:supabase` para probar la tabla `workspaces` del schema aplicado y se ignoran archivos locales con passwords para evitar commits accidentales.
+- Areas tocadas: `scripts/check-supabase-config.mjs`, `.gitignore`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run check:supabase`, `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured`.
+- Pendiente: probar login email OTP desde la UI.
