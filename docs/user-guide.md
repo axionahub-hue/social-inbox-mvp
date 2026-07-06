@@ -75,9 +75,19 @@ La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del 
 
 La preferencia queda guardada en el navegador sin sesion y en `user_preferences` con sesion Supabase.
 
+## Configuracion Meta
+
+El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
+
+- callback URL para configurar en Meta Developers;
+- permisos esperados;
+- boton `Iniciar OAuth Meta`.
+
+El OAuth queda preparado, pero la app todavia no guarda tokens reales hasta implementar cifrado server-side.
+
 ## Limitaciones actuales
 
-- No hay OAuth real de Meta todavia.
+- OAuth Meta esta preparado hasta recepcion de `code`, pero todavia no guarda tokens ni cuentas reales.
 - Los datos del inbox autenticado todavia son seed demo en Supabase hasta conectar Meta real.
 - Las acciones se guardan en Supabase, pero todavia no se envian a Meta real sin OAuth/tokens.
 - Las respuestas rapidas y preferencias se guardan en el navegador si no hay sesion Supabase.

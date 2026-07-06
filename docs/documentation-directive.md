@@ -15,6 +15,7 @@ La documentacion debe avanzar junto con el codigo. Si una decision cambia arquit
 - `docs/programming-log.md`: bitacora de programacion con cambios relevantes, decisiones y verificaciones.
 - `docs/work-directive.md`: pautas operativas para trabajar sin memoria falsa.
 - `docs/account-filter-plan.md`: plan especifico para filtros por cuentas conectadas.
+- `docs/meta-setup.md`: guia operativa para configuracion OAuth Meta y callbacks.
 
 ## Regla de actualizacion
 

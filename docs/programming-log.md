@@ -106,3 +106,10 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, revision en viewport 390x844 sin overflow horizontal, boton `Archivados` visible, panel abierto desde icono y `outsideControlCount: 0`.
 - Pendiente: continuar con el siguiente bloque funcional de Meta OAuth o configuracion de cuentas conectadas.
+
+### Preparacion OAuth Meta
+
+- Resumen: se agrego panel `Configuracion Meta`, inicio OAuth server-side con sesion Supabase, callback OAuth con `state` firmado y documentacion operativa de Meta.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/start/route.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `README.md`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, `POST /api/meta/oauth/start` sin credenciales Meta devuelve 400 controlado, callback con `state` invalido redirige a `meta_oauth=invalid_state`, revision UI del panel Meta sin overflow.
+- Pendiente: agregar cifrado server-side de tokens, intercambiar `code` por token y guardar cuentas reales en `connected_accounts`.

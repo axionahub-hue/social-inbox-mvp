@@ -24,6 +24,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - `docs/programming-log.md`: bitacora de programacion y verificaciones.
 - `docs/account-filter-plan.md`: plan para filtrar por cuentas conectadas visibles/ocultas.
 - `docs/supabase-setup.md`: guia operativa para conectar Supabase real.
+- `docs/meta-setup.md`: guia operativa para preparar OAuth Meta.
 - `docs/work-directive.md`: pautas para no trabajar de memoria.
 - `docs/documentation-directive.md`: directiva para mantener documentacion viva.
 
@@ -89,13 +90,19 @@ Webhook callback:
 https://TU-DOMINIO/api/meta/webhook
 ```
 
+OAuth callback:
+
+```text
+https://TU-DOMINIO/api/meta/oauth/callback
+```
+
 ## Vercel
 
 Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. Para uso comercial, revisar terminos y limites del plan antes de pasar a produccion.
 
 ## Proximos pasos tecnicos
 
-1. Implementar OAuth Meta real.
-2. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
-3. Crear pantalla de configuracion de cuentas conectadas.
+1. Agregar cifrado server-side para tokens Meta.
+2. Intercambiar `code` OAuth por token y guardar cuentas reales.
+3. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
 4. Agregar tests de acciones Meta y parsing de webhooks.

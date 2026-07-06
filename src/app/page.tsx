@@ -7,6 +7,7 @@ import {
   Camera,
   Eye,
   EyeOff,
+  ExternalLink,
   Heart,
   Pencil,
   Plus,
@@ -52,6 +53,17 @@ const networkIcon = {
   facebook: MessagesSquare,
   instagram: Camera,
 };
+
+const metaRequiredScopes = [
+  "pages_show_list",
+  "pages_read_engagement",
+  "pages_manage_engagement",
+  "pages_messaging",
+  "pages_manage_metadata",
+  "instagram_basic",
+  "instagram_manage_comments",
+  "instagram_manage_messages",
+];
 
 const visibleAccountsStorageKey = "social-inbox.visible-account-ids";
 const quickRepliesStorageKey = "social-inbox.quick-replies";
@@ -145,6 +157,19 @@ export default function Home() {
     useState<QuickReplyDraft>(emptyQuickReplyDraft);
   const [composer, setComposer] = useState("");
   const [notice, setNotice] = useState("Listo para conectar Meta cuando tengas permisos.");
+  const [appOrigin] = useState(() =>
+    typeof window === "undefined" ? "http://localhost:3100" : window.location.origin,
+  );
+  const [isMetaSettingsOpen, setIsMetaSettingsOpen] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : new URLSearchParams(window.location.search).has("meta_oauth"),
+  );
+  const [metaConnectionMessage, setMetaConnectionMessage] = useState(() =>
+    typeof window === "undefined"
+      ? "Configura la app Meta y usa OAuth cuando tengas credenciales."
+      : resolveMetaOAuthMessage(new URLSearchParams(window.location.search).get("meta_oauth")),
+  );
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
   const hiddenAccountCount = channelList.length - visibleAccountIds.length;
@@ -168,6 +193,15 @@ export default function Home() {
   }, [inboxView, items, network, query, visibleAccountSet]);
 
   const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
+  const metaCallbackUrl = `${appOrigin}/api/meta/oauth/callback`;
+
+  useEffect(() => {
+    const metaOAuthResult = new URLSearchParams(window.location.search).get("meta_oauth");
+
+    if (metaOAuthResult) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -853,6 +887,41 @@ export default function Home() {
     setIsQuickReplyPanelOpen(false);
   }
 
+  async function startMetaOAuth() {
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      setMetaConnectionMessage("Inicia sesion Supabase antes de conectar Meta.");
+      return;
+    }
+
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+
+    if (!accessToken) {
+      setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    const response = await fetch("/api/meta/oauth/start", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        workspaceId: activeWorkspaceId,
+      }),
+    });
+
+    const payload = await response.json();
+
+    if (!response.ok || !payload.redirectUrl) {
+      setMetaConnectionMessage(payload.message ?? "No se pudo iniciar OAuth Meta.");
+      return;
+    }
+
+    window.location.href = payload.redirectUrl;
+  }
+
   async function runAction(action: InboxAction, message?: string) {
     if (!selectedItem) return;
 
@@ -928,6 +997,7 @@ export default function Home() {
             </div>
             <button
               className="grid size-10 place-items-center rounded-md border border-slate-200 text-slate-700"
+              onClick={() => setIsMetaSettingsOpen((current) => !current)}
               title="Configuracion"
             >
               <Settings size={18} />
@@ -1077,10 +1147,66 @@ export default function Home() {
             </div>
           </div>
 
-          <button className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
+          <button
+            className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+            onClick={() => setIsMetaSettingsOpen(true)}
+          >
             <PanelLeft size={17} />
             Conectar cuenta Meta
           </button>
+
+          {isMetaSettingsOpen ? (
+            <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Configuracion Meta</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    OAuth queda preparado; los tokens no se guardan hasta sumar cifrado.
+                  </p>
+                </div>
+                <button
+                  className="grid size-8 shrink-0 place-items-center rounded-md border border-slate-200 text-slate-600"
+                  onClick={() => setIsMetaSettingsOpen(false)}
+                  title="Cerrar configuracion Meta"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-md bg-slate-50 p-2">
+                <p className="text-xs font-semibold text-slate-700">Callback URL</p>
+                <p className="mt-1 break-all text-xs leading-5 text-slate-500">
+                  {metaCallbackUrl}
+                </p>
+              </div>
+
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-slate-700">Permisos esperados</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {metaRequiredScopes.map((scope) => (
+                    <span
+                      className="rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-600"
+                      key={scope}
+                    >
+                      {scope}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                {metaConnectionMessage}
+              </p>
+
+              <button
+                className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-950 bg-white px-3 text-sm font-semibold text-slate-950"
+                onClick={() => void startMetaOAuth()}
+              >
+                <ExternalLink size={16} />
+                Iniciar OAuth Meta
+              </button>
+            </div>
+          ) : null}
         </aside>
 
         <section className="min-w-0 border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
@@ -1688,4 +1814,19 @@ function formatTimestamp(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function resolveMetaOAuthMessage(result: string | null) {
+  switch (result) {
+    case "code_received":
+      return "Meta devolvio un codigo OAuth valido. Siguiente paso: intercambio de token con cifrado antes de guardar cuentas reales.";
+    case "invalid_state":
+      return "Meta devolvio un estado invalido o expirado. Reintenta desde Conectar cuenta Meta.";
+    case "missing_code":
+      return "Meta no devolvio codigo OAuth. Revisa la configuracion de la app Meta.";
+    case "error":
+      return "Meta devolvio un error durante la autorizacion.";
+    default:
+      return "Configura la app Meta y usa OAuth cuando tengas credenciales.";
+  }
 }

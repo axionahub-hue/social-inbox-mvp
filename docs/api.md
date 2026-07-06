@@ -94,10 +94,55 @@ Validacion:
 
 Si Supabase esta configurado, guarda el evento crudo en `webhook_events`.
 
+### `POST /api/meta/oauth/start`
+
+Inicia el flujo OAuth Meta desde una sesion Supabase autenticada.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Payload:
+
+```json
+{
+  "workspaceId": "uuid-del-workspace"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "ok": true,
+  "redirectUrl": "https://www.facebook.com/...",
+  "callbackUrl": "http://localhost:3100/api/meta/oauth/callback",
+  "scopes": ["pages_show_list"]
+}
+```
+
+Si faltan `META_APP_ID` o `META_APP_SECRET`, responde `400` con las variables requeridas.
+
+### `GET /api/meta/oauth/callback`
+
+Recibe el retorno OAuth de Meta.
+
+Estado actual:
+
+- valida `state` firmado;
+- valida que exista `code`;
+- redirige a la app con `meta_oauth=code_received`;
+- no intercambia ni guarda tokens todavia.
+
+El guardado real de cuentas queda bloqueado hasta implementar cifrado server-side para tokens Meta.
+
 ## Reglas
 
 - Las credenciales Supabase anon pueden estar en el cliente; la service role nunca debe exponerse.
 - No llamar a Meta desde componentes cliente.
 - No enviar tokens de Meta al navegador.
+- No guardar tokens Meta sin cifrado server-side.
 - No asumir que un evento webhook ya esta normalizado.
 - Guardar eventos crudos antes de procesarlos para poder depurar.

@@ -3,6 +3,25 @@ import type { InboxAction } from "@/lib/types";
 
 const graphVersion = process.env.META_GRAPH_VERSION ?? "v25.0";
 const graphBaseUrl = `https://graph.facebook.com/${graphVersion}`;
+const facebookDialogBaseUrl = `https://www.facebook.com/${graphVersion}/dialog/oauth`;
+
+export const metaOAuthScopes = [
+  "pages_show_list",
+  "pages_read_engagement",
+  "pages_manage_engagement",
+  "pages_messaging",
+  "pages_manage_metadata",
+  "instagram_basic",
+  "instagram_manage_comments",
+  "instagram_manage_messages",
+] as const;
+
+type MetaOAuthStatePayload = {
+  exp: number;
+  nonce: string;
+  userId: string;
+  workspaceId: string;
+};
 
 export type MetaActionInput = {
   action: InboxAction;
@@ -13,6 +32,76 @@ export type MetaActionInput = {
 
 export function isMetaConfigured() {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+}
+
+export function getMetaOAuthRedirectUri(origin: string) {
+  return `${origin.replace(/\/$/, "")}/api/meta/oauth/callback`;
+}
+
+export function buildMetaOAuthUrl({
+  origin,
+  state,
+}: {
+  origin: string;
+  state: string;
+}) {
+  if (!process.env.META_APP_ID) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    client_id: process.env.META_APP_ID,
+    redirect_uri: getMetaOAuthRedirectUri(origin),
+    response_type: "code",
+    scope: metaOAuthScopes.join(","),
+    state,
+  });
+
+  return `${facebookDialogBaseUrl}?${params.toString()}`;
+}
+
+export function createMetaOAuthState(payload: Omit<MetaOAuthStatePayload, "exp" | "nonce">) {
+  const statePayload: MetaOAuthStatePayload = {
+    ...payload,
+    exp: Math.floor(Date.now() / 1000) + 10 * 60,
+    nonce: crypto.randomBytes(16).toString("hex"),
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
+  const signature = signMetaOAuthState(encodedPayload);
+
+  return `${encodedPayload}.${signature}`;
+}
+
+export function verifyMetaOAuthState(state: string | null) {
+  if (!state) {
+    return null;
+  }
+
+  const [encodedPayload, signature] = state.split(".");
+
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = signMetaOAuthState(encodedPayload);
+
+  if (!safeEqual(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as MetaOAuthStatePayload;
+
+    if (payload.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 export function verifyMetaWebhookSignature(rawBody: string, signature: string | null) {
@@ -99,6 +188,27 @@ export async function executeMetaAction(input: MetaActionInput) {
     message: `Accion ${input.action} ejecutada en Meta.`,
     payload,
   };
+}
+
+function signMetaOAuthState(encodedPayload: string) {
+  const secret = process.env.META_APP_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secret) {
+    throw new Error("META_APP_SECRET or SUPABASE_SERVICE_ROLE_KEY is required to sign OAuth state.");
+  }
+
+  return crypto.createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+}
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function resolveActionEndpoint(input: MetaActionInput) {

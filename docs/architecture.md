@@ -14,6 +14,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `scripts/check-supabase-config.mjs`: verificacion local de variables y alcance REST/Auth de Supabase.
 - `src/app/api/inbox/action/route.ts`: entrada unica para acciones de moderacion/respuesta.
 - `src/app/api/meta/webhook/route.ts`: callback para webhooks Meta.
+- `src/app/api/meta/oauth/start/route.ts`: inicio OAuth Meta con sesion Supabase validada.
+- `src/app/api/meta/oauth/callback/route.ts`: callback OAuth Meta con `state` firmado.
 - `supabase/schema.sql`: modelo relacional inicial.
 
 ## Flujo de datos previsto
@@ -26,6 +28,14 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 6. El agente responde desde la UI.
 7. `/api/inbox/action` ejecuta la accion en Meta y registra `action_log`.
 8. Mientras Meta real no este conectado, `/api/inbox/action` persiste el estado interno en Supabase para validar el flujo operativo completo.
+
+## OAuth Meta
+
+- El inicio OAuth se ejecuta en `/api/meta/oauth/start` y requiere sesion Supabase por bearer token.
+- El endpoint valida que el usuario sea propietario del workspace antes de construir la URL de Meta.
+- El parametro `state` se firma server-side y expira a los 10 minutos.
+- El callback valida `state` y `code`, pero todavia no intercambia tokens.
+- No se guardan tokens Meta hasta implementar cifrado server-side.
 
 ## Carga de inbox
 
@@ -66,6 +76,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 ## Reglas de infraestructura
 
 - Los tokens de Meta no deben exponerse al cliente.
+- Los tokens de Meta no deben guardarse sin cifrado server-side.
 - Las acciones contra Meta siempre pasan por API server-side.
 - Los webhooks se validan con `META_WEBHOOK_VERIFY_TOKEN` y `META_APP_SECRET`.
 - Supabase debe usar RLS antes de tener mas de un usuario real.
