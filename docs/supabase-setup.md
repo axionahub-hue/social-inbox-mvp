@@ -55,6 +55,16 @@ npm run dev
 9. Crear, editar y eliminar una respuesta rapida con sesion activa.
 10. Ocultar/mostrar una cuenta conectada y recargar para validar persistencia de preferencias.
 
+## Correccion de duplicados en desarrollo
+
+Si una sesion de desarrollo creo mas de un workspace `Personal` para el mismo usuario antes de aplicar el indice unico, ejecutar una sola vez:
+
+```text
+supabase/fixes/2026-07-06-dedupe-personal-workspaces.sql
+```
+
+Luego volver a ejecutar `npm run check:supabase`.
+
 ## Vercel
 
 En Vercel se deben crear las mismas variables de entorno. Despues del primer deploy, actualizar Supabase Auth:

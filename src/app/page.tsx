@@ -91,6 +91,10 @@ export default function Home() {
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
   const hiddenAccountCount = channels.length - visibleAccountIds.length;
+  const workspaceBootstrap = useRef<{
+    userId: string;
+    promise: Promise<string | null>;
+  } | null>(null);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -222,6 +226,7 @@ export default function Home() {
     setCurrentUser(null);
     setActiveWorkspaceId(null);
     hasLoadedRemoteWorkspace.current = false;
+    workspaceBootstrap.current = null;
     setReplies(quickReplies);
     setVisibleAccountIds(channels.map((channel) => channel.id));
     setAuthMessage("Sesion cerrada. La app vuelve a modo demo local.");
@@ -343,6 +348,7 @@ export default function Home() {
       window.setTimeout(() => {
         setActiveWorkspaceId(null);
         hasLoadedRemoteWorkspace.current = false;
+        workspaceBootstrap.current = null;
       }, 0);
       return;
     }
@@ -351,7 +357,17 @@ export default function Home() {
     let isCancelled = false;
 
     async function loadWorkspaceData() {
-      const workspaceId = await ensurePersonalWorkspace(userId);
+      let workspacePromise = workspaceBootstrap.current?.promise ?? null;
+
+      if (workspaceBootstrap.current?.userId !== userId) {
+        workspacePromise = ensurePersonalWorkspace(userId);
+        workspaceBootstrap.current = {
+          userId,
+          promise: workspacePromise,
+        };
+      }
+
+      const workspaceId = await workspacePromise;
       if (!workspaceId || isCancelled) return;
 
       setActiveWorkspaceId(workspaceId);

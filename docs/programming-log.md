@@ -64,3 +64,10 @@
 - Areas tocadas: `scripts/check-supabase-config.mjs`, `.gitignore`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run check:supabase`, `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured`.
 - Pendiente: probar login email OTP desde la UI.
+
+### Bootstrap idempotente de workspace
+
+- Resumen: se detecto login real Supabase activo y se corrigio una carrera de desarrollo que podia crear dos workspaces personales para el mismo usuario. Se agrego indice unico por `owner_user_id` y SQL de limpieza para entornos ya afectados.
+- Areas tocadas: `src/app/page.tsx`, `supabase/schema.sql`, `supabase/fixes/2026-07-06-dedupe-personal-workspaces.sql`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `npm run check:supabase`; se limpio un workspace duplicado sin datos asociados en el proyecto Supabase real.
+- Pendiente: ejecutar `supabase/fixes/2026-07-06-dedupe-personal-workspaces.sql` en SQL Editor para crear el indice unico en la base real y confirmar siembra de respuestas rapidas luego de recargar sesion.

@@ -131,6 +131,10 @@ create index if not exists webhook_events_unprocessed_idx
   on webhook_events (provider, created_at)
   where processed_at is null;
 
+create unique index if not exists workspaces_owner_user_id_unique_idx
+  on workspaces (owner_user_id)
+  where owner_user_id is not null;
+
 alter table workspaces enable row level security;
 alter table workspace_members enable row level security;
 alter table user_preferences enable row level security;

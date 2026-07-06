@@ -32,6 +32,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Si no hay credenciales, la app mantiene modo demo local.
 - Al iniciar sesion, la app busca o crea un workspace `Personal` para `auth.uid()`.
 - `workspaces.owner_user_id` define el propietario del workspace.
+- `workspaces_owner_user_id_unique_idx` impide mas de un workspace personal por usuario.
 - `workspace_members` deja preparado el modelo para sumar usuarios despues, aunque el MVP opera como workspace personal.
 - `user_preferences` guarda preferencias por usuario/workspace, empezando por `visible_account_ids`.
 - RLS esta habilitado para tablas de aplicacion usando acceso por propietario de workspace.
