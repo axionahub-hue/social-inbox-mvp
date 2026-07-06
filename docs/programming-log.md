@@ -36,3 +36,10 @@
 - Areas tocadas: `src/lib/types.ts`, `src/lib/demo-data.ts`, `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/account-filter-plan.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, revision desktop/mobile en `http://localhost:3100`, prueba de ocultar/mostrar cuenta conectada.
 - Pendiente: persistir preferencias por usuario/workspace cuando exista autenticacion y Supabase real.
+
+### CRUD local de respuestas rapidas
+
+- Resumen: se agrego administracion local de respuestas rapidas con crear, editar, eliminar, insertar en composer y persistencia en `localStorage`.
+- Areas tocadas: `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, revision desktop en `http://localhost:3100`, prueba de crear respuesta rapida e insertarla en el composer.
+- Pendiente: mover persistencia a Supabase con autenticacion y validar mobile con automatizacion estable o prueba manual.

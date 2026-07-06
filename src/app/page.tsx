@@ -8,6 +8,9 @@ import {
   Eye,
   EyeOff,
   Heart,
+  Pencil,
+  Plus,
+  Save,
   MessageCircle,
   MessagesSquare,
   PanelLeft,
@@ -16,9 +19,11 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Trash2,
+  X,
 } from "lucide-react";
 import { channels, inboxItems, quickReplies } from "@/lib/demo-data";
-import type { InboxAction, InboxItem, InboxSource, Network } from "@/lib/types";
+import type { InboxAction, InboxItem, InboxSource, Network, QuickReply } from "@/lib/types";
 
 const sourceLabels: Record<InboxSource, string> = {
   messenger: "Messenger",
@@ -40,9 +45,25 @@ const networkIcon = {
 };
 
 const visibleAccountsStorageKey = "social-inbox.visible-account-ids";
+const quickRepliesStorageKey = "social-inbox.quick-replies";
+
+type QuickReplyDraft = {
+  title: string;
+  category: string;
+  body: string;
+  tagsText: string;
+};
+
+const emptyQuickReplyDraft: QuickReplyDraft = {
+  title: "",
+  category: "General",
+  body: "",
+  tagsText: "",
+};
 
 export default function Home() {
   const [items, setItems] = useState(inboxItems);
+  const [replies, setReplies] = useState<QuickReply[]>(quickReplies);
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
@@ -50,6 +71,11 @@ export default function Home() {
     channels.map((channel) => channel.id),
   );
   const hasLoadedVisibleAccounts = useRef(false);
+  const hasLoadedQuickReplies = useRef(false);
+  const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
+  const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
+  const [quickReplyDraft, setQuickReplyDraft] =
+    useState<QuickReplyDraft>(emptyQuickReplyDraft);
   const [composer, setComposer] = useState("");
   const [notice, setNotice] = useState("Listo para conectar Meta cuando tengas permisos.");
 
@@ -105,6 +131,37 @@ export default function Home() {
     );
   }, [visibleAccountIds]);
 
+  useEffect(() => {
+    window.setTimeout(() => {
+      const stored = window.localStorage.getItem(quickRepliesStorageKey);
+      if (!stored) {
+        hasLoadedQuickReplies.current = true;
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) {
+          hasLoadedQuickReplies.current = true;
+          return;
+        }
+
+        const validReplies = parsed.filter(isQuickReply);
+        setReplies(validReplies);
+      } catch {
+        window.localStorage.removeItem(quickRepliesStorageKey);
+      } finally {
+        hasLoadedQuickReplies.current = true;
+      }
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedQuickReplies.current) return;
+
+    window.localStorage.setItem(quickRepliesStorageKey, JSON.stringify(replies));
+  }, [replies]);
+
   function toggleAccountVisibility(accountId: string) {
     setVisibleAccountIds((current) => {
       if (current.includes(accountId)) {
@@ -117,6 +174,73 @@ export default function Home() {
 
   function showAllAccounts() {
     setVisibleAccountIds(channels.map((channel) => channel.id));
+  }
+
+  function openNewQuickReply() {
+    setEditingQuickReplyId(null);
+    setQuickReplyDraft(emptyQuickReplyDraft);
+    setIsQuickReplyEditorOpen(true);
+  }
+
+  function openEditQuickReply(reply: QuickReply) {
+    setEditingQuickReplyId(reply.id);
+    setQuickReplyDraft({
+      title: reply.title,
+      category: reply.category,
+      body: reply.body,
+      tagsText: reply.tags.join(", "),
+    });
+    setIsQuickReplyEditorOpen(true);
+  }
+
+  function closeQuickReplyEditor() {
+    setEditingQuickReplyId(null);
+    setQuickReplyDraft(emptyQuickReplyDraft);
+    setIsQuickReplyEditorOpen(false);
+  }
+
+  function saveQuickReply() {
+    const title = quickReplyDraft.title.trim();
+    const body = quickReplyDraft.body.trim();
+    const category = quickReplyDraft.category.trim() || "General";
+
+    if (!title || !body) {
+      setNotice("Titulo y texto son obligatorios para guardar la respuesta rapida.");
+      return;
+    }
+
+    const nextReply: QuickReply = {
+      id: editingQuickReplyId ?? createLocalId("qr"),
+      title,
+      category,
+      body,
+      tags: parseTags(quickReplyDraft.tagsText),
+    };
+
+    setReplies((current) => {
+      if (!editingQuickReplyId) {
+        return [nextReply, ...current];
+      }
+
+      return current.map((reply) =>
+        reply.id === editingQuickReplyId ? nextReply : reply,
+      );
+    });
+
+    setNotice(
+      editingQuickReplyId
+        ? "Respuesta rapida actualizada."
+        : "Respuesta rapida guardada.",
+    );
+    closeQuickReplyEditor();
+  }
+
+  function deleteQuickReply(replyId: string) {
+    setReplies((current) => current.filter((reply) => reply.id !== replyId));
+    if (editingQuickReplyId === replyId) {
+      closeQuickReplyEditor();
+    }
+    setNotice("Respuesta rapida eliminada.");
   }
 
   async function runAction(action: InboxAction, message?: string) {
@@ -176,7 +300,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
-      <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[280px_minmax(320px,420px)_1fr]">
+      <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[280px_minmax(320px,420px)_minmax(0,1fr)]">
         <aside className="border-b border-slate-200 bg-white px-4 py-4 lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between">
             <div>
@@ -295,7 +419,7 @@ export default function Home() {
           </button>
         </aside>
 
-        <section className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+        <section className="min-w-0 border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-4 backdrop-blur">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
@@ -354,7 +478,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="flex min-h-[620px] flex-col bg-[#fbfcfd]">
+        <section className="flex min-h-[620px] min-w-0 flex-col bg-[#fbfcfd]">
           {selectedItem ? (
             <>
               <ConversationHeader item={selectedItem} />
@@ -410,16 +534,130 @@ export default function Home() {
 
               <div className="border-t border-slate-200 bg-white p-4">
                 <div className="mx-auto max-w-3xl">
-                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-                    {quickReplies.map((reply) => (
+                  <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Respuestas rapidas</p>
+                        <p className="text-xs text-slate-500">
+                          {replies.length} guardadas
+                        </p>
+                      </div>
                       <button
-                        className="shrink-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-white"
-                        key={reply.id}
-                        onClick={() => setComposer(reply.body)}
+                        className="grid size-9 place-items-center rounded-md bg-slate-950 text-white"
+                        data-testid="quick-reply-new"
+                        onClick={openNewQuickReply}
+                        title="Crear respuesta rapida"
                       >
-                        {reply.title}
+                        <Plus size={17} />
                       </button>
-                    ))}
+                    </div>
+
+                    {isQuickReplyEditorOpen ? (
+                      <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+                        <div className="grid gap-2 sm:grid-cols-[1fr_160px]">
+                          <input
+                            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-slate-400"
+                            data-testid="quick-reply-title"
+                            onChange={(event) =>
+                              setQuickReplyDraft((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                            placeholder="Titulo"
+                            value={quickReplyDraft.title}
+                          />
+                          <input
+                            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-slate-400"
+                            data-testid="quick-reply-category"
+                            onChange={(event) =>
+                              setQuickReplyDraft((current) => ({
+                                ...current,
+                                category: event.target.value,
+                              }))
+                            }
+                            placeholder="Categoria"
+                            value={quickReplyDraft.category}
+                          />
+                        </div>
+                        <textarea
+                          className="mt-2 min-h-20 w-full resize-none rounded-md border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-slate-400"
+                          data-testid="quick-reply-body"
+                          onChange={(event) =>
+                            setQuickReplyDraft((current) => ({
+                              ...current,
+                              body: event.target.value,
+                            }))
+                          }
+                          placeholder="Texto de respuesta"
+                          value={quickReplyDraft.body}
+                        />
+                        <input
+                          className="mt-2 h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-slate-400"
+                          data-testid="quick-reply-tags"
+                          onChange={(event) =>
+                            setQuickReplyDraft((current) => ({
+                              ...current,
+                              tagsText: event.target.value,
+                            }))
+                          }
+                          placeholder="Tags separados por coma"
+                          value={quickReplyDraft.tagsText}
+                        />
+                        <div className="mt-3 flex justify-end gap-2">
+                          <button
+                            className="grid size-9 place-items-center rounded-md border border-slate-200 bg-white text-slate-700"
+                            onClick={closeQuickReplyEditor}
+                            title="Cancelar"
+                          >
+                            <X size={17} />
+                          </button>
+                          <button
+                            className="grid size-9 place-items-center rounded-md bg-slate-950 text-white"
+                            data-testid="quick-reply-save"
+                            onClick={saveQuickReply}
+                            title="Guardar respuesta rapida"
+                          >
+                            <Save size={17} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                      {replies.map((reply) => (
+                        <div
+                          className="shrink-0 rounded-md border border-slate-200 bg-white p-2"
+                          key={reply.id}
+                        >
+                          <button
+                            className="block min-w-36 max-w-56 truncate text-left text-xs font-semibold text-slate-800"
+                            onClick={() => setComposer(reply.body)}
+                          >
+                            {reply.title}
+                          </button>
+                          <p className="mt-1 truncate text-xs text-slate-500">
+                            {reply.category}
+                          </p>
+                          <div className="mt-2 flex gap-1">
+                            <button
+                              className="grid size-7 place-items-center rounded-md border border-slate-200 text-slate-600"
+                              onClick={() => openEditQuickReply(reply)}
+                              title="Editar"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className="grid size-7 place-items-center rounded-md border border-slate-200 text-slate-600"
+                              onClick={() => deleteQuickReply(reply.id)}
+                              title="Eliminar"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex items-end gap-2">
@@ -545,7 +783,7 @@ function ConversationHeader({ item }: { item: InboxItem }) {
 
   return (
     <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid size-11 shrink-0 place-items-center rounded-md bg-slate-900 text-sm font-semibold text-white">
             {item.avatarInitials}
@@ -597,5 +835,37 @@ function ActionButton({
     >
       {children}
     </button>
+  );
+}
+
+function createLocalId(prefix: string) {
+  if (crypto.randomUUID) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}`;
+}
+
+function parseTags(tagsText: string) {
+  return tagsText
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function isQuickReply(value: unknown): value is QuickReply {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as QuickReply;
+
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.category === "string" &&
+    typeof candidate.body === "string" &&
+    Array.isArray(candidate.tags) &&
+    candidate.tags.every((tag) => typeof tag === "string")
   );
 }

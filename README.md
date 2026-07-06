@@ -8,6 +8,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - UI operativa en modo demo.
 - Contratos de dominio para inbox, comentarios, mensajes, cuentas y respuestas rapidas.
 - Filtros combinados por busqueda, red social y cuentas conectadas visibles/ocultas.
+- Respuestas rapidas con crear, editar, eliminar, insertar y persistencia local.
 - Endpoint de acciones preparado para responder, like/unlike, ocultar/mostrar y bloquear.
 - Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
 - Esquema inicial de Supabase en `supabase/schema.sql`.
@@ -80,11 +81,10 @@ Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. 
 
 ## Proximos pasos tecnicos
 
-1. Persistir respuestas rapidas con CRUD usable.
-2. Conectar Supabase real para datos de inbox y preferencias.
-3. Implementar OAuth Meta real.
-4. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
-5. Agregar autenticacion interna.
-6. Activar RLS por `workspace_id`.
-7. Crear pantalla de configuracion de cuentas conectadas.
-8. Agregar tests de acciones Meta y parsing de webhooks.
+1. Conectar Supabase real para datos de inbox, respuestas rapidas y preferencias.
+2. Agregar autenticacion interna.
+3. Activar RLS por `workspace_id`.
+4. Implementar OAuth Meta real.
+5. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
+6. Crear pantalla de configuracion de cuentas conectadas.
+7. Agregar tests de acciones Meta y parsing de webhooks.

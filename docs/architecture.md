@@ -33,6 +33,14 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La preferencia de cuentas visibles se guarda en `localStorage` en modo demo.
 - La evolucion natural es persistir esa preferencia por usuario/workspace en Supabase cuando exista autenticacion.
 
+## Respuestas rapidas
+
+- `QuickReply` define titulo, categoria, cuerpo y tags.
+- En modo demo, las respuestas rapidas se editan en cliente y se guardan en `localStorage`.
+- El estado inicial sale de `src/lib/demo-data.ts`.
+- La tabla `quick_replies` de Supabase ya existe para mover esta persistencia al servidor.
+- La UI permite crear, editar, eliminar e insertar una respuesta en el composer.
+
 ## Reglas de infraestructura
 
 - Los tokens de Meta no deben exponerse al cliente.

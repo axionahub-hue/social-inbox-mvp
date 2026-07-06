@@ -35,12 +35,24 @@ En una conversacion seleccionada se puede:
 
 - responder;
 - usar una respuesta rapida;
+- crear, editar y eliminar respuestas rapidas;
 - dar o quitar like;
 - ocultar o mostrar;
 - bloquear usuario;
 - archivar visualmente.
 
 En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local.
+
+## Respuestas rapidas
+
+El bloque `Respuestas rapidas` aparece sobre el composer. Permite:
+
+- insertar una respuesta guardada en el composer;
+- crear una respuesta con titulo, categoria, texto y tags;
+- editar respuestas existentes;
+- eliminar respuestas que ya no sirven.
+
+Las respuestas quedan guardadas en el navegador hasta que se conecte Supabase.
 
 ## Cuentas conectadas
 
@@ -51,4 +63,5 @@ La app muestra cuentas conectadas demo en el panel izquierdo. Cada cuenta tiene 
 - No hay OAuth real de Meta todavia.
 - No hay login interno todavia.
 - Los datos del inbox son demo.
+- Las respuestas rapidas y preferencias se guardan en el navegador.
 - Supabase registra acciones y webhooks solo cuando se configuran las variables de entorno.
