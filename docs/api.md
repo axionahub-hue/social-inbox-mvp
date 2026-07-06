@@ -4,6 +4,8 @@
 
 La API esta preparada para operar en modo demo y para conectarse despues con Supabase y Meta. Los endpoints server-side son la unica via para ejecutar acciones contra Meta.
 
+La autenticacion interna de usuario usa Supabase Auth desde el cliente con email OTP. No agrega endpoints propios por ahora.
+
 ## Endpoints
 
 ### `GET /api/health`
@@ -83,6 +85,7 @@ Si Supabase esta configurado, guarda el evento crudo en `webhook_events`.
 
 ## Reglas
 
+- Las credenciales Supabase anon pueden estar en el cliente; la service role nunca debe exponerse.
 - No llamar a Meta desde componentes cliente.
 - No enviar tokens de Meta al navegador.
 - No asumir que un evento webhook ya esta normalizado.

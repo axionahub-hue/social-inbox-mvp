@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Archive,
   Ban,
@@ -23,7 +23,9 @@ import {
   X,
 } from "lucide-react";
 import { channels, inboxItems, quickReplies } from "@/lib/demo-data";
+import { createBrowserSupabaseClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { InboxAction, InboxItem, InboxSource, Network, QuickReply } from "@/lib/types";
+import type { User } from "@supabase/supabase-js";
 
 const sourceLabels: Record<InboxSource, string> = {
   messenger: "Messenger",
@@ -62,8 +64,15 @@ const emptyQuickReplyDraft: QuickReplyDraft = {
 };
 
 export default function Home() {
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [items, setItems] = useState(inboxItems);
   const [replies, setReplies] = useState<QuickReply[]>(quickReplies);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authMessage, setAuthMessage] = useState(
+    hasSupabaseConfig ? "Inicia sesion para guardar en Supabase." : "Modo demo local.",
+  );
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
@@ -72,6 +81,7 @@ export default function Home() {
   );
   const hasLoadedVisibleAccounts = useRef(false);
   const hasLoadedQuickReplies = useRef(false);
+  const hasLoadedRemoteWorkspace = useRef(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
   const [quickReplyDraft, setQuickReplyDraft] =
@@ -95,6 +105,24 @@ export default function Home() {
   const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
 
   useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUser(data.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  useEffect(() => {
+    if (currentUser) return;
+
     window.setTimeout(() => {
       const stored = window.localStorage.getItem(visibleAccountsStorageKey);
       if (!stored) {
@@ -120,18 +148,21 @@ export default function Home() {
         hasLoadedVisibleAccounts.current = true;
       }
     }, 0);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
+    if (currentUser) return;
     if (!hasLoadedVisibleAccounts.current) return;
 
     window.localStorage.setItem(
       visibleAccountsStorageKey,
       JSON.stringify(visibleAccountIds),
     );
-  }, [visibleAccountIds]);
+  }, [currentUser, visibleAccountIds]);
 
   useEffect(() => {
+    if (currentUser) return;
+
     window.setTimeout(() => {
       const stored = window.localStorage.getItem(quickRepliesStorageKey);
       if (!stored) {
@@ -154,26 +185,297 @@ export default function Home() {
         hasLoadedQuickReplies.current = true;
       }
     }, 0);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
+    if (currentUser) return;
     if (!hasLoadedQuickReplies.current) return;
 
     window.localStorage.setItem(quickRepliesStorageKey, JSON.stringify(replies));
-  }, [replies]);
+  }, [currentUser, replies]);
+
+  async function sendMagicLink() {
+    const email = authEmail.trim();
+    if (!supabase || !email) {
+      setAuthMessage("Ingresa un email para iniciar sesion.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    setAuthMessage(
+      error
+        ? `No se pudo enviar el enlace: ${error.message}`
+        : "Revisa tu email para abrir el enlace de acceso.",
+    );
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setActiveWorkspaceId(null);
+    hasLoadedRemoteWorkspace.current = false;
+    setReplies(quickReplies);
+    setVisibleAccountIds(channels.map((channel) => channel.id));
+    setAuthMessage("Sesion cerrada. La app vuelve a modo demo local.");
+  }
+
+  const ensurePersonalWorkspace = useCallback(async (userId: string) => {
+    if (!supabase) return null;
+
+    const existing = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("owner_user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing.data?.id) {
+      return existing.data.id as string;
+    }
+
+    if (existing.error) {
+      setNotice(`No se pudo leer workspace: ${existing.error.message}`);
+      return null;
+    }
+
+    const created = await supabase
+      .from("workspaces")
+      .insert({
+        name: "Personal",
+        owner_user_id: userId,
+      })
+      .select("id")
+      .single();
+
+    if (created.error) {
+      setNotice(`No se pudo crear workspace: ${created.error.message}`);
+      return null;
+    }
+
+    const workspaceId = created.data.id as string;
+
+    await supabase.from("workspace_members").upsert({
+      workspace_id: workspaceId,
+      user_id: userId,
+      role: "owner",
+    });
+
+    return workspaceId;
+  }, [supabase]);
+
+  const loadSupabaseQuickReplies = useCallback(async (workspaceId: string) => {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("quick_replies")
+      .select("id,title,category,body,tags")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setNotice(`No se pudieron cargar respuestas rapidas: ${error.message}`);
+      return [];
+    }
+
+    return (data ?? []).map(mapQuickReplyRow);
+  }, [supabase]);
+
+  const seedSupabaseQuickReplies = useCallback(async (workspaceId: string) => {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+      .from("quick_replies")
+      .insert(
+        quickReplies.map((reply) => ({
+          workspace_id: workspaceId,
+          title: reply.title,
+          category: reply.category,
+          body: reply.body,
+          tags: reply.tags,
+        })),
+      )
+      .select("id,title,category,body,tags")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setNotice(`No se pudieron crear respuestas iniciales: ${error.message}`);
+      return [];
+    }
+
+    return (data ?? []).map(mapQuickReplyRow);
+  }, [supabase]);
+
+  const loadSupabasePreferences = useCallback(async (workspaceId: string) => {
+    if (!supabase || !currentUser) return null;
+
+    const { data, error } = await supabase
+      .from("user_preferences")
+      .select("visible_account_ids")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+
+    if (error) {
+      setNotice(`No se pudieron cargar preferencias: ${error.message}`);
+      return null;
+    }
+
+    return {
+      visibleAccountIds: Array.isArray(data?.visible_account_ids)
+        ? (data.visible_account_ids as string[])
+        : null,
+    };
+  }, [currentUser, supabase]);
+
+  useEffect(() => {
+    const user = currentUser;
+
+    if (!supabase || !user) {
+      window.setTimeout(() => {
+        setActiveWorkspaceId(null);
+        hasLoadedRemoteWorkspace.current = false;
+      }, 0);
+      return;
+    }
+
+    const userId = user.id;
+    let isCancelled = false;
+
+    async function loadWorkspaceData() {
+      const workspaceId = await ensurePersonalWorkspace(userId);
+      if (!workspaceId || isCancelled) return;
+
+      setActiveWorkspaceId(workspaceId);
+
+      const [replyRows, preferences] = await Promise.all([
+        loadSupabaseQuickReplies(workspaceId),
+        loadSupabasePreferences(workspaceId),
+      ]);
+
+      if (isCancelled) return;
+
+      if (replyRows.length > 0) {
+        setReplies(replyRows);
+      } else {
+        const seededReplies = await seedSupabaseQuickReplies(workspaceId);
+        if (!isCancelled && seededReplies.length > 0) {
+          setReplies(seededReplies);
+        }
+      }
+
+      if (preferences?.visibleAccountIds) {
+        setVisibleAccountIds(
+          preferences.visibleAccountIds.filter((id) =>
+            channels.some((channel) => channel.id === id),
+          ),
+        );
+      }
+
+      hasLoadedRemoteWorkspace.current = true;
+      setNotice("Supabase conectado. Respuestas rapidas y preferencias se guardan en tu cuenta.");
+    }
+
+    void loadWorkspaceData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    currentUser,
+    ensurePersonalWorkspace,
+    loadSupabasePreferences,
+    loadSupabaseQuickReplies,
+    seedSupabaseQuickReplies,
+    supabase,
+  ]);
+
+  async function persistSupabasePreferences(nextVisibleAccountIds: string[]) {
+    if (!supabase || !currentUser || !activeWorkspaceId || !hasLoadedRemoteWorkspace.current) {
+      return;
+    }
+
+    const { error } = await supabase.from("user_preferences").upsert({
+      user_id: currentUser.id,
+      workspace_id: activeWorkspaceId,
+      visible_account_ids: nextVisibleAccountIds,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      setNotice(`No se pudieron guardar preferencias: ${error.message}`);
+    }
+  }
+
+  async function persistSupabaseQuickReply(reply: QuickReply) {
+    if (!supabase || !activeWorkspaceId || !hasLoadedRemoteWorkspace.current) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("quick_replies")
+      .upsert({
+        id: reply.id,
+        workspace_id: activeWorkspaceId,
+        title: reply.title,
+        category: reply.category,
+        body: reply.body,
+        tags: reply.tags,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id,title,category,body,tags")
+      .single();
+
+    if (error) {
+      setNotice(`No se pudo guardar en Supabase: ${error.message}`);
+      return;
+    }
+
+    const savedReply = mapQuickReplyRow(data);
+    setReplies((current) =>
+      current.map((item) => (item.id === reply.id ? savedReply : item)),
+    );
+  }
+
+  async function deleteSupabaseQuickReply(replyId: string) {
+    if (!supabase || !activeWorkspaceId || !hasLoadedRemoteWorkspace.current) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("quick_replies")
+      .delete()
+      .eq("id", replyId)
+      .eq("workspace_id", activeWorkspaceId);
+
+    if (error) {
+      setNotice(`No se pudo eliminar en Supabase: ${error.message}`);
+    }
+  }
 
   function toggleAccountVisibility(accountId: string) {
     setVisibleAccountIds((current) => {
-      if (current.includes(accountId)) {
-        return current.filter((id) => id !== accountId);
-      }
+      const next = current.includes(accountId)
+        ? current.filter((id) => id !== accountId)
+        : [...current, accountId];
 
-      return [...current, accountId];
+      void persistSupabasePreferences(next);
+      return next;
     });
   }
 
   function showAllAccounts() {
-    setVisibleAccountIds(channels.map((channel) => channel.id));
+    const next = channels.map((channel) => channel.id);
+    setVisibleAccountIds(next);
+    void persistSupabasePreferences(next);
   }
 
   function openNewQuickReply() {
@@ -210,7 +512,7 @@ export default function Home() {
     }
 
     const nextReply: QuickReply = {
-      id: editingQuickReplyId ?? createLocalId("qr"),
+      id: editingQuickReplyId ?? createLocalId(),
       title,
       category,
       body,
@@ -232,6 +534,7 @@ export default function Home() {
         ? "Respuesta rapida actualizada."
         : "Respuesta rapida guardada.",
     );
+    void persistSupabaseQuickReply(nextReply);
     closeQuickReplyEditor();
   }
 
@@ -241,6 +544,7 @@ export default function Home() {
       closeQuickReplyEditor();
     }
     setNotice("Respuesta rapida eliminada.");
+    void deleteSupabaseQuickReply(replyId);
   }
 
   async function runAction(action: InboxAction, message?: string) {
@@ -317,6 +621,51 @@ export default function Home() {
             >
               <Settings size={18} />
             </button>
+          </div>
+
+          <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <p className="text-sm font-semibold">Sesion</p>
+            {supabase ? (
+              currentUser ? (
+                <>
+                  <p className="mt-1 truncate text-xs text-slate-500">
+                    {currentUser.email}
+                  </p>
+                  <p className="mt-1 text-xs text-emerald-700">
+                    Supabase activo
+                  </p>
+                  <button
+                    className="mt-3 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+                    onClick={() => void signOut()}
+                  >
+                    Cerrar sesion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    className="mt-3 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                    onChange={(event) => setAuthEmail(event.target.value)}
+                    placeholder="tu@email.com"
+                    type="email"
+                    value={authEmail}
+                  />
+                  <button
+                    className="mt-2 h-9 w-full rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+                    onClick={() => void sendMagicLink()}
+                  >
+                    Enviar acceso
+                  </button>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    {authMessage}
+                  </p>
+                </>
+              )
+            ) : (
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Sin variables de Supabase. La app guarda datos en este navegador.
+              </p>
+            )}
           </div>
 
           <div className="mt-5 grid grid-cols-3 gap-2">
@@ -838,12 +1187,12 @@ function ActionButton({
   );
 }
 
-function createLocalId(prefix: string) {
+function createLocalId() {
   if (crypto.randomUUID) {
-    return `${prefix}-${crypto.randomUUID()}`;
+    return crypto.randomUUID();
   }
 
-  return `${prefix}-${Date.now()}`;
+  return `${Date.now()}`;
 }
 
 function parseTags(tagsText: string) {
@@ -868,4 +1217,20 @@ function isQuickReply(value: unknown): value is QuickReply {
     Array.isArray(candidate.tags) &&
     candidate.tags.every((tag) => typeof tag === "string")
   );
+}
+
+function mapQuickReplyRow(row: {
+  id: string;
+  title: string;
+  category: string;
+  body: string;
+  tags: string[] | null;
+}): QuickReply {
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    body: row.body,
+    tags: row.tags ?? [],
+  };
 }

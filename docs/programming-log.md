@@ -43,3 +43,10 @@
 - Areas tocadas: `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, revision desktop en `http://localhost:3100`, prueba de crear respuesta rapida e insertarla en el composer.
 - Pendiente: mover persistencia a Supabase con autenticacion y validar mobile con automatizacion estable o prueba manual.
+
+### Supabase Auth y persistencia preparada
+
+- Resumen: se agrego login Supabase por email OTP, fallback demo local, carga/guardado de respuestas rapidas en Supabase cuando hay sesion, preferencias por usuario/workspace y RLS inicial en el esquema.
+- Areas tocadas: `src/app/page.tsx`, `supabase/schema.sql`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, revision desktop en `http://localhost:3100` sin credenciales Supabase.
+- Pendiente: crear proyecto Supabase real, aplicar esquema, configurar Auth email OTP y probar flujo autenticado con credenciales reales.

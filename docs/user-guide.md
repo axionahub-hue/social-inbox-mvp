@@ -18,6 +18,12 @@ La pantalla principal muestra una bandeja unificada con:
 - comentarios de publicaciones;
 - comentarios de anuncios.
 
+## Sesion
+
+Si Supabase no esta configurado, el panel `Sesion` indica modo demo y la app guarda datos en el navegador.
+
+Si Supabase esta configurado, se puede ingresar un email y pedir un enlace de acceso. Al abrir ese enlace, la app guarda respuestas rapidas y preferencias en el workspace personal de la cuenta.
+
 ## Filtros actuales
 
 - `Todo`: muestra todos los items demo.
@@ -52,7 +58,7 @@ El bloque `Respuestas rapidas` aparece sobre el composer. Permite:
 - editar respuestas existentes;
 - eliminar respuestas que ya no sirven.
 
-Las respuestas quedan guardadas en el navegador hasta que se conecte Supabase.
+En modo demo, las respuestas quedan guardadas en el navegador. Con sesion Supabase, se guardan en `quick_replies`.
 
 ## Cuentas conectadas
 
@@ -61,7 +67,7 @@ La app muestra cuentas conectadas demo en el panel izquierdo. Cada cuenta tiene 
 ## Limitaciones actuales
 
 - No hay OAuth real de Meta todavia.
-- No hay login interno todavia.
 - Los datos del inbox son demo.
-- Las respuestas rapidas y preferencias se guardan en el navegador.
+- El login Supabase necesita credenciales y configuracion Auth real para operar fuera del modo demo.
+- Las respuestas rapidas y preferencias se guardan en el navegador si no hay sesion Supabase.
 - Supabase registra acciones y webhooks solo cuando se configuran las variables de entorno.

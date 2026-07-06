@@ -9,6 +9,8 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - Contratos de dominio para inbox, comentarios, mensajes, cuentas y respuestas rapidas.
 - Filtros combinados por busqueda, red social y cuentas conectadas visibles/ocultas.
 - Respuestas rapidas con crear, editar, eliminar, insertar y persistencia local.
+- Auth interna preparada con Supabase email OTP y fallback demo local.
+- RLS inicial por workspace/usuario en el esquema de Supabase.
 - Endpoint de acciones preparado para responder, like/unlike, ocultar/mostrar y bloquear.
 - Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
 - Esquema inicial de Supabase en `supabase/schema.sql`.
@@ -41,13 +43,15 @@ cp .env.example .env.local
 ```
 
 Sin credenciales, la app corre en modo demo. Con Supabase configurado, los endpoints empiezan a registrar eventos y acciones.
+Con Supabase configurado, el panel `Sesion` permite enviar un enlace de acceso por email y guardar respuestas rapidas/preferencias en la cuenta.
 
 ## Supabase
 
 1. Crear proyecto Supabase.
 2. Ejecutar `supabase/schema.sql` en SQL Editor.
 3. Configurar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
-4. En produccion, cifrar tokens de Meta antes de guardarlos en `connected_accounts.access_token_encrypted`.
+4. En Supabase Auth, configurar la URL del sitio local como `http://localhost:3100` y luego la URL de Vercel cuando exista deploy.
+5. En produccion, cifrar tokens de Meta antes de guardarlos en `connected_accounts.access_token_encrypted`.
 
 ## Meta
 
@@ -81,10 +85,9 @@ Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. 
 
 ## Proximos pasos tecnicos
 
-1. Conectar Supabase real para datos de inbox, respuestas rapidas y preferencias.
-2. Agregar autenticacion interna.
-3. Activar RLS por `workspace_id`.
-4. Implementar OAuth Meta real.
-5. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
-6. Crear pantalla de configuracion de cuentas conectadas.
-7. Agregar tests de acciones Meta y parsing de webhooks.
+1. Crear el proyecto Supabase real, aplicar `supabase/schema.sql` y probar login email OTP con credenciales.
+2. Migrar inbox demo a lectura real desde Supabase.
+3. Implementar OAuth Meta real.
+4. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
+5. Crear pantalla de configuracion de cuentas conectadas.
+6. Agregar tests de acciones Meta y parsing de webhooks.

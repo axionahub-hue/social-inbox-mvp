@@ -25,6 +25,16 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 6. El agente responde desde la UI.
 7. `/api/inbox/action` ejecuta la accion en Meta y registra `action_log`.
 
+## Auth y workspace
+
+- Si `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` existen, la UI activa login por email OTP de Supabase.
+- Si no hay credenciales, la app mantiene modo demo local.
+- Al iniciar sesion, la app busca o crea un workspace `Personal` para `auth.uid()`.
+- `workspaces.owner_user_id` define el propietario del workspace.
+- `workspace_members` deja preparado el modelo para sumar usuarios despues, aunque el MVP opera como workspace personal.
+- `user_preferences` guarda preferencias por usuario/workspace, empezando por `visible_account_ids`.
+- RLS esta habilitado para tablas de aplicacion usando acceso por propietario de workspace.
+
 ## Filtros de inbox
 
 - `InboxItem.accountId` es la referencia estable a la cuenta conectada.
@@ -37,8 +47,9 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 
 - `QuickReply` define titulo, categoria, cuerpo y tags.
 - En modo demo, las respuestas rapidas se editan en cliente y se guardan en `localStorage`.
+- Con Supabase autenticado, las respuestas rapidas se cargan y guardan en `quick_replies`.
 - El estado inicial sale de `src/lib/demo-data.ts`.
-- La tabla `quick_replies` de Supabase ya existe para mover esta persistencia al servidor.
+- Si el workspace no tiene respuestas, la app siembra las respuestas demo iniciales en Supabase.
 - La UI permite crear, editar, eliminar e insertar una respuesta en el composer.
 
 ## Reglas de infraestructura
