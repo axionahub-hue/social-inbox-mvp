@@ -65,4 +65,5 @@ export type InboxAction =
   | "unlike"
   | "hide"
   | "unhide"
-  | "block";
+  | "block"
+  | "archive";

@@ -25,6 +25,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 5. Un procesador normaliza eventos a `inbox_items` e `inbox_messages`.
 6. El agente responde desde la UI.
 7. `/api/inbox/action` ejecuta la accion en Meta y registra `action_log`.
+8. Mientras Meta real no este conectado, `/api/inbox/action` persiste el estado interno en Supabase para validar el flujo operativo completo.
 
 ## Carga de inbox
 

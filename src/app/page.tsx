@@ -864,6 +864,7 @@ export default function Home() {
             ...item,
             status: "responded",
             unreadCount: 0,
+            preview: message,
             messages: [
               ...item.messages,
               {
@@ -881,6 +882,8 @@ export default function Home() {
           liked: action === "like" ? true : action === "unlike" ? false : item.liked,
           hidden: action === "hide" ? true : action === "unhide" ? false : item.hidden,
           blocked: action === "block" ? true : item.blocked,
+          status: action === "archive" ? "archived" : item.status,
+          unreadCount: action === "archive" ? 0 : item.unreadCount,
         };
       }),
     );
@@ -1146,6 +1149,11 @@ export default function Home() {
                           Bloqueado
                         </span>
                       ) : null}
+                      {selectedItem.status === "archived" ? (
+                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                          Archivado
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-3 text-sm text-slate-600">{selectedItem.title}</p>
                   </div>
@@ -1339,7 +1347,11 @@ export default function Home() {
                       <ActionButton title="Bloquear usuario" onClick={() => void runAction("block")}>
                         <Ban size={17} />
                       </ActionButton>
-                      <ActionButton title="Archivar">
+                      <ActionButton
+                        active={selectedItem.status === "archived"}
+                        title="Archivar"
+                        onClick={() => void runAction("archive")}
+                      >
                         <Archive size={17} />
                       </ActionButton>
                     </div>

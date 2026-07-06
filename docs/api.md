@@ -47,6 +47,7 @@ Acciones soportadas:
 - `hide`
 - `unhide`
 - `block`
+- `archive`
 
 Respuesta demo:
 
@@ -58,7 +59,15 @@ Respuesta demo:
 }
 ```
 
-Si Supabase esta configurado, registra la accion en `action_log`.
+Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_items`, tambien persiste:
+
+- `reply`: inserta un mensaje agente en `inbox_messages`, marca `status = responded`, limpia `unread_count` y actualiza `preview`.
+- `like`/`unlike`: actualiza `inbox_items.is_liked`.
+- `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
+- `block`: actualiza `contacts.is_blocked`.
+- `archive`: marca `inbox_items.status = archived` y limpia `unread_count`.
+
+Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 
 ### `GET /api/meta/webhook`
 

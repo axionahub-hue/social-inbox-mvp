@@ -78,3 +78,10 @@
 - Areas tocadas: `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/account-filter-plan.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`; conteo Supabase real con `connected_accounts: 2`, `contacts: 4`, `inbox_items: 4`, `inbox_messages: 9`, `quick_replies: 1`.
 - Pendiente: persistir acciones de respuesta, like, ocultar/mostrar y bloquear sobre las tablas Supabase.
+
+### Persistencia de acciones de inbox
+
+- Resumen: se extendio `/api/inbox/action` para persistir `reply`, `like`, `unlike`, `hide`, `unhide`, `block` y `archive` sobre `inbox_items`, `inbox_messages` y `contacts`, manteniendo `action_log`.
+- Areas tocadas: `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `README.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, prueba HTTP de `like`, `unlike`, `hide`, `unhide`, `reply`, `archive` y `block` contra un `inbox_item` real; todas devolvieron `persisted=true`. Conteos posteriores: `inbox_items: 4`, `inbox_messages: 10`, `contacts: 4`, `action_log: 8`.
+- Pendiente: conectar acciones a Meta real cuando exista OAuth/tokens.

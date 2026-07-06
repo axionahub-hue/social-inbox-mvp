@@ -51,9 +51,9 @@ En una conversacion seleccionada se puede:
 - dar o quitar like;
 - ocultar o mostrar;
 - bloquear usuario;
-- archivar visualmente.
+- archivar.
 
-En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, el inbox se lee desde la base; la persistencia completa de acciones sobre conversaciones queda como siguiente bloque.
+En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear y archivar tambien actualizan las tablas del workspace.
 
 ## Respuestas rapidas
 
@@ -76,5 +76,6 @@ La preferencia queda guardada en el navegador sin sesion y en `user_preferences`
 
 - No hay OAuth real de Meta todavia.
 - Los datos del inbox autenticado todavia son seed demo en Supabase hasta conectar Meta real.
+- Las acciones se guardan en Supabase, pero todavia no se envian a Meta real sin OAuth/tokens.
 - Las respuestas rapidas y preferencias se guardan en el navegador si no hay sesion Supabase.
 - Supabase registra acciones y webhooks solo cuando se configuran las variables de entorno.
