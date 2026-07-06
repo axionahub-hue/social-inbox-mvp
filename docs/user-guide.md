@@ -24,6 +24,10 @@ La pantalla principal muestra una bandeja unificada con:
 - `Facebook`: muestra items de Facebook.
 - `Instagram`: muestra items de Instagram.
 - Busqueda: filtra por contacto, usuario, titulo o texto visible.
+- `Cuentas visibles`: permite mostrar u ocultar cuentas conectadas individuales.
+- `Mostrar todas`: vuelve a activar todas las cuentas ocultas.
+
+Los filtros se combinan. Por ejemplo, se puede ver solo Instagram y ademas ocultar una cuenta de Instagram especifica cuando haya varias conectadas.
 
 ## Acciones actuales
 
@@ -40,7 +44,7 @@ En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan 
 
 ## Cuentas conectadas
 
-La app ya muestra cuentas conectadas demo en el panel izquierdo. El proximo paso funcional es permitir que cada cuenta pueda mostrarse u ocultarse del inbox con toggles individuales.
+La app muestra cuentas conectadas demo en el panel izquierdo. Cada cuenta tiene un toggle para decidir si sus conversaciones aparecen en el inbox. La preferencia queda guardada en el navegador.
 
 ## Limitaciones actuales
 

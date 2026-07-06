@@ -25,6 +25,14 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 6. El agente responde desde la UI.
 7. `/api/inbox/action` ejecuta la accion en Meta y registra `action_log`.
 
+## Filtros de inbox
+
+- `InboxItem.accountId` es la referencia estable a la cuenta conectada.
+- `InboxItem.accountName` es solo texto de presentacion.
+- El inbox combina busqueda textual, filtro por red y filtro por cuentas visibles.
+- La preferencia de cuentas visibles se guarda en `localStorage` en modo demo.
+- La evolucion natural es persistir esa preferencia por usuario/workspace en Supabase cuando exista autenticacion.
+
 ## Reglas de infraestructura
 
 - Los tokens de Meta no deben exponerse al cliente.

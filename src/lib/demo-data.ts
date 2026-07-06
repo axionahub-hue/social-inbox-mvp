@@ -33,6 +33,7 @@ export const channels: ChannelConnection[] = [
 export const inboxItems: InboxItem[] = [
   {
     id: "item-1001",
+    accountId: "ig-crumbtrack",
     network: "instagram",
     source: "ad_comment",
     status: "new",
@@ -68,6 +69,7 @@ export const inboxItems: InboxItem[] = [
   },
   {
     id: "item-1002",
+    accountId: "fb-crumbtrack",
     network: "facebook",
     source: "messenger",
     status: "open",
@@ -107,6 +109,7 @@ export const inboxItems: InboxItem[] = [
   },
   {
     id: "item-1003",
+    accountId: "ig-crumbtrack",
     network: "instagram",
     source: "instagram_dm",
     status: "responded",
@@ -146,6 +149,7 @@ export const inboxItems: InboxItem[] = [
   },
   {
     id: "item-1004",
+    accountId: "fb-crumbtrack",
     network: "facebook",
     source: "post_comment",
     status: "new",

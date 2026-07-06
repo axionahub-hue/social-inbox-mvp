@@ -12,6 +12,7 @@ export type Sentiment = "hot" | "neutral" | "support";
 
 export type InboxItem = {
   id: string;
+  accountId: string;
   network: Network;
   source: InboxSource;
   status: InboxStatus;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Archive,
   Ban,
@@ -39,24 +39,85 @@ const networkIcon = {
   instagram: Camera,
 };
 
+const visibleAccountsStorageKey = "social-inbox.visible-account-ids";
+
 export default function Home() {
   const [items, setItems] = useState(inboxItems);
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
+  const [visibleAccountIds, setVisibleAccountIds] = useState<string[]>(() =>
+    channels.map((channel) => channel.id),
+  );
+  const hasLoadedVisibleAccounts = useRef(false);
   const [composer, setComposer] = useState("");
   const [notice, setNotice] = useState("Listo para conectar Meta cuando tengas permisos.");
 
+  const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
+  const hiddenAccountCount = channels.length - visibleAccountIds.length;
+
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      const matchesAccount = visibleAccountSet.has(item.accountId);
       const matchesNetwork = network === "all" || item.network === network;
       const text = `${item.contactName} ${item.contactHandle} ${item.title} ${item.preview}`;
-      return matchesNetwork && text.toLowerCase().includes(query.toLowerCase());
+      const matchesQuery = text.toLowerCase().includes(query.toLowerCase());
+      return matchesAccount && matchesNetwork && matchesQuery;
     });
-  }, [items, network, query]);
+  }, [items, network, query, visibleAccountSet]);
 
-  const selectedItem =
-    filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0] ?? items[0];
+  const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
+
+  useEffect(() => {
+    window.setTimeout(() => {
+      const stored = window.localStorage.getItem(visibleAccountsStorageKey);
+      if (!stored) {
+        hasLoadedVisibleAccounts.current = true;
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) {
+          hasLoadedVisibleAccounts.current = true;
+          return;
+        }
+
+        const validIds = parsed.filter((id) =>
+          channels.some((channel) => channel.id === id),
+        );
+
+        setVisibleAccountIds(validIds);
+      } catch {
+        window.localStorage.removeItem(visibleAccountsStorageKey);
+      } finally {
+        hasLoadedVisibleAccounts.current = true;
+      }
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedVisibleAccounts.current) return;
+
+    window.localStorage.setItem(
+      visibleAccountsStorageKey,
+      JSON.stringify(visibleAccountIds),
+    );
+  }, [visibleAccountIds]);
+
+  function toggleAccountVisibility(accountId: string) {
+    setVisibleAccountIds((current) => {
+      if (current.includes(accountId)) {
+        return current.filter((id) => id !== accountId);
+      }
+
+      return [...current, accountId];
+    });
+  }
+
+  function showAllAccounts() {
+    setVisibleAccountIds(channels.map((channel) => channel.id));
+  }
 
   async function runAction(action: InboxAction, message?: string) {
     if (!selectedItem) return;
@@ -170,6 +231,64 @@ export default function Home() {
             })}
           </div>
 
+          <div className="mt-6 rounded-md border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Cuentas visibles</p>
+                <p className="text-xs text-slate-500">
+                  {visibleAccountIds.length} de {channels.length} activas
+                </p>
+              </div>
+              {hiddenAccountCount > 0 ? (
+                <button
+                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700"
+                  onClick={showAllAccounts}
+                >
+                  Mostrar todas
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {channels.map((channel) => {
+                const Icon = networkIcon[channel.network];
+                const isVisible = visibleAccountSet.has(channel.id);
+                const accountItems = items.filter((item) => item.accountId === channel.id).length;
+
+                return (
+                  <button
+                    className="flex w-full items-center gap-3 rounded-md border border-slate-200 bg-slate-50 p-2 text-left"
+                    data-testid={`account-toggle-${channel.id}`}
+                    key={channel.id}
+                    onClick={() => toggleAccountVisibility(channel.id)}
+                    aria-pressed={isVisible}
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-white text-slate-700 ring-1 ring-slate-200">
+                      <Icon size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{channel.name}</span>
+                      <span className="block truncate text-xs text-slate-500">
+                        {accountItems} items
+                      </span>
+                    </span>
+                    <span
+                      className={`h-6 w-11 rounded-full p-0.5 transition ${
+                        isVisible ? "bg-slate-950" : "bg-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`block size-5 rounded-full bg-white transition ${
+                          isVisible ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <button className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
             <PanelLeft size={17} />
             Conectar cuenta Meta
@@ -205,14 +324,33 @@ export default function Home() {
           </div>
 
           <div className="max-h-[44vh] overflow-auto lg:max-h-[calc(100vh-141px)]">
-            {filteredItems.map((item) => (
-              <InboxRow
-                item={item}
-                key={item.id}
-                selected={item.id === selectedItem?.id}
-                onClick={() => setSelectedId(item.id)}
-              />
-            ))}
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item) => (
+                <InboxRow
+                  item={item}
+                  key={item.id}
+                  selected={item.id === selectedItem?.id}
+                  onClick={() => setSelectedId(item.id)}
+                />
+              ))
+            ) : (
+              <div className="p-6 text-center">
+                <p className="text-sm font-semibold text-slate-800">
+                  No hay conversaciones visibles
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Ajusta busqueda, red o cuentas visibles para volver a mostrar items.
+                </p>
+                {hiddenAccountCount > 0 ? (
+                  <button
+                    className="mt-4 h-9 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+                    onClick={showAllAccounts}
+                  >
+                    Mostrar todas las cuentas
+                  </button>
+                ) : null}
+              </div>
+            )}
           </div>
         </section>
 

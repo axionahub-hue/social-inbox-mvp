@@ -1,5 +1,9 @@
 # Plan operativo: filtros por cuentas conectadas
 
+## Estado
+
+Completado en el MVP demo. La persistencia actual es local en `localStorage`; la persistencia por usuario/workspace en Supabase queda preparada como siguiente evolucion.
+
 ## Objetivo
 
 Permitir que el usuario elija que cuentas conectadas quiere mostrar u ocultar en el inbox, ademas del filtro general por red social. El filtro debe servir igual para modo demo y para datos reales de Supabase/Meta.
@@ -10,38 +14,33 @@ El inbox no debe filtrar solamente por `facebook` o `instagram`. La unidad real 
 
 ## Checklist operativo
 
-- [ ] Confirmar el modelo actual leyendo `src/lib/types.ts`, `src/lib/demo-data.ts` y `src/app/page.tsx`.
-- [ ] Verificar si `InboxItem` tiene un identificador estable de cuenta conectada.
-- [ ] Si falta, agregar `accountId` a `InboxItem` y poblarlo en `src/lib/demo-data.ts`.
-- [ ] Mantener `network` como filtro rapido, pero no usarlo como unica segmentacion.
-- [ ] Agregar estado UI para cuentas visibles, por ejemplo `visibleAccountIds`.
-- [ ] Renderizar una lista de cuentas conectadas con toggle mostrar/ocultar.
-- [ ] Permitir combinacion de filtros: busqueda textual + red + cuentas visibles.
-- [ ] Evitar que el usuario deje el inbox en estado ambiguo: si no hay cuentas visibles, mostrar estado vacio claro y boton para mostrar todas.
-- [ ] Persistir preferencia localmente en `localStorage` para modo demo.
-- [ ] Preparar persistencia futura en Supabase por usuario/workspace, sin bloquear el MVP.
-- [ ] Verificar desktop y mobile; la lista de cuentas no debe romper el ancho de pantalla.
-- [ ] Ejecutar `npm run lint` y `npm run build`.
-- [ ] Buscar referencias inconsistentes con `rg "accountId|visibleAccount|connected" src docs README.md`.
-- [ ] Commit y push a `main` si el cambio esta validado.
+- [x] Confirmar el modelo actual leyendo `src/lib/types.ts`, `src/lib/demo-data.ts` y `src/app/page.tsx`.
+- [x] Verificar si `InboxItem` tiene un identificador estable de cuenta conectada.
+- [x] Si falta, agregar `accountId` a `InboxItem` y poblarlo en `src/lib/demo-data.ts`.
+- [x] Mantener `network` como filtro rapido, pero no usarlo como unica segmentacion.
+- [x] Agregar estado UI para cuentas visibles, por ejemplo `visibleAccountIds`.
+- [x] Renderizar una lista de cuentas conectadas con toggle mostrar/ocultar.
+- [x] Permitir combinacion de filtros: busqueda textual + red + cuentas visibles.
+- [x] Evitar que el usuario deje el inbox en estado ambiguo: si no hay cuentas visibles, mostrar estado vacio claro y boton para mostrar todas.
+- [x] Persistir preferencia localmente en `localStorage` para modo demo.
+- [x] Preparar persistencia futura en Supabase por usuario/workspace, sin bloquear el MVP.
+- [x] Verificar desktop y mobile; la lista de cuentas no debe romper el ancho de pantalla.
+- [x] Ejecutar `npm run lint` y `npm run build`.
+- [x] Buscar referencias inconsistentes con `rg "accountId|visibleAccount|connected" src docs README.md`.
+- [x] Commit y push a `main` si el cambio esta validado.
 
-## Diseño de UI propuesto
+## Diseno de UI aplicado
 
-- En el panel izquierdo, debajo de las tarjetas de cuentas conectadas, agregar un bloque `Cuentas visibles`.
-- Cada cuenta debe tener:
-  - icono de red;
-  - nombre de cuenta;
-  - handle;
-  - toggle mostrar/ocultar;
-  - contador de items visibles si esta disponible.
-- Mantener los botones `Todo`, `Facebook`, `Instagram` como filtro superior rapido.
-- Agregar accion secundaria `Mostrar todas` cuando una o mas cuentas esten ocultas.
+- En el panel izquierdo, debajo de las tarjetas de cuentas conectadas, hay un bloque `Cuentas visibles`.
+- Cada cuenta muestra icono de red, nombre, contador de items y toggle mostrar/ocultar.
+- Los filtros `Todo`, `Facebook`, `Instagram` se mantienen como filtro rapido.
+- Si no hay conversaciones visibles, la app muestra estado vacio claro y boton para mostrar todas las cuentas.
 
-## Contrato tecnico esperado
+## Contrato tecnico aplicado
 
-`ChannelConnection` debe seguir representando cada cuenta conectada.
+`ChannelConnection` sigue representando cada cuenta conectada.
 
-`InboxItem` debe apuntar a una cuenta concreta:
+`InboxItem` apunta a una cuenta concreta:
 
 ```ts
 type InboxItem = {
@@ -52,7 +51,7 @@ type InboxItem = {
 };
 ```
 
-El filtro final debe respetar esta logica:
+El filtro final respeta esta logica:
 
 ```ts
 const matchesAccount = visibleAccountIds.has(item.accountId);
