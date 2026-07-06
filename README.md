@@ -11,6 +11,12 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
 - Esquema inicial de Supabase en `supabase/schema.sql`.
 
+## Documentacion operativa
+
+- `docs/architecture.md`: arquitectura y reglas de infraestructura.
+- `docs/account-filter-plan.md`: plan para filtrar por cuentas conectadas visibles/ocultas.
+- `docs/work-directive.md`: pautas para no trabajar de memoria.
+
 ## Ejecutar local
 
 ```bash
@@ -69,9 +75,10 @@ Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. 
 
 ## Proximos pasos tecnicos
 
-1. Implementar OAuth Meta real.
-2. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
-3. Agregar autenticacion interna.
-4. Activar RLS por `workspace_id`.
-5. Crear pantalla de configuracion de cuentas conectadas.
-6. Agregar tests de acciones Meta y parsing de webhooks.
+1. Implementar filtros por cuentas conectadas visibles/ocultas.
+2. Implementar OAuth Meta real.
+3. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
+4. Agregar autenticacion interna.
+5. Activar RLS por `workspace_id`.
+6. Crear pantalla de configuracion de cuentas conectadas.
+7. Agregar tests de acciones Meta y parsing de webhooks.
