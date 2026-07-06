@@ -1,0 +1,77 @@
+# Social Inbox MVP
+
+App web responsive para administrar en una bandeja unica mensajes, DMs y comentarios de Facebook e Instagram.
+
+## Estado
+
+- Next.js App Router con TypeScript.
+- UI operativa en modo demo.
+- Contratos de dominio para inbox, comentarios, mensajes, cuentas y respuestas rapidas.
+- Endpoint de acciones preparado para responder, like/unlike, ocultar/mostrar y bloquear.
+- Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
+- Esquema inicial de Supabase en `supabase/schema.sql`.
+
+## Ejecutar local
+
+```bash
+npm install
+npm run dev
+```
+
+Abrir `http://localhost:3000`.
+
+## Variables de entorno
+
+Copiar `.env.example` a `.env.local` y completar cuando existan credenciales:
+
+```bash
+cp .env.example .env.local
+```
+
+Sin credenciales, la app corre en modo demo. Con Supabase configurado, los endpoints empiezan a registrar eventos y acciones.
+
+## Supabase
+
+1. Crear proyecto Supabase.
+2. Ejecutar `supabase/schema.sql` en SQL Editor.
+3. Configurar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
+4. En produccion, cifrar tokens de Meta antes de guardarlos en `connected_accounts.access_token_encrypted`.
+
+## Meta
+
+La app esta preparada para conectar:
+
+- Facebook Page Messenger.
+- Instagram Messaging.
+- Comentarios organicos.
+- Comentarios de ads.
+
+Permisos esperados para la primera integracion real:
+
+- `pages_show_list`
+- `pages_read_engagement`
+- `pages_manage_engagement`
+- `pages_messaging`
+- `pages_manage_metadata`
+- `instagram_basic`
+- `instagram_manage_comments`
+- `instagram_manage_messages`
+
+Webhook callback:
+
+```text
+https://TU-DOMINIO/api/meta/webhook
+```
+
+## Vercel
+
+Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. Para uso comercial, revisar terminos y limites del plan antes de pasar a produccion.
+
+## Proximos pasos tecnicos
+
+1. Implementar OAuth Meta real.
+2. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
+3. Agregar autenticacion interna.
+4. Activar RLS por `workspace_id`.
+5. Crear pantalla de configuracion de cuentas conectadas.
+6. Agregar tests de acciones Meta y parsing de webhooks.
