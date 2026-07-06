@@ -50,3 +50,10 @@
 - Areas tocadas: `src/app/page.tsx`, `supabase/schema.sql`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, revision desktop en `http://localhost:3100` sin credenciales Supabase.
 - Pendiente: crear proyecto Supabase real, aplicar esquema, configurar Auth email OTP y probar flujo autenticado con credenciales reales.
+
+### Verificacion operativa de Supabase
+
+- Resumen: se agrego `npm run check:supabase` para validar `.env.local`, variables publicas/server y alcance REST/Auth del proyecto Supabase antes de probar login real.
+- Areas tocadas: `scripts/check-supabase-config.mjs`, `package.json`, `README.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run check:supabase` confirma que faltan credenciales locales, `npm run lint`, `npm run build`, `git diff --check`.
+- Pendiente: cargar credenciales Supabase reales, aplicar `supabase/schema.sql` y probar email OTP.

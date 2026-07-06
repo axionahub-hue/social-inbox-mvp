@@ -9,6 +9,12 @@ npm run dev
 
 Abrir `http://localhost:3100`.
 
+Si ya se cargaron credenciales Supabase en `.env.local`, se puede validar la conexion antes de abrir la app:
+
+```bash
+npm run check:supabase
+```
+
 ## Inbox
 
 La pantalla principal muestra una bandeja unificada con:

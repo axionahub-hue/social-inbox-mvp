@@ -22,6 +22,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - `docs/user-guide.md`: guia de uso de la app.
 - `docs/programming-log.md`: bitacora de programacion y verificaciones.
 - `docs/account-filter-plan.md`: plan para filtrar por cuentas conectadas visibles/ocultas.
+- `docs/supabase-setup.md`: guia operativa para conectar Supabase real.
 - `docs/work-directive.md`: pautas para no trabajar de memoria.
 - `docs/documentation-directive.md`: directiva para mantener documentacion viva.
 
@@ -45,6 +46,12 @@ cp .env.example .env.local
 Sin credenciales, la app corre en modo demo. Con Supabase configurado, los endpoints empiezan a registrar eventos y acciones.
 Con Supabase configurado, el panel `Sesion` permite enviar un enlace de acceso por email y guardar respuestas rapidas/preferencias en la cuenta.
 
+Validar configuracion Supabase:
+
+```bash
+npm run check:supabase
+```
+
 ## Supabase
 
 1. Crear proyecto Supabase.
@@ -52,6 +59,8 @@ Con Supabase configurado, el panel `Sesion` permite enviar un enlace de acceso p
 3. Configurar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
 4. En Supabase Auth, configurar la URL del sitio local como `http://localhost:3100` y luego la URL de Vercel cuando exista deploy.
 5. En produccion, cifrar tokens de Meta antes de guardarlos en `connected_accounts.access_token_encrypted`.
+
+Detalle operativo: `docs/supabase-setup.md`.
 
 ## Meta
 

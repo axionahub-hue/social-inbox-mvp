@@ -11,6 +11,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `src/lib/demo-data.ts`: datos locales para validar experiencia sin permisos Meta.
 - `src/lib/meta.ts`: cliente de acciones y verificacion de webhooks.
 - `src/lib/supabase.ts`: clientes Supabase browser/server.
+- `scripts/check-supabase-config.mjs`: verificacion local de variables y alcance REST/Auth de Supabase.
 - `src/app/api/inbox/action/route.ts`: entrada unica para acciones de moderacion/respuesta.
 - `src/app/api/meta/webhook/route.ts`: callback para webhooks Meta.
 - `supabase/schema.sql`: modelo relacional inicial.
@@ -59,3 +60,4 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los webhooks se validan con `META_WEBHOOK_VERIFY_TOKEN` y `META_APP_SECRET`.
 - Supabase debe usar RLS antes de tener mas de un usuario real.
 - El modo demo no debe mezclarse con datos reales: se identifica con `provider_mode = demo`.
+- La conexion real de Supabase debe validarse con `npm run check:supabase` antes de probar login o persistencia autenticada.
