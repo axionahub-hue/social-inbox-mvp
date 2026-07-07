@@ -6,6 +6,8 @@ import {
   AtSign,
   Ban,
   Camera,
+  ChevronDown,
+  ChevronLeft,
   Eye,
   EyeOff,
   ExternalLink,
@@ -178,9 +180,10 @@ type SupabaseInboxData = {
   items: InboxItem[];
 };
 
-type InboxView = "active" | "archived";
+type InboxView = "active" | "responded" | "archived";
 type BulkInboxAction = "mark_read" | "mark_unread" | "archive" | "unarchive";
 type ReactionKind = "like" | "love" | "smile";
+type MobileInboxPanel = "list" | "detail";
 type RunActionOptions = {
   replyMode?: ReplyMode;
   recipientExternalId?: string;
@@ -213,6 +216,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
   const [inboxView, setInboxView] = useState<InboxView>("active");
+  const [mobileInboxPanel, setMobileInboxPanel] = useState<MobileInboxPanel>("list");
+  const [isMobileAccountsOpen, setIsMobileAccountsOpen] = useState(false);
   const [visibleAccountIds, setVisibleAccountIds] = useState<string[]>(() =>
     channels.map((channel) => channel.id),
   );
@@ -248,8 +253,9 @@ export default function Home() {
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
   const hiddenAccountCount = channelList.length - visibleAccountIds.length;
-  const archivedCount = items.filter((item) => item.status === "archived").length;
-  const activeCount = items.length - archivedCount;
+  const inboxUnreadCount = items.filter(
+    (item) => item.status !== "archived" && item.status !== "responded" && item.unreadCount > 0,
+  ).length;
   const realMetaChannels = channelList.filter((channel) => channel.status === "connected");
   const reviewMetaChannels = channelList.filter((channel) => channel.status === "needs_review");
   const demoMetaChannels = channelList.filter((channel) => channel.status === "demo");
@@ -272,15 +278,14 @@ export default function Home() {
     return items.filter((item) => {
       const matchesAccount = visibleAccountSet.has(item.accountId);
       const matchesNetwork = network === "all" || item.network === network;
-      const matchesView =
-        inboxView === "archived" ? item.status === "archived" : item.status !== "archived";
+      const matchesView = matchesInboxView(item, inboxView);
       const text = `${item.contactName} ${item.contactHandle} ${item.title} ${item.preview}`;
       const matchesQuery = text.toLowerCase().includes(query.toLowerCase());
       return matchesAccount && matchesNetwork && matchesQuery && matchesView;
     });
   }, [inboxView, items, network, query, visibleAccountSet]);
 
-  const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
+  const selectedItem = items.find((item) => item.id === selectedId) ?? filteredItems[0];
   const selectedReaction = selectedItem
     ? itemReactions[selectedItem.id] ?? (selectedItem.liked ? "like" : null)
     : null;
@@ -1328,7 +1333,9 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
       <div className="flex min-h-screen flex-col lg:h-screen lg:grid lg:grid-cols-[340px_minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
-        <aside className="flex min-h-[560px] flex-col border-b border-slate-200 bg-[#202020] text-white lg:h-screen lg:border-b-0 lg:border-r lg:border-slate-800">
+        <aside
+          className={`${mobileInboxPanel === "detail" ? "hidden" : "flex"} min-h-0 flex-col border-b border-slate-200 bg-[#202020] text-white lg:flex lg:h-screen lg:border-b-0 lg:border-r lg:border-slate-800`}
+        >
           <div className="shrink-0 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
             <div>
@@ -1337,13 +1344,25 @@ export default function Home() {
               </p>
                 <h1 className="mt-1 text-lg font-semibold tracking-tight">Cuentas</h1>
             </div>
-            <button
+            <div className="flex shrink-0 items-center gap-1">
+              <button
                 className="grid size-8 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
                 onClick={toggleAllAccountsVisibility}
                 title={visibleAccountIds.length === channelList.length ? "Ocultar todas" : "Mostrar todas"}
-            >
+              >
                 {visibleAccountIds.length === channelList.length ? <Eye size={17} /> : <EyeOff size={17} />}
-            </button>
+              </button>
+              <button
+                className="grid size-8 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10 lg:hidden"
+                onClick={() => setIsMobileAccountsOpen((current) => !current)}
+                title={isMobileAccountsOpen ? "Contraer cuentas" : "Expandir cuentas"}
+              >
+                <ChevronDown
+                  className={`transition ${isMobileAccountsOpen ? "rotate-180" : ""}`}
+                  size={17}
+                />
+              </button>
+            </div>
           </div>
 
             <div className="mt-3 flex items-center justify-between gap-2">
@@ -1363,7 +1382,10 @@ export default function Home() {
                 <Settings size={16} />
               </button>
             </div>
+          </div>
 
+          <div className={`${isMobileAccountsOpen ? "flex" : "hidden"} max-h-[58vh] min-h-0 flex-col lg:flex lg:max-h-none lg:flex-1`}>
+            <div className="shrink-0 px-3 pb-3">
             <div className="mt-3 rounded-md border border-white/10 bg-white/[0.04] p-2.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Sesion</p>
             {supabase ? (
@@ -1614,9 +1636,12 @@ export default function Home() {
               </p>
             </div>
           ) : null}
+          </div>
         </aside>
 
-        <section className="flex min-h-[560px] min-w-0 flex-col border-b border-slate-200 bg-white lg:h-screen lg:border-b-0 lg:border-r">
+        <section
+          className={`${mobileInboxPanel === "detail" ? "hidden" : "flex"} min-h-[calc(100vh-96px)] min-w-0 flex-col border-b border-slate-200 bg-white lg:flex lg:h-screen lg:border-b-0 lg:border-r`}
+        >
           <div className="shrink-0 border-b border-slate-200 bg-white/95 p-4 backdrop-blur">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
@@ -1642,19 +1667,23 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-2">
               {([
-                ["active", `Bandeja (${activeCount})`],
-                ["archived", `Archivados (${archivedCount})`],
+                ["active", inboxUnreadCount > 0 ? `Bandeja (${inboxUnreadCount})` : "Bandeja"],
+                ["responded", "Respondidos"],
+                ["archived", "Archivados"],
               ] as const).map(([value, label]) => (
                 <button
-                  className={`h-9 rounded-md border text-sm font-medium ${
+                  className={`h-9 rounded-md border text-xs font-medium sm:text-sm ${
                     inboxView === value
                       ? "border-slate-950 bg-slate-950 text-white"
                       : "border-slate-200 bg-white text-slate-700"
                   }`}
                   key={value}
-                  onClick={() => setInboxView(value)}
+                  onClick={() => {
+                    setInboxView(value);
+                    setMobileInboxPanel("list");
+                  }}
                 >
                   {label}
                 </button>
@@ -1721,7 +1750,11 @@ export default function Home() {
                   key={item.id}
                   selected={item.id === selectedItem?.id}
                   checked={selectedItemSet.has(item.id)}
-                  onClick={() => setSelectedId(item.id)}
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    setMobileInboxPanel("detail");
+                    setIsMobileAccountsOpen(false);
+                  }}
                   onCheckedChange={(checked) => toggleSelectedItem(item.id, checked)}
                 />
               ))
@@ -1733,6 +1766,8 @@ export default function Home() {
                 <p className="mt-2 text-sm leading-6 text-slate-500">
                   {inboxView === "archived"
                     ? "No hay conversaciones archivadas con estos filtros."
+                    : inboxView === "responded"
+                      ? "No hay conversaciones respondidas con estos filtros."
                     : "Ajusta busqueda, red o cuentas visibles para volver a mostrar items."}
                 </p>
                 {hiddenAccountCount > 0 ? (
@@ -1748,9 +1783,20 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="flex min-h-[620px] min-w-0 flex-col bg-[#fbfcfd] lg:h-screen lg:overflow-hidden">
+        <section
+          className={`${mobileInboxPanel === "detail" ? "flex" : "hidden"} min-h-screen min-w-0 flex-col bg-[#fbfcfd] lg:flex lg:h-screen lg:min-h-[620px] lg:overflow-hidden`}
+        >
           {selectedItem ? (
             <>
+              <div className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+                <button
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
+                  onClick={() => setMobileInboxPanel("list")}
+                >
+                  <ChevronLeft size={17} />
+                  Volver a bandeja
+                </button>
+              </div>
               <ConversationHeader
                 item={selectedItem}
                 onBlockToggle={() => void runAction(selectedItem.blocked ? "unblock" : "block")}
@@ -2408,6 +2454,18 @@ function resolveRecipientExternalId(item: InboxItem) {
   return undefined;
 }
 
+function matchesInboxView(item: InboxItem, inboxView: InboxView) {
+  if (inboxView === "archived") {
+    return item.status === "archived";
+  }
+
+  if (inboxView === "responded") {
+    return item.status === "responded";
+  }
+
+  return item.status !== "archived" && item.status !== "responded";
+}
+
 function createLocalId() {
   if (crypto.randomUUID) {
     return crypto.randomUUID();
@@ -2549,7 +2607,9 @@ function applyInboxActionToItem(
           : action === "mark_unread"
             ? "new"
             : action === "mark_read"
-              ? "open"
+              ? item.status === "responded"
+                ? "responded"
+                : "open"
               : item.status,
     unreadCount:
       action === "archive" || action === "unarchive" || action === "mark_read"

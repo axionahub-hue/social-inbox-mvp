@@ -40,6 +40,9 @@ Si Supabase esta configurado, se puede ingresar un email y pedir un enlace de ac
 - `Mostrar todas`: vuelve a activar todas las cuentas ocultas.
 - Cada fila del inbox muestra plataforma, cuenta conectada y tipo de origen: comentario organico, comentario de anuncio, Messenger o Instagram DM.
 - Los checkboxes permiten seleccionar conversaciones individuales o todas las visibles.
+- `Bandeja`: muestra conversaciones pendientes/no respondidas; solo aqui se muestra cantidad, basada en no leidos.
+- `Respondidos`: muestra conversaciones ya contestadas.
+- `Archivados`: muestra conversaciones archivadas.
 
 Los filtros se combinan. Por ejemplo, se puede ver solo Instagram y ademas ocultar una cuenta de Instagram especifica cuando haya varias conectadas.
 
@@ -66,7 +69,13 @@ Cuando el item es comentario, el selector del composer muestra:
 - `Responder sobre comentario`: prepara respuesta publica en el hilo del comentario y deja listo el dato para etiquetar/notificar al autor cuando el cableado Meta lo permita.
 - `Responder por mensaje interno`: prepara respuesta privada por Messenger en Facebook o DM en Instagram.
 
-Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.
+Al responder una conversacion, sale de `Bandeja` y pasa a `Respondidos`. Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.
+
+## Uso en celular
+
+En mobile, el bloque de cuentas/configuracion aparece comprimido arriba. Se puede expandir con el icono de flecha cuando hace falta cambiar cuentas, conectar Meta o revisar configuracion.
+
+La pantalla principal del celular muestra la bandeja. Al tocar una conversacion, la app abre la vista de respuesta a pantalla completa y muestra `Volver a bandeja` para regresar a la lista.
 
 ## Respuestas rapidas
 

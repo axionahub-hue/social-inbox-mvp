@@ -79,7 +79,7 @@ async function persistInboxAction({
 }) {
   const existing = await supabase
     .from("inbox_items")
-    .select("id,contact_id")
+    .select("id,contact_id,status")
     .eq("id", itemId)
     .maybeSingle();
 
@@ -153,7 +153,12 @@ async function persistInboxAction({
     const { error } = await supabase
       .from("inbox_items")
       .update({
-        status: action === "mark_unread" ? "new" : "open",
+        status:
+          action === "mark_unread"
+            ? "new"
+            : existing.data.status === "responded"
+              ? "responded"
+              : "open",
         unread_count: action === "mark_unread" ? 1 : 0,
         updated_at: updatedAt,
       })

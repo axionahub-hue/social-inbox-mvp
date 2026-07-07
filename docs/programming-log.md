@@ -253,3 +253,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`.
 - Pendiente: cablear respuesta publica con etiquetado real del autor y respuesta privada Messenger/Instagram DM cuando esten listos los permisos Meta correspondientes.
+
+### Mobile inbox y vista Respondidos
+
+- Resumen: se ajusto mobile para comprimir cuentas/configuracion arriba, expandible bajo demanda; la lista de conversaciones queda como pantalla principal y al tocar un item se abre el panel de respuesta con boton `Volver a bandeja`. Se agrego vista `Respondidos`, y `Bandeja` ahora excluye respondidos/archivados y solo muestra contador de no leidos.
+- Areas tocadas: `src/app/page.tsx`, `src/app/api/inbox/action/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke mobile lista/detalle/volver sin overflow, smoke desktop tres columnas con `Bandeja`, `Respondidos` y `Archivados`.
+- Pendiente: probar con datos reales despues de desplegar Webhooks Meta para confirmar transicion automatica a `Respondidos` con acciones de respuesta reales.
