@@ -35,11 +35,18 @@ Payload:
   "itemId": "item-1001",
   "externalId": "provider-comment-or-post-id",
   "action": "reply",
-  "message": "Texto de respuesta"
+  "message": "Texto de respuesta",
+  "replyMode": "public_comment",
+  "recipientExternalId": "provider-user-id"
 }
 ```
 
 `itemId` es el UUID interno de `inbox_items`. `externalId` debe ser el ID real del comentario/post/mensaje del proveedor cuando exista; la UI usa `provider_comment_id` y cae a `provider_post_id` o al ID interno solo como fallback demo.
+
+Para `reply` sobre comentarios, `replyMode` define el canal:
+
+- `public_comment`: responde sobre el comentario original. La integracion Meta debe usar el edge de respuesta publica del comentario y conservar `recipientExternalId` para etiquetado/notificacion del autor cuando el proveedor lo permita.
+- `private_message`: responde por canal privado. En Facebook debe cablearse a Messenger/private replies; en Instagram debe cablearse a DM/private replies segun permisos disponibles.
 
 Acciones soportadas:
 

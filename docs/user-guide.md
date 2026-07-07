@@ -48,6 +48,7 @@ Los filtros se combinan. Por ejemplo, se puede ver solo Instagram y ademas ocult
 En una conversacion seleccionada se puede:
 
 - responder;
+- en comentarios, elegir si la respuesta sale sobre el comentario o por mensaje interno;
 - usar una respuesta rapida;
 - crear, editar y eliminar respuestas rapidas;
 - abrir las opciones de la publicacion/contexto y, cuando haya URL disponible, abrir la publicacion original en otra pestana;
@@ -59,6 +60,11 @@ En una conversacion seleccionada se puede:
 - marcar leido/no leido desde la barra de seleccion.
 
 En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear/desbloquear, archivar, desarchivar y marcar leido/no leido tambien actualizan las tablas del workspace. Las reacciones visuales multiples usan por ahora la persistencia `like/unlike`; para enviar reacciones diferenciadas a Meta hace falta ampliar la accion server-side.
+
+Cuando el item es comentario, el selector del composer muestra:
+
+- `Responder sobre comentario`: prepara respuesta publica en el hilo del comentario y deja listo el dato para etiquetar/notificar al autor cuando el cableado Meta lo permita.
+- `Responder por mensaje interno`: prepara respuesta privada por Messenger en Facebook o DM en Instagram.
 
 Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.
 

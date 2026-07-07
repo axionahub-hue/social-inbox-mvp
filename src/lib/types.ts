@@ -52,6 +52,8 @@ export type QuickReply = {
   tags: string[];
 };
 
+export type ReplyMode = "public_comment" | "private_message";
+
 export type ChannelConnection = {
   id: string;
   network: Network;

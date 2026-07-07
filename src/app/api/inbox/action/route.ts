@@ -6,6 +6,8 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 const actionSchema = z.object({
   itemId: z.string().min(1),
   externalId: z.string().default("demo-external-id"),
+  replyMode: z.enum(["public_comment", "private_message"]).optional(),
+  recipientExternalId: z.string().optional(),
   action: z.enum([
     "reply",
     "like",
@@ -55,6 +57,8 @@ export async function POST(request: Request) {
       provider_payload: {
         ...result,
         persisted,
+        replyMode: parsed.data.replyMode ?? null,
+        recipientExternalId: parsed.data.recipientExternalId ?? null,
       },
     });
   }

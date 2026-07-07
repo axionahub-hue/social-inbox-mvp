@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Archive,
+  AtSign,
   Ban,
   Camera,
   Eye,
@@ -33,6 +34,7 @@ import type {
   InboxSource,
   Network,
   QuickReply,
+  ReplyMode,
 } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -179,6 +181,10 @@ type SupabaseInboxData = {
 type InboxView = "active" | "archived";
 type BulkInboxAction = "mark_read" | "mark_unread" | "archive" | "unarchive";
 type ReactionKind = "like" | "love" | "smile";
+type RunActionOptions = {
+  replyMode?: ReplyMode;
+  recipientExternalId?: string;
+};
 
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
@@ -202,6 +208,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [itemReactions, setItemReactions] = useState<Record<string, ReactionKind>>({});
+  const [replyModesByItemId, setReplyModesByItemId] = useState<Record<string, ReplyMode>>({});
   const [isBulkActionRunning, setIsBulkActionRunning] = useState(false);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
@@ -279,6 +286,13 @@ export default function Home() {
     : null;
   const selectedOriginalPostUrl = selectedItem ? resolveOriginalPostUrl(selectedItem) : null;
   const selectedPostContext = selectedItem ? resolvePostContextText(selectedItem) : "";
+  const selectedReplyMode = selectedItem
+    ? replyModesByItemId[selectedItem.id] ?? getDefaultReplyMode(selectedItem)
+    : "private_message";
+  const selectedRecipientExternalId = selectedItem
+    ? resolveRecipientExternalId(selectedItem)
+    : undefined;
+  const shouldShowReplyModeSelector = selectedItem ? isCommentItem(selectedItem) : false;
   const selectedItemSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const filteredItemIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
   const selectedVisibleCount = filteredItemIds.filter((id) => selectedItemSet.has(id)).length;
@@ -1164,7 +1178,7 @@ export default function Home() {
     };
   }, [activeWorkspaceId, canAutoSyncFacebookComments, currentUser, syncFacebookComments]);
 
-  async function runAction(action: InboxAction, message?: string) {
+  async function runAction(action: InboxAction, message?: string, options?: RunActionOptions) {
     if (!selectedItem) return;
 
     const response = await fetch("/api/inbox/action", {
@@ -1176,6 +1190,8 @@ export default function Home() {
           selectedItem.providerCommentId ?? selectedItem.providerPostId ?? selectedItem.id,
         action,
         message,
+        replyMode: options?.replyMode,
+        recipientExternalId: options?.recipientExternalId,
       }),
     });
 
@@ -1187,6 +1203,15 @@ export default function Home() {
         item.id === selectedItem.id ? applyInboxActionToItem(item, action, message) : item,
       ),
     );
+  }
+
+  function setReplyModeForSelectedItem(replyMode: ReplyMode) {
+    if (!selectedItem) return;
+
+    setReplyModesByItemId((current) => ({
+      ...current,
+      [selectedItem.id]: replyMode,
+    }));
   }
 
   function openOriginalPost() {
@@ -1293,7 +1318,10 @@ export default function Home() {
   function sendReply() {
     const message = composer.trim();
     if (!message) return;
-    void runAction("reply", message);
+    void runAction("reply", message, {
+      replyMode: selectedReplyMode,
+      recipientExternalId: selectedRecipientExternalId,
+    });
     setComposer("");
   }
 
@@ -1974,6 +2002,14 @@ export default function Home() {
                   </div>
                   ) : null}
 
+                  {shouldShowReplyModeSelector ? (
+                    <ReplyModeSelector
+                      network={selectedItem.network}
+                      replyMode={selectedReplyMode}
+                      onChange={setReplyModeForSelectedItem}
+                    />
+                  ) : null}
+
                   <div className="flex items-end gap-2">
                     <textarea
                       value={composer}
@@ -2215,6 +2251,81 @@ function SmallActionButton({
   );
 }
 
+function ReplyModeSelector({
+  network,
+  replyMode,
+  onChange,
+}: {
+  network: Network;
+  replyMode: ReplyMode;
+  onChange: (replyMode: ReplyMode) => void;
+}) {
+  const privateLabel = network === "instagram" ? "Responder por DM" : "Responder por mensaje interno";
+  const privateDescription =
+    network === "instagram"
+      ? "Envia la respuesta como DM cuando el permiso este conectado."
+      : "Envia la respuesta por Messenger cuando el permiso este conectado.";
+
+  return (
+    <div className="mb-3 grid gap-2 sm:grid-cols-2">
+      <ReplyModeButton
+        active={replyMode === "public_comment"}
+        description="Etiqueta al usuario y responde sobre el comentario."
+        icon={<AtSign size={18} />}
+        label="Responder sobre comentario"
+        onClick={() => onChange("public_comment")}
+      />
+      <ReplyModeButton
+        active={replyMode === "private_message"}
+        description={privateDescription}
+        icon={<MessageCircle size={18} />}
+        label={privateLabel}
+        onClick={() => onChange("private_message")}
+      />
+    </div>
+  );
+}
+
+function ReplyModeButton({
+  active,
+  description,
+  icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  description: string;
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`flex min-h-16 items-center gap-3 rounded-md border px-3 py-2 text-left transition ${
+        active
+          ? "border-slate-950 bg-slate-950 text-white"
+          : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span
+        className={`grid size-9 shrink-0 place-items-center rounded-md ${
+          active ? "bg-white/10 text-white" : "bg-slate-100 text-slate-700"
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold leading-5">{label}</span>
+        <span className={`mt-0.5 block text-xs leading-4 ${active ? "text-slate-300" : "text-slate-500"}`}>
+          {description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function ActionButton({
   active,
   title,
@@ -2277,6 +2388,24 @@ function resolvePostContextText(item: InboxItem) {
   }
 
   return title;
+}
+
+function isCommentItem(item: InboxItem) {
+  return item.source === "post_comment" || item.source === "ad_comment";
+}
+
+function getDefaultReplyMode(item: InboxItem): ReplyMode {
+  return isCommentItem(item) ? "public_comment" : "private_message";
+}
+
+function resolveRecipientExternalId(item: InboxItem) {
+  const [prefix, value] = item.contactHandle.split(":");
+
+  if ((prefix === "facebook" || prefix === "instagram") && value) {
+    return value;
+  }
+
+  return undefined;
 }
 
 function createLocalId() {

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { InboxAction } from "@/lib/types";
+import type { InboxAction, ReplyMode } from "@/lib/types";
 
 const graphVersion = process.env.META_GRAPH_VERSION ?? "v25.0";
 const graphBaseUrl = `https://graph.facebook.com/${graphVersion}`;
@@ -34,6 +34,8 @@ export type MetaActionInput = {
   externalId: string;
   accessToken?: string;
   message?: string;
+  replyMode?: ReplyMode;
+  recipientExternalId?: string;
 };
 
 type MetaTokenResponse = {
@@ -554,10 +556,15 @@ export async function executeMetaAction(input: MetaActionInput) {
   }
 
   if (!input.accessToken) {
+    const replyModeLabel =
+      input.action === "reply" && input.replyMode
+        ? ` (${resolveReplyModeLabel(input.replyMode)})`
+        : "";
+
     return {
       mode: "demo",
       ok: true,
-      message: `Accion ${input.action} registrada en modo demo.`,
+      message: `Accion ${input.action}${replyModeLabel} registrada en modo demo.`,
     };
   }
 
@@ -728,7 +735,9 @@ function createMetaTokenEncryptionKey() {
 function resolveActionEndpoint(input: MetaActionInput) {
   switch (input.action) {
     case "reply":
-      return `${input.externalId}/comments`;
+      return input.replyMode === "private_message"
+        ? `${input.externalId}/private_replies`
+        : `${input.externalId}/comments`;
     case "like":
       return `${input.externalId}/likes`;
     case "unlike":
@@ -773,4 +782,8 @@ function resolveInternalActionMessage(action: InboxAction) {
     default:
       return "Accion interna registrada.";
   }
+}
+
+function resolveReplyModeLabel(replyMode: ReplyMode) {
+  return replyMode === "private_message" ? "mensaje interno" : "comentario publico";
 }

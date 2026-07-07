@@ -246,3 +246,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`; enriquecimiento puntual en Supabase dejo posts recientes de Academia Expertos de la Musica en 461 y 1113 caracteres.
 - Pendiente: persistir `permalink_url` exacto en una columna dedicada para no derivar URL desde `provider_post_id`.
+
+### Selector de canal de respuesta para comentarios
+
+- Resumen: se agrego selector visible en el composer de comentarios para elegir `Responder sobre comentario` o `Responder por mensaje interno`; la decision viaja al backend como `replyMode`, junto con `recipientExternalId` cuando el handle permite inferirlo.
+- Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`.
+- Pendiente: cablear respuesta publica con etiquetado real del autor y respuesta privada Messenger/Instagram DM cuando esten listos los permisos Meta correspondientes.
