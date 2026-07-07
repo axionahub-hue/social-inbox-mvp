@@ -904,9 +904,7 @@ export async function executeMetaAction(input: MetaActionInput) {
 
     return {
       ...primaryResult,
-      message: privateCopyResult.ok
-        ? "Respuesta publicada y copia enviada por mensaje interno."
-        : "Respuesta publicada, pero Meta no acepto la copia por mensaje interno.",
+      message: resolvePublicReplyWithPrivateCopyMessage(privateCopyResult),
       payload: {
         ...(typeof primaryResult.payload === "object" && primaryResult.payload ? primaryResult.payload : {}),
         private_copy: privateCopyResult,
@@ -973,6 +971,20 @@ async function sendMetaActionRequest(input: MetaActionInput) {
 
 function shouldSendPrivateCopy(input: MetaActionInput) {
   return input.action === "reply" && input.replyMode === "public_comment";
+}
+
+function resolvePublicReplyWithPrivateCopyMessage(privateCopyResult: Awaited<ReturnType<typeof sendMetaActionRequest>>) {
+  if (privateCopyResult.ok) {
+    return "Respuesta publicada y copia enviada por mensaje interno.";
+  }
+
+  const errorCode = readMetaErrorCode(privateCopyResult.payload);
+
+  if (errorCode === 10900) {
+    return "Respuesta publicada. Meta no permite enviar otra copia interna porque esta actividad ya tuvo una respuesta privada.";
+  }
+
+  return "Respuesta publicada, pero Meta no acepto la copia por mensaje interno.";
 }
 
 function signMetaOAuthState(encodedPayload: string) {
@@ -1123,6 +1135,15 @@ function readMetaErrorMessage(payload: unknown) {
 
   const error = (payload as { error?: { message?: unknown } }).error;
   return typeof error?.message === "string" ? error.message : null;
+}
+
+function readMetaErrorCode(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) {
+    return null;
+  }
+
+  const error = (payload as { error?: { code?: unknown } }).error;
+  return typeof error?.code === "number" ? error.code : null;
 }
 
 function createMetaTokenEncryptionKey() {

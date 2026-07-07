@@ -389,3 +389,10 @@
 - Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar eliminacion de un reply nuevo con `provider_message_id`.
 - Pendiente: investigar si Meta permite borrar copias privadas enviadas por Messenger; por ahora se elimina el reply publico creado en el comentario.
+
+### Mensaje claro para private reply ya enviada
+
+- Resumen: al volver a responder el mismo comentario, Meta devolvio `(#10900) Activity already replied to`; el endpoint correcto `me/messages` seguia funcionando, pero Meta no permite otra copia privada para esa actividad. Se cambio el mensaje de UI para explicar esa regla en vez de mostrarlo como fallo generico.
+- Areas tocadas: `src/lib/meta.ts`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`.
+- Pendiente: considerar guardar en DB un flag de private reply enviada para no intentar repetirla en el mismo comentario.
