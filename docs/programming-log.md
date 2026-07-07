@@ -214,6 +214,7 @@
 ### Polling corto para comentarios nuevos
 
 - Resumen: se comprobo que el comentario `crack` de `Academia Expertos de la Musica` existe en Graph API pero no estaba en Supabase. Se bajo la auto-sincronizacion a 15 segundos y se optimizo la lectura para consultar solo posts con comentarios, usando `comments.summary(true).limit(0)` y luego `/comments?order=reverse_chronological`.
-- Areas tocadas: `src/lib/meta.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/page.tsx`, `src/app/api/meta/sync/comments/route.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`.
+- Diagnostico: despues de reiniciar, no se observo POST automatico nuevo si la UI no esta recargada/logueada; esto confirma que polling desde cliente no reemplaza Webhooks Meta.
 - Pendiente: implementar webhooks reales para eliminar dependencia de polling.

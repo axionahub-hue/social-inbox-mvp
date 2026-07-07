@@ -231,6 +231,14 @@ Respuesta:
     "inserted": 2,
     "updated": 1
   },
+  "accountSummaries": [
+    {
+      "account": "Nombre de pagina",
+      "found": 3,
+      "inserted": 2,
+      "updated": 1
+    }
+  ],
   "errors": []
 }
 ```

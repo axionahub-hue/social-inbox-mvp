@@ -100,6 +100,12 @@ export async function POST(request: Request) {
   let inserted = 0;
   let updated = 0;
   const errors: Array<{ account: string; message: string }> = [];
+  const accountSummaries: Array<{
+    account: string;
+    found: number;
+    inserted: number;
+    updated: number;
+  }> = [];
 
   for (const account of eligibleAccounts) {
     try {
@@ -108,6 +114,8 @@ export async function POST(request: Request) {
         accessToken: pageToken,
         pageId: account.provider_account_id,
       });
+      let accountInserted = 0;
+      let accountUpdated = 0;
 
       commentsFound += comments.length;
 
@@ -120,9 +128,22 @@ export async function POST(request: Request) {
           comment,
         });
 
-        if (result === "inserted") inserted += 1;
-        if (result === "updated") updated += 1;
+        if (result === "inserted") {
+          inserted += 1;
+          accountInserted += 1;
+        }
+        if (result === "updated") {
+          updated += 1;
+          accountUpdated += 1;
+        }
       }
+
+      accountSummaries.push({
+        account: account.name,
+        found: comments.length,
+        inserted: accountInserted,
+        updated: accountUpdated,
+      });
     } catch (error) {
       errors.push({
         account: account.name,
@@ -134,9 +155,18 @@ export async function POST(request: Request) {
   const message =
     eligibleAccounts.length === 0
       ? "No hay cuentas Facebook con pages_read_engagement y pages_read_user_content concedidos."
-      : errors.length > 0
+        : errors.length > 0
         ? `Meta bloqueo la sincronizacion en ${errors.length} cuenta(s).`
         : `Sincronizacion Facebook: ${commentsFound} comentario(s), ${inserted} nuevo(s), ${updated} actualizado(s).`;
+
+  console.info("meta_comment_sync", {
+    workspaceId: parsed.data.workspaceId,
+    accounts: accountSummaries,
+    commentsFound,
+    inserted,
+    updated,
+    errors,
+  });
 
   return NextResponse.json({
     ok: errors.length === 0,
@@ -151,6 +181,7 @@ export async function POST(request: Request) {
       inserted,
       updated,
     },
+    accountSummaries,
     errors,
   });
 }
