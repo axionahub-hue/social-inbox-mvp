@@ -91,6 +91,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `/api/meta/ads/diagnostics` valida si existe schema/token/scope y lista `/me/adaccounts`.
 - `/api/meta/sync/ad-comments` lista anuncios recientes, lee el creative y usa `effective_object_story_id` u `object_story_id` para encontrar el post/story asociado al anuncio.
 - La sincronizacion filtra solo Pages conectadas al workspace y usa el page token cifrado para leer comentarios.
+- La pasada manual de Ads esta acotada para no bloquear la UI: no pagina todo el historico de anuncios, deduplica por post/story y limita cuantos posts de anuncio revisa por llamada.
 - Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico de Ads.
 - Los comentarios importados se normalizan como `source = ad_comment`, `ingest_source = ads_manual` y guardan `provider_ad_id`.
 - Esta primera version puede no cubrir todos los formatos de anuncio; si un creative no expone story/post asociado, se debe ampliar la lectura de campos de creative.

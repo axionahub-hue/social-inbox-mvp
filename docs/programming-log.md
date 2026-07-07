@@ -326,3 +326,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y verificar que `Sincronizar comentarios Ads` deje de importar comentarios viejos.
 - Pendiente: implementar ingest automatico de Ads, Instagram comments, Messenger y DM con sus permisos reales.
+
+### Sincronizacion Ads acotada para evitar bloqueo de UI
+
+- Resumen: se corrigio la sincronizacion manual de Ads para no paginar todo el historico de anuncios por cuenta. Ahora lee solo la primera pagina limitada de anuncios por cuenta, deduplica por post/story, limita posts y comentarios por llamada, y el cliente cancela visualmente la espera si tarda mas de 25 segundos.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar que el boton `Sincronizar comentarios Ads` no quede tildado.
+- Pendiente: convertir Ads en ingest automatico incremental para no depender de una pasada manual.

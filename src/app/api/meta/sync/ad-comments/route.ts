@@ -14,6 +14,11 @@ const syncSchema = z.object({
   workspaceId: z.string().uuid(),
 });
 
+const adAccountScanLimit = 25;
+const adsPerAccountScanLimit = 8;
+const adCommentTargetLimit = 20;
+const commentsPerAdTargetLimit = 10;
+
 type FacebookAccountRow = {
   id: string;
   provider_account_id: string;
@@ -124,11 +129,16 @@ export async function POST(request: Request) {
   const userToken = decryptMetaToken(connection.user_access_token_encrypted);
   const targets = await fetchMetaAdCommentTargets({
     accessToken: userToken,
-    adAccountLimit: 25,
-    adsPerAccountLimit: 25,
+    adAccountLimit: adAccountScanLimit,
+    adsPerAccountLimit: adsPerAccountScanLimit,
   });
   const recentSince = createRecentMetaCommentSince();
-  const matchedTargets = targets.filter((target) => pageByProviderId.has(target.pageId));
+  const uniqueTargetsByPost = new Map(
+    targets
+      .filter((target) => pageByProviderId.has(target.pageId))
+      .map((target) => [target.postId, target]),
+  );
+  const matchedTargets = Array.from(uniqueTargetsByPost.values()).slice(0, adCommentTargetLimit);
   let commentsFound = 0;
   let inserted = 0;
   let updated = 0;
@@ -146,7 +156,7 @@ export async function POST(request: Request) {
       const comments = await fetchMetaPostComments({
         accessToken: pageToken,
         postId: target.postId,
-        commentsLimit: 25,
+        commentsLimit: commentsPerAdTargetLimit,
         since: recentSince,
       });
 
@@ -188,6 +198,9 @@ export async function POST(request: Request) {
     targets: {
       found: targets.length,
       matchedPages: matchedTargets.length,
+      scannedAdAccounts: adAccountScanLimit,
+      scannedAdsPerAccount: adsPerAccountScanLimit,
+      scannedPosts: matchedTargets.length,
     },
     comments: {
       found: commentsFound,

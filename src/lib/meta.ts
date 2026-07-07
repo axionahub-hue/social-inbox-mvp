@@ -668,18 +668,18 @@ export async function fetchMetaAdCommentTargets({
   const adAccounts = (await fetchMetaAdAccounts(accessToken)).slice(0, adAccountLimit);
   const targets = await Promise.all(
     adAccounts.map(async (adAccount) => {
-      const ads = await requestPagedGraph<MetaAdsResponse, MetaAd>(`${adAccount.id}/ads`, {
+      const ads = await requestGraph<MetaAdsResponse>(`${adAccount.id}/ads`, {
         fields:
           "id,name,effective_status,updated_time,campaign{id,name},creative{id,name,effective_object_story_id,object_story_id}",
         limit: `${adsPerAccountLimit}`,
         access_token: accessToken,
       });
 
-      if (!ads.ok) {
+      if (ads.error) {
         return [];
       }
 
-      return ads.data
+      return (ads.data ?? [])
         .map((ad) => {
           const postId = ad.creative?.effective_object_story_id ?? ad.creative?.object_story_id;
           const pageId = postId?.split("_")[0];

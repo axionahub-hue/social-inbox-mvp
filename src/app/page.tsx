@@ -1406,8 +1406,11 @@ export default function Home() {
         return;
       }
 
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 25000);
       const response = await fetch("/api/meta/sync/ad-comments", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
@@ -1416,6 +1419,7 @@ export default function Home() {
           workspaceId: activeWorkspaceId,
         }),
       });
+      window.clearTimeout(timeoutId);
       const payload = await response.json();
       const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
       const errorDetail =
@@ -1434,8 +1438,12 @@ export default function Home() {
       setItems(inboxData.items);
       setInboxSource("supabase");
       setNotice(`${payload.comments?.inserted ?? 0} comentario(s) de Ads nuevo(s) importado(s).`);
-    } catch {
-      setMetaConnectionMessage("No se pudo sincronizar comentarios de Ads.");
+    } catch (error) {
+      setMetaConnectionMessage(
+        error instanceof DOMException && error.name === "AbortError"
+          ? "La sincronizacion Ads tardo demasiado y fue cancelada en la UI. Intenta de nuevo en unos segundos."
+          : "No se pudo sincronizar comentarios de Ads.",
+      );
     } finally {
       setIsMetaAdCommentsSyncing(false);
     }
