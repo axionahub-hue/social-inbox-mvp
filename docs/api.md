@@ -76,7 +76,7 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 
 Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `provider_comment_id` y page token cifrado, ejecuta contra Meta:
 
-- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`; si existen ID y nombre del autor, el mensaje se envia con el nombre visible y `message_tags` para intentar crear una mencion real sobre ese rango de texto.
+- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`.
 - `reply` con `replyMode = private_message`: `/{comment-id}/private_replies`.
 - `like`: `/{comment-id}/likes`.
 - `unlike`: `DELETE /{comment-id}/likes`.
@@ -96,7 +96,7 @@ Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 
-Nota: `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
+Nota: Graph acepto `message_tags` al crear replies de Page, pero lo ignoro silenciosamente y guardo el nombre como texto plano. Por eso la app no simula menciones en respuestas publicas. `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
 
 ### `GET /api/meta/webhook`
 

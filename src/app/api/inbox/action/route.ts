@@ -132,9 +132,6 @@ async function resolveAuthenticatedActionInput({
       connected_accounts (
         network,
         access_token_encrypted
-      ),
-      contacts (
-        display_name
       )
     `,
     )
@@ -180,7 +177,6 @@ async function resolveAuthenticatedActionInput({
   }
 
   const account = firstOrNull(itemResult.data.connected_accounts);
-  const contact = firstOrNull(itemResult.data.contacts);
   const providerCommentId = itemResult.data.provider_comment_id as string | null;
 
   if (
@@ -197,8 +193,6 @@ async function resolveAuthenticatedActionInput({
       ...input,
       externalId: providerCommentId,
       accessToken: decryptMetaToken(account.access_token_encrypted),
-      recipientExternalName:
-        typeof contact?.display_name === "string" ? contact.display_name : undefined,
     },
     canPersist: true,
   };

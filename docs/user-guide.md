@@ -66,7 +66,7 @@ En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan 
 
 Cuando el item es comentario, el selector del composer muestra:
 
-- `Responder sobre comentario`: prepara respuesta publica en el hilo del comentario; en Facebook, si la app tiene ID y nombre del autor, la respuesta se envia con `message_tags` para intentar crear una mencion real.
+- `Responder sobre comentario`: prepara respuesta publica en el hilo del comentario. Facebook notifica normalmente por el hilo de respuesta, pero Graph no esta generando una mencion real del autor en esta operacion.
 - `Responder por mensaje interno`: prepara respuesta privada por Messenger en Facebook o DM en Instagram.
 
 Al responder una conversacion, sale de `Bandeja` y pasa a `Respondidos`. Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.

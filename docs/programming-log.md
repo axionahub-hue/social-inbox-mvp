@@ -354,3 +354,10 @@
 - Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con comentario real si Meta acepta `message_tags` al crear replies de Page.
 - Pendiente: si Meta rechaza `message_tags`, registrar el error exacto y decidir entre fallback visible o private reply.
+
+### Retiro de falsa mencion textual en Facebook replies
+
+- Resumen: se verifico en Graph el reply creado por Meta y la respuesta no incluyo `message_tags`; Meta acepto el POST pero guardo el nombre como texto plano. Se retiro el envio de `message_tags` y el prefijo de nombre para no simular una mencion que no es real.
+- Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`.
+- Pendiente: usar private reply/Messenger para notificacion directa cuando el usuario elija respuesta privada, y mantener respuesta publica sin falsa mencion.
