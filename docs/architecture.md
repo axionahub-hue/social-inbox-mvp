@@ -47,6 +47,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Si el workspace autenticado no tiene cuentas conectadas, la app siembra las cuentas/conversaciones demo en Supabase para validar experiencia real sin permisos Meta.
 - La UI muestra `Inbox: Supabase` o `Inbox: demo local` para hacer visible el origen de datos.
 - `ChannelConnection.id` representa el ID real de `connected_accounts` cuando hay sesion Supabase; en modo demo representa el ID local del fixture.
+- Las cuentas con `access_token_encrypted` se muestran como reales; las cuentas sin token cifrado quedan marcadas como demo.
 
 ## Auth y workspace
 
@@ -66,6 +67,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El inbox combina busqueda textual, filtro por red y filtro por cuentas visibles.
 - La preferencia de cuentas visibles se guarda en `localStorage` en modo demo.
 - Con Supabase autenticado, la preferencia se guarda por usuario/workspace en `user_preferences`.
+- El panel Meta calcula capacidades disponibles desde los scopes reales guardados en las cuentas conectadas.
 
 ## Respuestas rapidas
 

@@ -78,8 +78,11 @@ Al volver a la app, `Configuracion Meta` debe indicar:
 - cantidad de cuentas Instagram profesionales detectadas;
 - scopes concedidos;
 - si alguna pagina no devolvio page token.
+- cuentas reales vs demo guardadas en Supabase;
+- capacidades listas o pendientes segun scopes.
 
 Con solo `pages_show_list`, es normal detectar paginas sin poder leer comentarios, ads o DMs todavia.
+Si en Meta se seleccionaron varias paginas pero la app muestra menos, significa que Graph devolvio menos paginas en `/me/accounts`. Para listar y operar paginas de forma completa, Meta documenta permisos adicionales como `pages_manage_metadata` junto con `pages_show_list`; esos permisos deben habilitarse en el flujo/app antes de ampliar `META_OAUTH_SCOPES`.
 
 ## Siguiente bloque tecnico
 

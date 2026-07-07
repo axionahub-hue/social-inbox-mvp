@@ -18,7 +18,6 @@ import {
   Search,
   Send,
   Settings,
-  ShieldCheck,
   Sparkles,
   Trash2,
   X,
@@ -65,6 +64,29 @@ const metaRequiredScopes = [
   "instagram_manage_messages",
 ];
 
+const metaCapabilityChecks = [
+  {
+    label: "Comentarios Facebook",
+    scopes: ["pages_read_engagement", "pages_manage_engagement"],
+  },
+  {
+    label: "Comentarios Ads",
+    scopes: ["pages_read_engagement", "pages_manage_engagement"],
+  },
+  {
+    label: "Messenger",
+    scopes: ["pages_messaging"],
+  },
+  {
+    label: "Instagram comentarios",
+    scopes: ["instagram_basic", "instagram_manage_comments"],
+  },
+  {
+    label: "Instagram DM",
+    scopes: ["instagram_basic", "instagram_manage_messages"],
+  },
+];
+
 const visibleAccountsStorageKey = "social-inbox.visible-account-ids";
 const quickRepliesStorageKey = "social-inbox.quick-replies";
 
@@ -81,6 +103,7 @@ type ConnectedAccountRow = {
   provider_account_id: string;
   name: string;
   handle: string | null;
+  access_token_encrypted: string | null;
   scopes: string[] | null;
   updated_at: string | null;
 };
@@ -178,6 +201,12 @@ export default function Home() {
   const hiddenAccountCount = channelList.length - visibleAccountIds.length;
   const archivedCount = items.filter((item) => item.status === "archived").length;
   const activeCount = items.length - archivedCount;
+  const realMetaChannels = channelList.filter((channel) => channel.status === "connected");
+  const demoMetaChannels = channelList.filter((channel) => channel.status === "demo");
+  const grantedMetaScopes = useMemo(
+    () => [...new Set(realMetaChannels.flatMap((channel) => channel.scopes))],
+    [realMetaChannels],
+  );
   const workspaceBootstrap = useRef<{
     userId: string;
     promise: Promise<string | null>;
@@ -430,7 +459,7 @@ export default function Home() {
 
     const accounts = await supabase
       .from("connected_accounts")
-      .select("id,network,provider_account_id,name,handle,scopes,updated_at")
+      .select("id,network,provider_account_id,name,handle,access_token_encrypted,scopes,updated_at")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true });
 
@@ -470,6 +499,7 @@ export default function Home() {
           provider_account_id,
           name,
           handle,
+          access_token_encrypted,
           scopes,
           updated_at
         ),
@@ -1084,7 +1114,15 @@ export default function Home() {
                       <p className="truncate text-sm font-semibold">{channel.name}</p>
                       <p className="truncate text-xs text-slate-500">{channel.handle}</p>
                     </div>
-                    <ShieldCheck size={17} className="text-emerald-600" />
+                    <span
+                      className={`rounded-md px-2 py-1 text-[11px] font-medium ${
+                        channel.status === "connected"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      {channel.status === "connected" ? "Real" : "Demo"}
+                    </span>
                   </div>
                   <p className="mt-3 text-xs text-slate-500">{channel.lastSync}</p>
                 </div>
@@ -1198,6 +1236,49 @@ export default function Home() {
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   OAuth local: pages_show_list.
                 </p>
+              </div>
+
+              <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2">
+                <p className="text-xs font-semibold text-slate-700">Diagnostico actual</p>
+                <div className="mt-2 grid gap-1 text-xs leading-5 text-slate-600">
+                  <p>
+                    Reales: {realMetaChannels.length} | Demo: {demoMetaChannels.length}
+                  </p>
+                  <p>
+                    Facebook real:{" "}
+                    {realMetaChannels.filter((channel) => channel.network === "facebook").length}
+                    {" "} | Instagram real:{" "}
+                    {realMetaChannels.filter((channel) => channel.network === "instagram").length}
+                  </p>
+                  <p>
+                    Scopes concedidos: {grantedMetaScopes.length ? grantedMetaScopes.join(", ") : "ninguno"}
+                  </p>
+                </div>
+                <div className="mt-2 grid gap-1">
+                  {metaCapabilityChecks.map((capability) => {
+                    const isReady = capability.scopes.every((scope) =>
+                      grantedMetaScopes.includes(scope),
+                    );
+
+                    return (
+                      <div
+                        className="flex items-center justify-between gap-2 text-xs"
+                        key={capability.label}
+                      >
+                        <span className="text-slate-600">{capability.label}</span>
+                        <span
+                          className={`rounded-md px-2 py-0.5 font-medium ${
+                            isReady
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {isReady ? "Listo" : "Faltan permisos"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -1738,12 +1819,14 @@ function mapQuickReplyRow(row: {
 }
 
 function mapConnectedAccountRow(row: ConnectedAccountRow): ChannelConnection {
+  const hasRealToken = Boolean(row.access_token_encrypted);
+
   return {
     id: row.id,
     network: row.network,
     name: row.name,
     handle: row.handle ?? "",
-    status: "demo",
+    status: hasRealToken ? "connected" : "demo",
     scopes: row.scopes ?? [],
     lastSync: `Supabase ${formatTimestamp(row.updated_at)}`,
   };

@@ -127,3 +127,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `.env.example`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `git diff --check`.
 - Pendiente: ampliar permisos Meta y suscribir webhooks reales para comentarios, ads y DMs.
+
+### Diagnostico visual de cuentas Meta
+
+- Resumen: se marco cada cuenta conectada como real o demo segun tenga token cifrado, y se agrego diagnostico en Configuracion Meta para ver cuentas reales/demo, Facebook/Instagram reales, scopes concedidos y capacidades pendientes.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `git diff --check`.
+- Pendiente: usar el diagnostico para decidir el siguiente scope incremental a solicitar a Meta.

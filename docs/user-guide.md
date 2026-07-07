@@ -81,9 +81,12 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 
 - callback URL para configurar en Meta Developers;
 - permisos objetivo de la integracion;
+- diagnostico de cuentas reales vs demo;
+- diagnostico de capacidades por scopes concedidos;
 - boton `Iniciar OAuth Meta`.
 
 El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
+Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo puede guardar las paginas recibidas por `/me/accounts`. Con permisos minimos puede aparecer solo un subconjunto.
 
 ## Limitaciones actuales
 
