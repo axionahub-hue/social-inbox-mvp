@@ -1176,6 +1176,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           workspaceId: activeWorkspaceId,
+          mode: automatic ? "fast" : "full",
         }),
       });
       const payload = await response.json();

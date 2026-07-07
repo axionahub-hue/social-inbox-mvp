@@ -382,13 +382,19 @@ export function decryptMetaToken(encryptedToken: string) {
 export async function fetchMetaOrganicComments({
   accessToken,
   pageId,
+  commentsLimit = 25,
+  postLimit = 50,
+  postsWithCommentsLimit = 30,
 }: {
   accessToken: string;
   pageId: string;
+  commentsLimit?: number;
+  postLimit?: number;
+  postsWithCommentsLimit?: number;
 }) {
   const posts = await requestGraph<MetaPostsResponse>(`${pageId}/published_posts`, {
     fields: "id,message,permalink_url,created_time,comments.summary(true).limit(0)",
-    limit: "50",
+    limit: `${postLimit}`,
     access_token: accessToken,
   });
 
@@ -398,7 +404,7 @@ export async function fetchMetaOrganicComments({
 
   const postsWithComments = (posts.data ?? [])
     .filter((post) => (post.comments?.summary?.total_count ?? 0) > 0)
-    .slice(0, 30);
+    .slice(0, postsWithCommentsLimit);
 
   const commentsByPost = await Promise.all(
     postsWithComments.map(async (post) => {
@@ -409,7 +415,7 @@ export async function fetchMetaOrganicComments({
       const comments = await requestGraph<MetaCommentsResponse>(`${post.id}/comments`, {
         fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
         order: "reverse_chronological",
-        limit: "25",
+        limit: `${commentsLimit}`,
         access_token: accessToken,
       });
 

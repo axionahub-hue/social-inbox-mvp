@@ -9,6 +9,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 
 const syncSchema = z.object({
   workspaceId: z.string().uuid(),
+  mode: z.enum(["fast", "full"]).optional().default("full"),
 });
 
 const requiredFacebookReadScopes = ["pages_read_engagement", "pages_read_user_content"];
@@ -105,47 +106,82 @@ export async function POST(request: Request) {
     updated: number;
   }> = [];
 
-  for (const account of eligibleAccounts) {
-    try {
-      const pageToken = decryptMetaToken(account.access_token_encrypted!);
-      const comments = await fetchMetaOrganicComments({
-        accessToken: pageToken,
-        pageId: account.provider_account_id,
-      });
-      let accountInserted = 0;
-      let accountUpdated = 0;
+  const syncOptions =
+    parsed.data.mode === "fast"
+      ? {
+          commentsLimit: 5,
+          postLimit: 15,
+          postsWithCommentsLimit: 8,
+        }
+      : {
+          commentsLimit: 25,
+          postLimit: 50,
+          postsWithCommentsLimit: 30,
+        };
 
-      commentsFound += comments.length;
-
-      for (const comment of comments) {
-        const result = await persistFacebookComment({
-          supabase,
-          workspaceId: parsed.data.workspaceId,
-          accountId: account.id,
-          accountName: account.name,
-          comment,
+  const accountResults = await Promise.all(
+    eligibleAccounts.map(async (account) => {
+      try {
+        const pageToken = decryptMetaToken(account.access_token_encrypted!);
+        const comments = await fetchMetaOrganicComments({
+          accessToken: pageToken,
+          pageId: account.provider_account_id,
+          ...syncOptions,
         });
+        let accountInserted = 0;
+        let accountUpdated = 0;
 
-        if (result === "inserted") {
-          inserted += 1;
-          accountInserted += 1;
+        for (const comment of comments) {
+          const result = await persistFacebookComment({
+            supabase,
+            workspaceId: parsed.data.workspaceId,
+            accountId: account.id,
+            accountName: account.name,
+            comment,
+          });
+
+          if (result === "inserted") {
+            accountInserted += 1;
+          }
+          if (result === "updated") {
+            accountUpdated += 1;
+          }
         }
-        if (result === "updated") {
-          updated += 1;
-          accountUpdated += 1;
-        }
+
+        return {
+          account: account.name,
+          found: comments.length,
+          inserted: accountInserted,
+          updated: accountUpdated,
+          error: null,
+        };
+      } catch (error) {
+        return {
+          account: account.name,
+          found: 0,
+          inserted: 0,
+          updated: 0,
+          error: error instanceof Error ? error.message : "Error desconocido.",
+        };
       }
+    }),
+  );
 
-      accountSummaries.push({
-        account: account.name,
-        found: comments.length,
-        inserted: accountInserted,
-        updated: accountUpdated,
-      });
-    } catch (error) {
+  for (const result of accountResults) {
+    commentsFound += result.found;
+    inserted += result.inserted;
+    updated += result.updated;
+    accountSummaries.push({
+      account: result.account,
+      found: result.found,
+      inserted: result.inserted,
+      updated: result.updated,
+    });
+
+    if (result.error) {
       errors.push({
-        account: account.name,
-        message: error instanceof Error ? error.message : "Error desconocido.",
+        account: result.account,
+        message: result.error,
       });
     }
   }
@@ -160,6 +196,7 @@ export async function POST(request: Request) {
   console.info("meta_comment_sync", {
     workspaceId: parsed.data.workspaceId,
     accounts: accountSummaries,
+    mode: parsed.data.mode,
     commentsFound,
     inserted,
     updated,

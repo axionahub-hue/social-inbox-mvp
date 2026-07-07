@@ -288,3 +288,9 @@
 - Areas tocadas: `src/app/page.tsx`, `supabase/schema.sql`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: ejecutar el bloque Realtime del schema en Supabase, redesplegar Vercel y probar comentario real nuevo con la app publica abierta.
 - Nota: para diferencias de 1-2 segundos 24/7 el canal correcto sigue siendo Meta Webhooks; Vercel Hobby no sirve para cron frecuente porque sus cron jobs solo pueden correr una vez por dia.
+
+### Polling rapido para comentarios organicos
+
+- Resumen: un comentario organico `son geniales!` entro por polling en unos 32 segundos porque la sincronizacion automatica hacia una pasada profunda. Se agrego `mode = fast` para la auto-sincronizacion: cuentas en paralelo y limites reducidos de posts/comentarios; el boton manual conserva `mode = full`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion pendiente: desplegar y medir nuevo comentario organico con app abierta. Webhooks Meta siguen sin entregar eventos reales, por lo que el polling rapido es respaldo, no reemplazo definitivo.

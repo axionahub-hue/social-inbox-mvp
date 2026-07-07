@@ -132,9 +132,12 @@ Payload:
 
 ```json
 {
-  "workspaceId": "uuid-del-workspace"
+  "workspaceId": "uuid-del-workspace",
+  "mode": "fast"
 }
 ```
+
+`mode` es opcional. `fast` se usa en la auto-sincronizacion para priorizar latencia con cuentas en paralelo y menos profundidad de lectura. `full` es el valor por defecto y se usa en el boton manual para revisar mas historico.
 
 Respuesta:
 
@@ -233,6 +236,7 @@ Comportamiento:
 - selecciona cuentas Facebook reales del workspace;
 - omite cuentas sin `pages_read_engagement` y `pages_read_user_content`;
 - descifra page tokens solo en servidor;
+- en `mode = fast`, procesa cuentas en paralelo con limites reducidos;
 - consulta publicaciones recientes y luego el edge `/comments` de cada post con `order=reverse_chronological`;
 - guarda contactos, conversaciones y mensajes en `contacts`, `inbox_items` e `inbox_messages`.
 
