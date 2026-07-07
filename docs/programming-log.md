@@ -281,3 +281,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/programming-log.md`.
 - Validacion: consulta Graph directa encontro el comentario real de `Mauro Hernan Moras`; se persistio en `inbox_items` como `post_comment`, estado `new`, cuenta visible y `unread_count = 1`.
 - Pendiente: redesplegar y confirmar que el polling de la app publica importa comentarios nuevos aunque algun post aislado devuelva error de permisos.
+
+### Refresco casi en tiempo real del inbox
+
+- Resumen: se agrego suscripcion Supabase Realtime sobre `inbox_items` para recargar la bandeja cuando se inserta o actualiza una conversacion, y se bajo el polling de respaldo de comentarios Facebook a 5 segundos mientras la app esta abierta.
+- Areas tocadas: `src/app/page.tsx`, `supabase/schema.sql`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: ejecutar el bloque Realtime del schema en Supabase, redesplegar Vercel y probar comentario real nuevo con la app publica abierta.
+- Nota: para diferencias de 1-2 segundos 24/7 el canal correcto sigue siendo Meta Webhooks; Vercel Hobby no sirve para cron frecuente porque sus cron jobs solo pueden correr una vez por dia.

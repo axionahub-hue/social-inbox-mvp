@@ -92,6 +92,8 @@ const metaRequiredScopes = [
   "instagram_manage_messages",
 ];
 
+const facebookCommentSyncIntervalMs = 5000;
+
 const metaCapabilityChecks = [
   {
     label: "Leer posts/comentarios Facebook",
@@ -225,6 +227,7 @@ export default function Home() {
   const hasLoadedQuickReplies = useRef(false);
   const hasLoadedRemoteWorkspace = useRef(false);
   const commentSyncInFlight = useRef(false);
+  const realtimeRefreshTimeout = useRef<number | null>(null);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [openOriginalPostMenuItemId, setOpenOriginalPostMenuItemId] = useState<string | null>(null);
@@ -845,6 +848,56 @@ export default function Home() {
     supabase,
   ]);
 
+  useEffect(() => {
+    if (!supabase || !activeWorkspaceId) {
+      return;
+    }
+
+    const refreshInbox = () => {
+      if (realtimeRefreshTimeout.current) {
+        window.clearTimeout(realtimeRefreshTimeout.current);
+      }
+
+      realtimeRefreshTimeout.current = window.setTimeout(async () => {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+        setSelectedId((currentSelectedId) => {
+          if (currentSelectedId && inboxData.items.some((item) => item.id === currentSelectedId)) {
+            return currentSelectedId;
+          }
+
+          return inboxData.items[0]?.id;
+        });
+        realtimeRefreshTimeout.current = null;
+      }, 1200);
+    };
+
+    const channel = supabase
+      .channel(`inbox-items-${activeWorkspaceId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "inbox_items",
+          filter: `workspace_id=eq.${activeWorkspaceId}`,
+        },
+        refreshInbox,
+      )
+      .subscribe();
+
+    return () => {
+      if (realtimeRefreshTimeout.current) {
+        window.clearTimeout(realtimeRefreshTimeout.current);
+        realtimeRefreshTimeout.current = null;
+      }
+
+      void supabase.removeChannel(channel);
+    };
+  }, [activeWorkspaceId, loadSupabaseInbox, supabase]);
+
   async function persistSupabasePreferences(nextVisibleAccountIds: string[]) {
     if (!supabase || !currentUser || !activeWorkspaceId || !hasLoadedRemoteWorkspace.current) {
       return;
@@ -1172,10 +1225,10 @@ export default function Home() {
 
     const timeoutId = window.setTimeout(() => {
       void syncFacebookComments({ automatic: true });
-    }, 3000);
+    }, 1500);
     const intervalId = window.setInterval(() => {
       void syncFacebookComments({ automatic: true });
-    }, 15000);
+    }, facebookCommentSyncIntervalMs);
 
     return () => {
       window.clearTimeout(timeoutId);

@@ -131,6 +131,19 @@ create index if not exists webhook_events_unprocessed_idx
   on webhook_events (provider, created_at)
   where processed_at is null;
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'inbox_items'
+  ) then
+    alter publication supabase_realtime add table inbox_items;
+  end if;
+end $$;
+
 create unique index if not exists workspaces_owner_user_id_unique_idx
   on workspaces (owner_user_id)
   where owner_user_id is not null;

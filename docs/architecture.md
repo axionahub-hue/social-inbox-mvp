@@ -74,7 +74,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
-- La UI ejecuta auto-sincronizacion cada 15 segundos mientras la app esta abierta para no depender del boton manual durante pruebas locales.
+- La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
+- La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook.
 - Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page al campo `feed` y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
 
 ## Auth y workspace

@@ -114,12 +114,13 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - diagnostico de capacidades por scopes concedidos;
 - boton `Iniciar OAuth Meta`.
 - boton `Sincronizar comentarios FB` para importar comentarios organicos cuando `pages_read_engagement` y `pages_read_user_content` esten concedidos.
-- auto-sincronizacion de comentarios Facebook cada 15 segundos mientras la app esta abierta y los permisos esten listos.
+- actualizacion de bandeja por Supabase Realtime cuando entra o cambia una conversacion;
+- auto-sincronizacion de comentarios Facebook cada 5 segundos mientras la app esta abierta y los permisos esten listos.
 
 El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
 Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo puede guardar las paginas recibidas por `/me/accounts`. Con permisos minimos puede aparecer solo un subconjunto.
 
-La auto-sincronizacion local evita depender del boton manual durante desarrollo, pero no reemplaza los webhooks. Para recibir eventos aunque la app no este abierta, se debe publicar la app en una URL HTTPS y configurar Webhooks Meta.
+La auto-sincronizacion local evita depender del boton manual durante desarrollo, pero no reemplaza los webhooks. Para recibir eventos aunque la app no este abierta, se debe publicar la app en una URL HTTPS, configurar Webhooks Meta y tener `inbox_items` habilitado en Supabase Realtime para pintar los cambios en pantalla.
 
 ## Limitaciones actuales
 
