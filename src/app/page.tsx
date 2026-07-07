@@ -2332,7 +2332,12 @@ export default function Home() {
                         ) : (
                           <div className="mt-3 flex justify-end border-t border-white/10 pt-2">
                             <SmallActionButton
-                              title="Eliminar respuesta"
+                              disabled={!message.providerMessageId}
+                              title={
+                                message.providerMessageId
+                                  ? "Eliminar respuesta en Meta"
+                                  : "Esta respuesta no tiene ID de Meta para eliminar"
+                              }
                               onClick={() => deleteAgentMessage(message.id)}
                             >
                               <Trash2 size={14} />
@@ -2725,11 +2730,13 @@ function MessageModerationActions({
 
 function SmallActionButton({
   active,
+  disabled,
   title,
   onClick,
   children,
 }: {
   active?: boolean;
+  disabled?: boolean;
   title: string;
   onClick: () => void;
   children: ReactNode;
@@ -2737,10 +2744,13 @@ function SmallActionButton({
   return (
     <button
       className={`grid size-7 place-items-center rounded-md border ${
-        active
+        disabled
+          ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+          : active
           ? "border-slate-950 bg-slate-950 text-white"
           : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
       }`}
+      disabled={disabled}
       onClick={onClick}
       title={title}
       type="button"

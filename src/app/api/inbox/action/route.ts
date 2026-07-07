@@ -218,14 +218,37 @@ async function resolveAuthenticatedActionInput({
       };
     }
 
+    if (!messageResult.data.provider_message_id) {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json(
+          {
+            ok: false,
+            message:
+              "Esta respuesta no tiene ID de Meta guardado; no se puede eliminar de Meta.",
+          },
+          { status: 409 },
+        ),
+      };
+    }
+
+    if (account?.network !== "facebook" || !account.access_token_encrypted) {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json(
+          { ok: false, message: "No hay page token real para eliminar esta respuesta en Meta." },
+          { status: 409 },
+        ),
+      };
+    }
+
     return {
       input: {
         ...input,
-        externalId: (messageResult.data.provider_message_id as string | null) ?? input.messageId ?? input.externalId,
-        accessToken:
-          account?.network === "facebook" && account.access_token_encrypted && messageResult.data.provider_message_id
-            ? decryptMetaToken(account.access_token_encrypted)
-            : undefined,
+        externalId: messageResult.data.provider_message_id as string,
+        accessToken: decryptMetaToken(account.access_token_encrypted),
       },
       canPersist: true,
     };

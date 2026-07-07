@@ -87,7 +87,7 @@ Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `p
 Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 
 - `reply`: inserta un mensaje agente en `inbox_messages`, guarda `provider_message_id` cuando Meta devuelve ID, marca `status = responded`, limpia `unread_count` y actualiza `preview`.
-- `delete_message`: elimina una respuesta agente local; si existe `provider_message_id`, intenta borrarla tambien en Meta.
+- `delete_message`: exige `provider_message_id`; intenta borrar primero en Meta y solo si Meta confirma elimina la respuesta agente local.
 - `like`/`unlike`: actualiza `inbox_items.is_liked`.
 - `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
 - `block`: actualiza `contacts.is_blocked = true`.

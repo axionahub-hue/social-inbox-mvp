@@ -381,4 +381,11 @@
 - Resumen: `delete_message` no estaba incluido en el conjunto de acciones que resuelven page token Meta, por lo que caia en modo demo aunque el mensaje tuviera `provider_message_id`. Se agrego la accion al cableado real y la UI recarga Supabase despues de responder/eliminar para usar IDs persistidos.
 - Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar eliminacion de un reply creado despues del despliegue.
-- Pendiente: los replies antiguos sin `provider_message_id` solo podran eliminarse localmente.
+- Pendiente: los replies antiguos sin `provider_message_id` no se pueden eliminar desde la app porque no hay ID externo para borrar en Meta.
+
+### Eliminacion estricta en Meta
+
+- Resumen: se retiro el fallback de borrado local para respuestas agente. `delete_message` ahora exige `provider_message_id` y page token real; si no existen, devuelve error y no borra Supabase. La UI deshabilita el boton en respuestas sin ID externo para evitar prometer un borrado que no puede aplicarse en Meta.
+- Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar eliminacion de un reply nuevo con `provider_message_id`.
+- Pendiente: investigar si Meta permite borrar copias privadas enviadas por Messenger; por ahora se elimina el reply publico creado en el comentario.
