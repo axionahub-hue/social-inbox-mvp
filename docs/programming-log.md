@@ -396,3 +396,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`.
 - Pendiente: considerar guardar en DB un flag de private reply enviada para no intentar repetirla en el mismo comentario.
+
+### Mensaje claro para private reply no elegible
+
+- Resumen: Meta devolvio `Invalid parameter` con code `100`, subcode `1893060` y `error_user_title = Identificador de comentario de respuesta privada no valido` para un comentario cuyo ID tampoco se pudo leer directamente por Graph. Se mapeo ese caso a un mensaje especifico: Meta no acepta ese comentario como private reply.
+- Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`.
+- Pendiente: evaluar si vale la pena marcar estos comentarios como no elegibles para private reply en DB.

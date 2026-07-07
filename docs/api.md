@@ -101,6 +101,8 @@ Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 
 Nota: Graph acepto `message_tags` al crear replies de Page, pero lo ignoro silenciosamente y guardo el nombre como texto plano. Por eso la app no simula menciones en respuestas publicas. `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
 
+Nota private replies: aunque `pages_messaging` este concedido, Meta puede rechazar comentarios especificos con `(#100, subcode 1893060)` cuando no acepta ese `comment_id` como private reply. En ese caso la app no persiste respuesta privada y debe mostrar el motivo especifico.
+
 ### `GET /api/meta/webhook`
 
 Endpoint de verificacion de webhook Meta.

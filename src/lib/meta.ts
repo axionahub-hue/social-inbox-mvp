@@ -956,7 +956,7 @@ async function sendMetaActionRequest(input: MetaActionInput) {
     return {
       mode: "meta",
       ok: false,
-      message: payload?.error?.message ?? "Meta rechazo la accion.",
+      message: resolveMetaActionErrorMessage(input, payload),
       payload,
     };
   }
@@ -979,12 +979,35 @@ function resolvePublicReplyWithPrivateCopyMessage(privateCopyResult: Awaited<Ret
   }
 
   const errorCode = readMetaErrorCode(privateCopyResult.payload);
+  const errorSubcode = readMetaErrorSubcode(privateCopyResult.payload);
 
   if (errorCode === 10900) {
     return "Respuesta publicada. Meta no permite enviar otra copia interna porque esta actividad ya tuvo una respuesta privada.";
   }
 
+  if (errorCode === 100 && errorSubcode === 1893060) {
+    return "Respuesta publicada. Meta no permite copia interna para este comentario porque no acepta su ID como private reply.";
+  }
+
   return "Respuesta publicada, pero Meta no acepto la copia por mensaje interno.";
+}
+
+function resolveMetaActionErrorMessage(input: MetaActionInput, payload: unknown) {
+  const errorMessage = readMetaErrorMessage(payload) ?? "Meta rechazo la accion.";
+  const errorCode = readMetaErrorCode(payload);
+  const errorSubcode = readMetaErrorSubcode(payload);
+
+  if (input.action === "reply" && input.replyMode === "private_message") {
+    if (errorCode === 10900) {
+      return "Meta no permite enviar otra respuesta interna porque esta actividad ya tuvo una respuesta privada.";
+    }
+
+    if (errorCode === 100 && errorSubcode === 1893060) {
+      return "Meta no permite mensaje interno para este comentario porque no acepta su ID como private reply.";
+    }
+  }
+
+  return errorMessage;
 }
 
 function signMetaOAuthState(encodedPayload: string) {
@@ -1144,6 +1167,15 @@ function readMetaErrorCode(payload: unknown) {
 
   const error = (payload as { error?: { code?: unknown } }).error;
   return typeof error?.code === "number" ? error.code : null;
+}
+
+function readMetaErrorSubcode(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) {
+    return null;
+  }
+
+  const error = (payload as { error?: { error_subcode?: unknown } }).error;
+  return typeof error?.error_subcode === "number" ? error.error_subcode : null;
 }
 
 function createMetaTokenEncryptionKey() {
