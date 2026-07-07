@@ -148,3 +148,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `.gitignore`, `docs/api.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, callback con `state` invalido redirige a `meta_oauth=invalid_state`, `git diff --check`.
 - Pendiente: reintentar OAuth para confirmar si Graph devuelve mas paginas o solo `Ecuakaraoke Original`.
+
+### Descubrimiento de paginas via Business Manager
+
+- Resumen: se agrego fallback opcional con `business_management`; si Meta concede ese scope, el callback consulta `me/businesses` y fusiona paginas `owned_pages`/`client_pages` con las de `/me/accounts`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, callback con `state` invalido redirige a `meta_oauth=invalid_state`, `git diff --check`.
+- Pendiente: agregar `business_management` a la configuracion Meta y a `META_OAUTH_SCOPES`, reintentar OAuth y comparar paginas devueltas.

@@ -68,6 +68,14 @@ Luego se puede ampliar `META_OAUTH_SCOPES`, por ejemplo:
 META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata
 ```
 
+Si `/me/accounts` sigue devolviendo menos paginas que las seleccionadas en Meta, probar:
+
+```env
+META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata,business_management
+```
+
+Con `business_management` concedido, la app tambien consulta `me/businesses` y las paginas `owned_pages`/`client_pages` de cada negocio.
+
 ## Permisos objetivo
 
 - `pages_show_list`
@@ -99,6 +107,7 @@ Al volver a la app, `Configuracion Meta` debe indicar:
 - nombres de hasta 10 paginas devueltas por Meta;
 - cantidad de cuentas Instagram profesionales detectadas;
 - scopes concedidos;
+- si `business_management` permite descubrir paginas por Business Manager;
 - si alguna pagina no devolvio page token.
 - cuentas reales vs demo guardadas en Supabase;
 - capacidades listas o pendientes segun scopes.

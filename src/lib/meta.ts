@@ -13,6 +13,7 @@ export const metaTargetScopes = [
   "pages_manage_engagement",
   "pages_messaging",
   "pages_manage_metadata",
+  "business_management",
   "instagram_basic",
   "instagram_manage_comments",
   "instagram_manage_messages",
@@ -71,6 +72,21 @@ export type MetaPageAccount = {
 
 type MetaPagesResponse = {
   data?: MetaPageAccount[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
+type MetaBusiness = {
+  id: string;
+  name?: string;
+};
+
+type MetaBusinessesResponse = {
+  data?: MetaBusiness[];
   paging?: {
     next?: string;
   };
@@ -150,6 +166,34 @@ export async function fetchMetaGrantedScopes(accessToken: string) {
 }
 
 export async function fetchMetaPageAccounts(accessToken: string) {
+  return fetchMetaPageAccountsForScopes(accessToken, []);
+}
+
+export async function fetchMetaPageAccountsForScopes(accessToken: string, grantedScopes: string[]) {
+  const directPages = await fetchMetaUserPageAccounts(accessToken);
+
+  if (!grantedScopes.includes("business_management")) {
+    return directPages;
+  }
+
+  const businessPages = await fetchMetaBusinessPageAccounts(accessToken);
+  const pagesById = new Map<string, MetaPageAccount>();
+
+  for (const page of [...directPages, ...businessPages]) {
+    const existing = pagesById.get(page.id);
+    pagesById.set(page.id, {
+      ...existing,
+      ...page,
+      access_token: page.access_token ?? existing?.access_token,
+      instagram_business_account:
+        page.instagram_business_account ?? existing?.instagram_business_account,
+    });
+  }
+
+  return [...pagesById.values()];
+}
+
+async function fetchMetaUserPageAccounts(accessToken: string) {
   const withInstagram = await requestPagedGraph<MetaPagesResponse, MetaPageAccount>("me/accounts", {
     fields: "id,name,username,access_token,instagram_business_account{id,name,username}",
     limit: "100",
@@ -171,6 +215,57 @@ export async function fetchMetaPageAccounts(accessToken: string) {
   }
 
   return pagesOnly.data;
+}
+
+async function fetchMetaBusinessPageAccounts(accessToken: string) {
+  const businesses = await requestPagedGraph<MetaBusinessesResponse, MetaBusiness>("me/businesses", {
+    fields: "id,name",
+    limit: "100",
+    access_token: accessToken,
+  });
+
+  if (!businesses.ok) {
+    return [];
+  }
+
+  const pageResults = await Promise.all(
+    businesses.data.flatMap((business) => [
+      fetchMetaBusinessPageEdge(accessToken, business.id, "owned_pages"),
+      fetchMetaBusinessPageEdge(accessToken, business.id, "client_pages"),
+    ]),
+  );
+
+  return pageResults.flat();
+}
+
+async function fetchMetaBusinessPageEdge(
+  accessToken: string,
+  businessId: string,
+  edge: "owned_pages" | "client_pages",
+) {
+  const withInstagram = await requestPagedGraph<MetaPagesResponse, MetaPageAccount>(
+    `${businessId}/${edge}`,
+    {
+      fields: "id,name,username,access_token,instagram_business_account{id,name,username}",
+      limit: "100",
+      access_token: accessToken,
+    },
+  );
+
+  if (withInstagram.ok) {
+    return withInstagram.data;
+  }
+
+  const pagesOnly = await requestPagedGraph<MetaPagesResponse, MetaPageAccount>(
+    `${businessId}/${edge}`,
+    {
+      fields: "id,name,username,access_token",
+      limit: "100",
+      access_token: accessToken,
+    },
+  );
+
+  return pagesOnly.ok ? pagesOnly.data : [];
 }
 
 export function encryptMetaToken(token: string) {

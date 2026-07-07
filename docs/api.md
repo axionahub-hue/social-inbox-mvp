@@ -141,6 +141,7 @@ Comportamiento:
 - intercambia el `code` por access token;
 - pide token largo;
 - lee permisos concedidos y paginas disponibles;
+- si existe `business_management`, consulta tambien paginas de negocios via `owned_pages` y `client_pages`;
 - guarda paginas Facebook y cuentas Instagram profesionales vinculadas en `connected_accounts`;
 - cifra page tokens antes de guardarlos.
 

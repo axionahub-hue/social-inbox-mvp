@@ -59,6 +59,7 @@ const metaRequiredScopes = [
   "pages_manage_engagement",
   "pages_messaging",
   "pages_manage_metadata",
+  "business_management",
   "instagram_basic",
   "instagram_manage_comments",
   "instagram_manage_messages",
@@ -72,6 +73,10 @@ const metaCapabilityChecks = [
   {
     label: "Comentarios Ads",
     scopes: ["pages_read_engagement", "pages_manage_engagement"],
+  },
+  {
+    label: "Paginas Business Manager",
+    scopes: ["business_management"],
   },
   {
     label: "Messenger",

@@ -37,6 +37,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los scopes OAuth son configurables con `META_OAUTH_SCOPES`; por defecto solo se pide `pages_show_list` para validar el flujo local.
 - Si `META_LOGIN_CONFIG_ID` existe, OAuth incluye `config_id` y `override_default_response_type=true` para usar Facebook Login for Business.
 - El callback valida `state` y `code`, intercambia el codigo por token, pide token largo, lee permisos concedidos y consulta paginas disponibles.
+- La consulta de paginas usa `/me/accounts`; si el token tiene `business_management`, tambien consulta negocios del usuario y sus `owned_pages`/`client_pages`.
 - Las paginas Facebook y cuentas Instagram profesionales vinculadas se guardan en `connected_accounts`.
 - Los page tokens se cifran server-side con AES-256-GCM antes de persistirlos.
 - `META_TOKEN_ENCRYPTION_KEY` permite usar una clave dedicada; si falta, desarrollo local cae a `META_APP_SECRET`.

@@ -4,7 +4,7 @@ import {
   exchangeMetaCodeForToken,
   exchangeMetaLongLivedToken,
   fetchMetaGrantedScopes,
-  fetchMetaPageAccounts,
+  fetchMetaPageAccountsForScopes,
   resolveMetaTokenExpiresAt,
   verifyMetaOAuthState,
 } from "@/lib/meta";
@@ -52,10 +52,8 @@ export async function GET(request: Request) {
       origin: appUrl,
     });
     const longLived = await exchangeMetaLongLivedToken(shortLived.accessToken);
-    const [grantedScopes, pages] = await Promise.all([
-      fetchMetaGrantedScopes(longLived.accessToken),
-      fetchMetaPageAccounts(longLived.accessToken),
-    ]);
+    const grantedScopes = await fetchMetaGrantedScopes(longLived.accessToken);
+    const pages = await fetchMetaPageAccountsForScopes(longLived.accessToken, grantedScopes);
     const tokenExpiresAt = resolveMetaTokenExpiresAt(longLived.expiresIn);
     const accountRows = pages.flatMap((page) => {
       const encryptedPageToken = page.access_token
