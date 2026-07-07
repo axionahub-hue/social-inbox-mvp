@@ -210,3 +210,10 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, log con llamada automatica a `/api/meta/sync/comments`, smoke UI sin errores de consola ni overflow horizontal.
 - Pendiente: desplegar/publicar URL HTTPS y configurar Webhooks Meta reales.
+
+### Polling corto para comentarios nuevos
+
+- Resumen: se comprobo que el comentario `crack` de `Academia Expertos de la Musica` existe en Graph API pero no estaba en Supabase. Se bajo la auto-sincronizacion a 15 segundos y se optimizo la lectura para consultar solo posts con comentarios, usando `comments.summary(true).limit(0)` y luego `/comments?order=reverse_chronological`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`.
+- Pendiente: implementar webhooks reales para eliminar dependencia de polling.

@@ -115,6 +115,9 @@ type MetaPost = {
   created_time?: string;
   comments?: {
     data?: MetaComment[];
+    summary?: {
+      total_count?: number;
+    };
   };
 };
 
@@ -369,7 +372,7 @@ export async function fetchMetaOrganicComments({
   pageId: string;
 }) {
   const posts = await requestGraph<MetaPostsResponse>(`${pageId}/published_posts`, {
-    fields: "id,message,permalink_url,created_time",
+    fields: "id,message,permalink_url,created_time,comments.summary(true).limit(0)",
     limit: "50",
     access_token: accessToken,
   });
@@ -378,12 +381,16 @@ export async function fetchMetaOrganicComments({
     throw new Error(posts.error.message ?? "No se pudieron leer publicaciones de Facebook.");
   }
 
+  const postsWithComments = (posts.data ?? [])
+    .filter((post) => (post.comments?.summary?.total_count ?? 0) > 0)
+    .slice(0, 30);
+
   const commentsByPost = await Promise.all(
-    (posts.data ?? []).map(async (post) => {
+    postsWithComments.map(async (post) => {
       const comments = await requestGraph<MetaCommentsResponse>(`${post.id}/comments`, {
         fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
         order: "reverse_chronological",
-        limit: "100",
+        limit: "25",
         access_token: accessToken,
       });
 

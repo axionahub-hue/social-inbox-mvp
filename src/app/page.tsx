@@ -1116,10 +1116,10 @@ export default function Home() {
 
     const timeoutId = window.setTimeout(() => {
       void syncFacebookComments({ automatic: true });
-    }, 10000);
+    }, 3000);
     const intervalId = window.setInterval(() => {
       void syncFacebookComments({ automatic: true });
-    }, 120000);
+    }, 15000);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -1552,7 +1552,7 @@ export default function Home() {
               </button>
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments
-                  ? "Auto-sinc activa mientras la app este abierta. Para eventos instantaneos 24/7 falta conectar Webhooks Meta en una URL publica."
+                  ? "Auto-sinc activa cada 15 segundos mientras la app este abierta. Para eventos instantaneos 24/7 falta conectar Webhooks Meta en una URL publica."
                   : "Auto-sinc pendiente hasta conceder permisos de lectura de comentarios."}
               </p>
             </div>

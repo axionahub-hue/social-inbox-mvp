@@ -65,7 +65,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Lee las ultimas publicaciones publicadas y consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
-- La UI ejecuta auto-sincronizacion mientras la app esta abierta para no depender del boton manual durante pruebas locales.
+- La UI ejecuta auto-sincronizacion cada 15 segundos mientras la app esta abierta para no depender del boton manual durante pruebas locales.
 - Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion de app/Page y procesamiento de eventos `feed`.
 
 ## Auth y workspace
