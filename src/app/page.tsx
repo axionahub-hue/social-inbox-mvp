@@ -306,6 +306,7 @@ export default function Home() {
   const [metaAdsDiagnostics, setMetaAdsDiagnostics] =
     useState<MetaAdsDiagnostics | null>(null);
   const [isMetaWebhookDiagnosticsLoading, setIsMetaWebhookDiagnosticsLoading] = useState(false);
+  const [isMetaWebhookSubscribeLoading, setIsMetaWebhookSubscribeLoading] = useState(false);
   const [isMetaAdsDiagnosticsLoading, setIsMetaAdsDiagnosticsLoading] = useState(false);
   const [isMetaAdCommentsSyncing, setIsMetaAdCommentsSyncing] = useState(false);
   const [appOrigin] = useState(() =>
@@ -1352,6 +1353,47 @@ export default function Home() {
     }
   }
 
+  async function subscribeMetaWebhooks() {
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      setMetaConnectionMessage("Inicia sesion Supabase antes de suscribir Webhooks.");
+      return;
+    }
+
+    setIsMetaWebhookSubscribeLoading(true);
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+
+      if (!accessToken) {
+        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+        return;
+      }
+
+      const response = await fetch("/api/meta/webhook/subscribe", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const payload = await response.json();
+
+      setMetaConnectionMessage(payload.message ?? "Suscripcion Webhooks solicitada.");
+
+      if (response.ok && payload.ok) {
+        await runMetaWebhookDiagnostics();
+      }
+    } catch {
+      setMetaConnectionMessage("No se pudo re-suscribir Webhooks Meta.");
+    } finally {
+      setIsMetaWebhookSubscribeLoading(false);
+    }
+  }
+
   async function runMetaAdsDiagnostics() {
     if (!supabase || !currentUser || !activeWorkspaceId) {
       setMetaConnectionMessage("Inicia sesion Supabase antes de diagnosticar Ads.");
@@ -1987,7 +2029,7 @@ export default function Home() {
                     >
                       {metaWebhookDiagnostics.app?.pageFeedActive ? "Activo" : "No activo"}
                     </span>
-                    {" · "}
+                    {" | "}
                     Messages:{" "}
                     <span
                       className={
@@ -2007,6 +2049,16 @@ export default function Home() {
                     {(metaWebhookDiagnostics.pages ?? []).filter((page) => page.subscribed).length}
                     /{metaWebhookDiagnostics.pages?.length ?? 0}
                   </p>
+                  <button
+                    className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-2 text-xs font-semibold text-slate-800 disabled:cursor-not-allowed disabled:text-slate-400"
+                    disabled={isMetaWebhookSubscribeLoading}
+                    onClick={() => void subscribeMetaWebhooks()}
+                  >
+                    <Settings size={14} />
+                    {isMetaWebhookSubscribeLoading
+                      ? "Re-suscribiendo..."
+                      : "Re-suscribir paginas"}
+                  </button>
                   <div className="mt-2 grid gap-1">
                     {(metaWebhookDiagnostics.pages ?? []).map((page) => (
                       <div className="flex items-center justify-between gap-2" key={page.pageId}>

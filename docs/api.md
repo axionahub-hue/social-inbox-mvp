@@ -310,9 +310,29 @@ Payload:
 Comportamiento:
 
 - valida sesion Supabase;
-- consulta `/{app-id}/subscriptions` con app token para confirmar objeto `Page` y campo `feed`;
+- consulta `/{app-id}/subscriptions` con app token para confirmar objeto `Page` y campos `feed,messages`;
 - consulta `/{page-id}/subscribed_apps` con page token por cada pagina Facebook conectada;
 - devuelve los ultimos eventos `webhook_events` guardados para comparar configuracion con entregas reales.
+
+### `POST /api/meta/webhook/subscribe`
+
+Reintenta la suscripcion de todas las paginas Facebook conectadas del workspace a los campos Page `feed,messages`.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Payload:
+
+```json
+{
+  "workspaceId": "uuid-del-workspace"
+}
+```
+
+Importante: si en Meta Developers el objeto Page no tiene activo el campo `messages`, este endpoint avisa que primero hay que activar `messages` en la configuracion de Webhooks Meta.
 
 ### `POST /api/meta/ads/diagnostics`
 

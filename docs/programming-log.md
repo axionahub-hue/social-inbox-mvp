@@ -410,3 +410,10 @@
 - Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/api/meta/webhook/diagnostics/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/meta-setup.md`, `docs/user-guide.md`, `docs/vercel-deploy.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar en Vercel y probar una respuesta real por Messenger.
 - Pendiente: si el diagnostico marca `messages` como no activo, activar el campo Page `messages` en Meta Developers o reautorizar para que el callback suscriba de nuevo cada pagina.
+
+### Re-suscripcion operativa de webhooks Page
+
+- Resumen: se agrego `/api/meta/webhook/subscribe` y boton `Re-suscribir paginas` en Configuracion Meta para volver a pedir `feed,messages` con los page tokens guardados, sin obligar a repetir OAuth. El endpoint tambien avisa si `messages` no esta activo en la configuracion de Webhooks de la app Meta.
+- Areas tocadas: `src/app/api/meta/webhook/subscribe/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y pulsar el boton despues de activar `messages` en Meta Developers.
+- Pendiente: probar recepcion de un mensaje Messenger real luego de que el diagnostico muestre `feed + messages` y `4/4`.
