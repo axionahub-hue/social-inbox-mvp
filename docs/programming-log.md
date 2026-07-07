@@ -190,3 +190,9 @@
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop/mobile con navegador sin errores de consola ni overflow horizontal; en movil se elimino el scroll interno doble de la bandeja.
 - Pendiente: agregar `pages_manage_engagement` para ejecutar acciones reales de moderacion en Meta y volver a probar si Meta devuelve autor de comentario con permisos ampliados.
+
+### Feedback inmediato en acciones masivas
+
+- Resumen: se cambio la barra masiva para aplicar cambios optimistas en la UI antes de esperar la respuesta del endpoint, limpiar la seleccion inmediatamente y mostrar estado de guardado. Esto corrige la percepcion de que `Leido` no hacia nada cuando la persistencia demoraba.
+- Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke de seleccionar una conversacion y pulsar `Leido`; el badge desaparece inmediatamente y luego se confirma guardado.

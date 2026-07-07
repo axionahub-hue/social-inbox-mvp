@@ -196,6 +196,7 @@ export default function Home() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [isBulkActionRunning, setIsBulkActionRunning] = useState(false);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
   const [inboxView, setInboxView] = useState<InboxView>("active");
@@ -1117,32 +1118,56 @@ export default function Home() {
       return;
     }
 
-    const results = await Promise.all(
-      targetIds.map((itemId) =>
-        fetch("/api/inbox/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            itemId,
-            externalId: itemId,
-            action,
-          }),
-        }).then((response) => response.ok),
-      ),
-    );
-    const succeededIds = targetIds.filter((_, index) => results[index]);
-
+    setIsBulkActionRunning(true);
     setItems((current) =>
       current.map((item) =>
-        succeededIds.includes(item.id) ? applyInboxActionToItem(item, action) : item,
+        targetIds.includes(item.id) ? applyInboxActionToItem(item, action) : item,
       ),
     );
-    setSelectedItemIds((current) => current.filter((id) => !succeededIds.includes(id)));
-    setNotice(
-      `${succeededIds.length} conversacion(es) actualizada(s)${
-        succeededIds.length !== targetIds.length ? "; algunas no se pudieron guardar" : ""
-      }.`,
-    );
+    setSelectedItemIds((current) => current.filter((id) => !targetIds.includes(id)));
+    setNotice(`${targetIds.length} conversacion(es) actualizada(s). Guardando cambios...`);
+
+    try {
+      const results = await Promise.all(
+        targetIds.map((itemId) =>
+          fetch("/api/inbox/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemId,
+              externalId: itemId,
+              action,
+            }),
+          }).then((response) => response.ok),
+        ),
+      );
+      const succeededIds = targetIds.filter((_, index) => results[index]);
+      const failedCount = targetIds.length - succeededIds.length;
+
+      if (failedCount > 0 && activeWorkspaceId) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+
+      setNotice(
+        failedCount > 0
+          ? `${succeededIds.length} conversacion(es) guardada(s); ${failedCount} no se pudieron guardar.`
+          : `${succeededIds.length} conversacion(es) guardada(s).`,
+      );
+    } catch {
+      if (activeWorkspaceId) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+
+      setNotice("No se pudieron guardar los cambios masivos. Revisa la conexion e intenta de nuevo.");
+    } finally {
+      setIsBulkActionRunning(false);
+    }
   }
 
   function sendReply() {
@@ -1544,21 +1569,24 @@ export default function Home() {
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       className="h-8 rounded-md border border-slate-200 px-2 text-xs font-medium text-slate-700 disabled:opacity-40"
-                      disabled={selectedVisibleCount === 0}
+                      data-testid="bulk-mark-read"
+                      disabled={selectedVisibleCount === 0 || isBulkActionRunning}
                       onClick={() => void runBulkAction("mark_read")}
                     >
                       Leido
                     </button>
                     <button
                       className="h-8 rounded-md border border-slate-200 px-2 text-xs font-medium text-slate-700 disabled:opacity-40"
-                      disabled={selectedVisibleCount === 0}
+                      data-testid="bulk-mark-unread"
+                      disabled={selectedVisibleCount === 0 || isBulkActionRunning}
                       onClick={() => void runBulkAction("mark_unread")}
                     >
                       No leido
                     </button>
                     <button
                       className="h-8 rounded-md border border-slate-950 bg-slate-950 px-2 text-xs font-semibold text-white disabled:opacity-40"
-                      disabled={selectedVisibleCount === 0}
+                      data-testid="bulk-archive"
+                      disabled={selectedVisibleCount === 0 || isBulkActionRunning}
                       onClick={() =>
                         void runBulkAction(inboxView === "archived" ? "unarchive" : "archive")
                       }
