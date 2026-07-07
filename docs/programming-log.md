@@ -375,3 +375,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar respuesta publica con copia privada.
 - Pendiente: registrar si Meta devuelve errores de ventana/politica de Messenger para comentarios especificos.
+
+### Correccion de borrado real de respuestas agente
+
+- Resumen: `delete_message` no estaba incluido en el conjunto de acciones que resuelven page token Meta, por lo que caia en modo demo aunque el mensaje tuviera `provider_message_id`. Se agrego la accion al cableado real y la UI recarga Supabase despues de responder/eliminar para usar IDs persistidos.
+- Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar eliminacion de un reply creado despues del despliegue.
+- Pendiente: los replies antiguos sin `provider_message_id` solo podran eliminarse localmente.

@@ -104,7 +104,14 @@ async function resolveAuthenticatedActionInput({
   response?: NextResponse;
 }> {
   const internalActions = new Set(["archive", "unarchive", "mark_read", "mark_unread"]);
-  const metaFacebookCommentActions = new Set(["reply", "like", "unlike", "hide", "unhide"]);
+  const metaFacebookCommentActions = new Set([
+    "reply",
+    "like",
+    "unlike",
+    "hide",
+    "unhide",
+    "delete_message",
+  ]);
   const accessToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
 
   if (!accessToken) {

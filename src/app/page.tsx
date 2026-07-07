@@ -1496,11 +1496,28 @@ export default function Home() {
     const result = await response.json();
     setNotice(result.message ?? "Accion registrada.");
 
+    if (!response.ok) {
+      if (activeWorkspaceId) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+      return;
+    }
+
     setItems((current) =>
       current.map((item) =>
         item.id === selectedItem.id ? applyInboxActionToItem(item, action, message) : item,
       ),
     );
+
+    if ((action === "reply" || action === "delete_message") && activeWorkspaceId) {
+      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+      setChannelList(inboxData.channels);
+      setItems(inboxData.items);
+      setInboxSource("supabase");
+    }
   }
 
   function setReplyModeForSelectedItem(replyMode: ReplyMode) {
@@ -1632,16 +1649,6 @@ export default function Home() {
     if (!selectedItem) return;
 
     void runAction("delete_message", undefined, { messageId });
-    setItems((current) =>
-      current.map((item) =>
-        item.id === selectedItem.id
-          ? {
-              ...item,
-              messages: item.messages.filter((message) => message.id !== messageId),
-            }
-          : item,
-      ),
-    );
   }
 
   return (
