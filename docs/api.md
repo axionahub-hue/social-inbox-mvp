@@ -76,7 +76,7 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 
 Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `provider_comment_id` y page token cifrado, ejecuta contra Meta:
 
-- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`; si existe `recipientExternalId`, el mensaje se envia prefijado como `@[provider-user-id]` para intentar mencionar/notificar al autor.
+- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`; si existen ID y nombre del autor, el mensaje se envia con el nombre visible y `message_tags` para intentar crear una mencion real sobre ese rango de texto.
 - `reply` con `replyMode = private_message`: `/{comment-id}/private_replies`.
 - `like`: `/{comment-id}/likes`.
 - `unlike`: `DELETE /{comment-id}/likes`.

@@ -44,6 +44,7 @@ export type MetaActionInput = {
   message?: string;
   replyMode?: ReplyMode;
   recipientExternalId?: string;
+  recipientExternalName?: string;
 };
 
 type MetaTokenResponse = {
@@ -1118,7 +1119,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
 function resolveActionBody(input: MetaActionInput): Record<string, string | boolean> {
   switch (input.action) {
     case "reply":
-      return { message: resolveReplyMessage(input) };
+      return resolveReplyBody(input);
     case "hide":
       return { is_hidden: true };
     case "unhide":
@@ -1128,18 +1129,32 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
   }
 }
 
-function resolveReplyMessage(input: MetaActionInput) {
+function resolveReplyBody(input: MetaActionInput): Record<string, string> {
   const message = input.message ?? "";
 
   if (
     input.replyMode !== "public_comment" ||
     !input.recipientExternalId ||
-    message.includes(`@[${input.recipientExternalId}]`)
+    !input.recipientExternalName ||
+    input.recipientExternalName === "Autor no disponible" ||
+    message.startsWith(input.recipientExternalName)
   ) {
-    return message;
+    return { message };
   }
 
-  return `@[${input.recipientExternalId}] ${message}`.trim();
+  const taggedMessage = `${input.recipientExternalName} ${message}`.trim();
+
+  return {
+    message: taggedMessage,
+    message_tags: JSON.stringify([
+      {
+        id: input.recipientExternalId,
+        name: input.recipientExternalName,
+        offset: 0,
+        length: input.recipientExternalName.length,
+      },
+    ]),
+  };
 }
 
 function stringifyMetaActionBody(body: Record<string, string | boolean>) {
