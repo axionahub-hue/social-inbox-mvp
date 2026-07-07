@@ -214,7 +214,7 @@ async function persistFacebookComment({
   const now = new Date().toISOString();
   const receivedAt = normalizeDate(comment.createdTime) ?? now;
   const title = comment.postMessage
-    ? `Comentario en: ${comment.postMessage.slice(0, 90)}`
+    ? `Comentario en:\n${comment.postMessage}`
     : `Comentario en ${accountName}`;
   const preview = comment.message || "(comentario sin texto)";
 

@@ -218,3 +218,10 @@
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`.
 - Diagnostico: despues de reiniciar, no se observo POST automatico nuevo si la UI no esta recargada/logueada; esto confirma que polling desde cliente no reemplaza Webhooks Meta.
 - Pendiente: implementar webhooks reales para eliminar dependencia de polling.
+
+### Redisenio operativo de tres columnas
+
+- Resumen: se rehizo el layout desktop en tres paneles operativos: cuentas oscuras con nombres completos, ojo global/individual, menu de tres puntos y boton `Anadir cuenta`; bandeja con scroll propio; conversacion con contenido superior scrolleable y footer fijo para composer, respuestas rapidas y acciones.
+- Areas tocadas: `src/app/page.tsx`, `src/app/api/meta/sync/comments/route.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop y movil con navegador integrado sin errores de consola ni overflow horizontal.
+- Pendiente: seguir refinando densidad y comportamiento movil antes de pasar a Vercel/Webhooks.

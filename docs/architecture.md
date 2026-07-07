@@ -56,6 +56,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El usuario puede desconectar cuentas no deseadas del workspace; la eliminacion borra la fila de `connected_accounts` y sus inbox relacionados por cascada.
 - Cada item del inbox muestra metadatos operativos de plataforma, cuenta conectada y tipo de origen para evitar ambiguedad cuando haya Facebook, Instagram y futuras redes.
 - La seleccion por checkbox opera sobre los items visibles y reutiliza `/api/inbox/action` para marcar leido/no leido, archivar y desarchivar.
+- En desktop, el shell opera como tres paneles de altura fija: cuentas con scroll propio, bandeja con scroll propio y conversacion con footer fijo para composer/respuestas/acciones.
+- La columna de cuentas muestra nombres completos, ojo global, ojo por cuenta, menu de cuenta y boton fijo para anadir cuenta.
 
 ## Sincronizacion de comentarios Facebook
 

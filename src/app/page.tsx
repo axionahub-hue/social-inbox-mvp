@@ -9,12 +9,12 @@ import {
   EyeOff,
   ExternalLink,
   Heart,
+  MoreVertical,
   Pencil,
   Plus,
   Save,
   MessageCircle,
   MessagesSquare,
-  PanelLeft,
   Search,
   Send,
   Settings,
@@ -222,6 +222,7 @@ export default function Home() {
       ? false
       : new URLSearchParams(window.location.search).has("meta_oauth"),
   );
+  const [openAccountMenuId, setOpenAccountMenuId] = useState<string | null>(null);
   const [metaConnectionMessage, setMetaConnectionMessage] = useState(() => {
     if (typeof window === "undefined") {
       return "Configura la app Meta y usa OAuth cuando tengas credenciales.";
@@ -889,6 +890,26 @@ export default function Home() {
     void persistSupabasePreferences(next);
   }
 
+  function hideAllAccounts() {
+    setVisibleAccountIds([]);
+    void persistSupabasePreferences([]);
+  }
+
+  function toggleAllAccountsVisibility() {
+    if (visibleAccountIds.length === channelList.length) {
+      hideAllAccounts();
+      return;
+    }
+
+    showAllAccounts();
+  }
+
+  function configureAccount(channel: ChannelConnection) {
+    setIsMetaSettingsOpen(true);
+    setOpenAccountMenuId(null);
+    setNotice(`Configuracion abierta para revisar permisos de ${channel.name}.`);
+  }
+
   async function disconnectAccount(accountId: string) {
     if (!supabase || !currentUser) {
       setNotice("Inicia sesion Supabase para desconectar cuentas.");
@@ -1234,39 +1255,56 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
-      <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[280px_minmax(320px,420px)_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200 bg-white px-4 py-4 lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between">
+      <div className="flex min-h-screen flex-col lg:h-screen lg:grid lg:grid-cols-[340px_minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
+        <aside className="flex min-h-[560px] flex-col border-b border-slate-200 bg-[#202020] text-white lg:h-screen lg:border-b-0 lg:border-r lg:border-slate-800">
+          <div className="shrink-0 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                 Social Inbox
               </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-                Bandeja unificada
-              </h1>
+                <h1 className="mt-1 text-xl font-semibold tracking-tight">Cuentas</h1>
             </div>
             <button
-              className="grid size-10 place-items-center rounded-md border border-slate-200 text-slate-700"
-              onClick={() => setIsMetaSettingsOpen((current) => !current)}
-              title="Configuracion"
+                className="grid size-10 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+                onClick={toggleAllAccountsVisibility}
+                title={visibleAccountIds.length === channelList.length ? "Ocultar todas" : "Mostrar todas"}
             >
-              <Settings size={18} />
+                {visibleAccountIds.length === channelList.length ? <Eye size={20} /> : <EyeOff size={20} />}
             </button>
           </div>
 
-          <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-semibold">Sesion</p>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-300">
+                <span className="font-semibold text-white">{visibleAccountIds.length}</span>
+                {" / "}
+                {channelList.length} visibles
+              </p>
+              <p className="rounded-md bg-white/5 px-2 py-1 text-xs text-slate-400">
+                Inbox: {inboxSource === "supabase" ? "Supabase" : "demo"}
+              </p>
+              <button
+                className="grid size-9 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+                onClick={() => setIsMetaSettingsOpen((current) => !current)}
+                title="Configuracion Meta"
+              >
+                <Settings size={18} />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-md border border-white/10 bg-white/[0.04] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Sesion</p>
             {supabase ? (
               currentUser ? (
                 <>
-                  <p className="mt-1 truncate text-xs text-slate-500">
+                    <p className="mt-2 break-all text-sm text-slate-200">
                     {currentUser.email}
                   </p>
-                  <p className="mt-1 text-xs text-emerald-700">
+                    <p className="mt-1 text-xs text-emerald-300">
                     Supabase activo
                   </p>
                   <button
-                    className="mt-3 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+                      className="mt-3 h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm font-medium text-slate-100 hover:bg-white/10"
                     onClick={() => void signOut()}
                   >
                     Cerrar sesion
@@ -1275,179 +1313,126 @@ export default function Home() {
               ) : (
                 <>
                   <input
-                    className="mt-3 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                      className="mt-3 h-10 w-full rounded-md border border-white/10 bg-white px-3 text-sm text-slate-950 outline-none focus:border-slate-400"
                     onChange={(event) => setAuthEmail(event.target.value)}
                     placeholder="tu@email.com"
                     type="email"
                     value={authEmail}
                   />
                   <button
-                    className="mt-2 h-9 w-full rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+                      className="mt-2 h-9 w-full rounded-md bg-white px-3 text-sm font-semibold text-slate-950"
                     onClick={() => void sendMagicLink()}
                   >
                     Enviar acceso
                   </button>
-                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    <p className="mt-2 text-xs leading-5 text-slate-400">
                     {authMessage}
                   </p>
                 </>
               )
             ) : (
-              <p className="mt-1 text-xs leading-5 text-slate-500">
+                <p className="mt-1 text-xs leading-5 text-slate-400">
                 Sin variables de Supabase. La app guarda datos en este navegador.
               </p>
             )}
-          </div>
-
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <Metric label="Nuevo" value={items.filter((item) => item.status === "new").length} />
-            <Metric
-              label="Abierto"
-              value={items.filter((item) => item.status === "open").length}
-            />
-            <Metric
-              label="Oculto"
-              value={items.filter((item) => item.hidden).length}
-            />
-          </div>
-
-          <p className="mt-3 rounded-md bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600">
-            Inbox: {inboxSource === "supabase" ? "Supabase" : "demo local"}
-          </p>
-
-          <div className="mt-6 space-y-3">
-              {channelList.map((channel) => {
-                const Icon = networkIcon[channel.network];
-                const platform = networkMeta[channel.network];
-                return (
-                <div
-                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
-                  key={channel.id}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-9 place-items-center rounded-md bg-white text-slate-700 ring-1 ring-slate-200">
-                      <Icon size={18} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-semibold leading-5">{channel.name}</p>
-                      <p className="break-words text-xs leading-4 text-slate-500">{channel.handle}</p>
-                      <span
-                        className={`mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ${platform.badgeClass}`}
-                        title={platform.label}
-                      >
-                        <Icon size={12} />
-                        {platform.label}
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <span
-                        className={`rounded-md px-2 py-1 text-[11px] font-medium ${
-                          channel.status === "connected"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : channel.status === "needs_review"
-                              ? "bg-amber-50 text-amber-800"
-                              : "bg-slate-200 text-slate-600"
-                        }`}
-                      >
-                        {channel.status === "connected"
-                          ? "Real"
-                          : channel.status === "needs_review"
-                            ? "Pendiente"
-                            : "Demo"}
-                      </span>
-                      {currentUser ? (
-                        <button
-                          className="grid size-7 place-items-center rounded-md border border-slate-200 bg-white text-slate-600"
-                          onClick={() => void disconnectAccount(channel.id)}
-                          title="Desconectar cuenta"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-slate-500">{channel.lastSync}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 rounded-md border border-slate-200 bg-white p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Cuentas visibles</p>
-                <p className="text-xs text-slate-500">
-                  {visibleAccountIds.length} de {channelList.length} activas
-                </p>
-              </div>
-              {hiddenAccountCount > 0 ? (
-                <button
-                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700"
-                  onClick={showAllAccounts}
-                >
-                  Mostrar todas
-                </button>
-              ) : null}
             </div>
+          </div>
 
-            <div className="mt-3 space-y-2">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+            <div className="space-y-2">
               {channelList.map((channel) => {
                 const Icon = networkIcon[channel.network];
                 const platform = networkMeta[channel.network];
                 const isVisible = visibleAccountSet.has(channel.id);
                 const accountItems = items.filter((item) => item.accountId === channel.id).length;
+                const accountType =
+                  channel.network === "facebook" ? "Pagina de Facebook" : "Instagram para Empresa";
 
                 return (
-                  <button
-                    className="flex w-full items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-2 text-left"
-                    data-testid={`account-toggle-${channel.id}`}
+                  <div
+                    className={`relative rounded-md border p-3 ${
+                      isVisible
+                        ? "border-white/10 bg-white/[0.05]"
+                        : "border-white/5 bg-transparent opacity-60"
+                    }`}
                     key={channel.id}
-                    onClick={() => toggleAccountVisibility(channel.id)}
-                    aria-pressed={isVisible}
                   >
-                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-white text-slate-700 ring-1 ring-slate-200">
-                      <Icon size={16} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block break-words text-sm font-medium leading-5">{channel.name}</span>
-                      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${platform.badgeClass}`}
-                          title={platform.label}
-                        >
-                          <Icon size={11} />
+                    <div className="flex items-start gap-3">
+                      <span className="relative grid size-12 shrink-0 place-items-center rounded-full border-2 border-amber-300 bg-slate-100 text-slate-700">
+                        <Icon size={20} />
+                        <span className={`absolute -bottom-1 -right-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-2 ring-[#202020] ${platform.badgeClass}`}>
                           {platform.shortLabel}
                         </span>
-                        <span>{accountItems} items</span>
                       </span>
-                    </span>
-                    <span
-                      className={`mt-1 h-6 w-11 shrink-0 rounded-full p-0.5 transition ${
-                        isVisible ? "bg-slate-950" : "bg-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`block size-5 rounded-full bg-white transition ${
-                          isVisible ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </span>
-                  </button>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-base font-semibold leading-5 text-white">
+                          {channel.name}
+                        </p>
+                        <p className="mt-1 break-words text-sm leading-5 text-slate-300">
+                          {accountType}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {accountItems} item(s) · {channel.status === "connected" ? "Real" : channel.status === "needs_review" ? "Pendiente" : "Demo"}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          className="grid size-9 place-items-center rounded-md text-slate-200 hover:bg-white/10"
+                          onClick={() => toggleAccountVisibility(channel.id)}
+                          title={isVisible ? "Ocultar cuenta" : "Mostrar cuenta"}
+                        >
+                          {isVisible ? <Eye size={20} /> : <EyeOff size={20} />}
+                        </button>
+                        <button
+                          className="grid size-9 place-items-center rounded-md text-slate-200 hover:bg-white/10"
+                          onClick={() =>
+                            setOpenAccountMenuId((current) =>
+                              current === channel.id ? null : channel.id,
+                            )
+                          }
+                          title="Opciones de cuenta"
+                        >
+                          <MoreVertical size={20} />
+                        </button>
+                      </div>
+                    </div>
+                    {openAccountMenuId === channel.id ? (
+                      <div className="absolute right-3 top-12 z-20 w-44 rounded-md border border-white/10 bg-[#2d2d2d] p-1 shadow-xl">
+                        <button
+                          className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm text-slate-100 hover:bg-white/10"
+                          onClick={() => configureAccount(channel)}
+                        >
+                          <Settings size={15} />
+                          Configurar
+                        </button>
+                        <button
+                          className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm text-rose-200 hover:bg-white/10"
+                          onClick={() => {
+                            setOpenAccountMenuId(null);
+                            void disconnectAccount(channel.id);
+                          }}
+                        >
+                          <Trash2 size={15} />
+                          Eliminar cuenta
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
           </div>
 
           <button
-            className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+            className="mx-4 mb-4 mt-3 flex h-12 shrink-0 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/5 px-3 text-base font-semibold text-white hover:bg-white/10"
             onClick={() => setIsMetaSettingsOpen(true)}
           >
-            <PanelLeft size={17} />
-            Conectar cuenta Meta
+            <Plus size={20} />
+            Añadir cuenta
           </button>
 
           {isMetaSettingsOpen ? (
-            <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
+            <div className="mx-4 mb-4 max-h-[42vh] shrink-0 overflow-y-auto rounded-md border border-white/10 bg-white p-3 text-slate-950 shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold">Configuracion Meta</p>
@@ -1559,8 +1544,8 @@ export default function Home() {
           ) : null}
         </aside>
 
-        <section className="min-w-0 border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
-          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 p-4 backdrop-blur">
+        <section className="flex min-h-[560px] min-w-0 flex-col border-b border-slate-200 bg-white lg:h-screen lg:border-b-0 lg:border-r">
+          <div className="shrink-0 border-b border-slate-200 bg-white/95 p-4 backdrop-blur">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
               <input
@@ -1605,7 +1590,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="overflow-visible lg:max-h-[calc(100vh-141px)] lg:overflow-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {filteredItems.length > 0 ? (
               <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3">
                 <div className="flex items-center gap-3">
@@ -1691,11 +1676,11 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="flex min-h-[620px] min-w-0 flex-col bg-[#fbfcfd]">
+        <section className="flex min-h-[620px] min-w-0 flex-col bg-[#fbfcfd] lg:h-screen lg:overflow-hidden">
           {selectedItem ? (
             <>
               <ConversationHeader item={selectedItem} />
-              <div className="flex-1 overflow-auto px-4 py-4 sm:px-6">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
                 <div className="mx-auto max-w-3xl space-y-4">
                   <div className="rounded-md border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1725,7 +1710,14 @@ export default function Home() {
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-3 text-sm text-slate-600">{selectedItem.title}</p>
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        Publicacion / contexto
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                        {selectedItem.title}
+                      </p>
+                    </div>
                   </div>
 
                   {selectedItem.messages.map((message) => (
@@ -1754,7 +1746,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="border-t border-slate-200 bg-white p-4">
+              <div className="shrink-0 border-t border-slate-200 bg-white p-4">
                 <div className="mx-auto max-w-3xl">
                   {isQuickReplyPanelOpen ? (
                   <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -1964,15 +1956,6 @@ export default function Home() {
         </section>
       </div>
     </main>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xl font-semibold">{value}</p>
-      <p className="mt-1 text-xs text-slate-500">{label}</p>
-    </div>
   );
 }
 

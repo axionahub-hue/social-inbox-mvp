@@ -74,8 +74,9 @@ En modo demo, las respuestas quedan guardadas en el navegador. Con sesion Supaba
 
 ## Cuentas conectadas
 
-La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del fixture local; con sesion activa salen de `connected_accounts` en Supabase. Cada cuenta tiene un toggle para decidir si sus conversaciones aparecen en el inbox.
+La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del fixture local; con sesion activa salen de `connected_accounts` en Supabase. Cada cuenta tiene un ojo para decidir si sus conversaciones aparecen en el inbox.
 Cada cuenta muestra una etiqueta de plataforma, por ejemplo `Facebook` o `Instagram`, para distinguir cuentas con nombres parecidos.
+El ojo de la cabecera permite mostrar u ocultar todas las cuentas. El menu de tres puntos de cada cuenta permite abrir configuracion o eliminar la cuenta. El boton `Anadir cuenta` abre la configuracion Meta/OAuth.
 
 La preferencia queda guardada en el navegador sin sesion y en `user_preferences` con sesion Supabase.
 
