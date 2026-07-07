@@ -176,3 +176,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `POST /api/meta/sync/comments` sin sesion devuelve `401`, `git diff --check`.
 - Pendiente: agregar `pages_read_engagement` en Meta, actualizar `.env.local`, reautorizar OAuth y ejecutar sincronizacion real.
+
+### Diagnostico de permisos para comentarios Facebook
+
+- Resumen: se verifico contra Graph API que los page tokens tienen `pages_read_engagement`, pero `/{pageId}/posts`, `/{pageId}/published_posts` y `/{pageId}/feed` devuelven error `#10` si falta `pages_read_user_content`. Se ajusto el diagnostico de capacidades y el endpoint para exigir ambos permisos y mostrar el primer error real de Meta en la UI.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, `git diff --check`.
+- Pendiente: agregar `pages_read_user_content` en Meta, actualizar `.env.local`, reautorizar OAuth y reintentar `Sincronizar comentarios FB`.

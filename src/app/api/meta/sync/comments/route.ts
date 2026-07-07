@@ -11,6 +11,8 @@ const syncSchema = z.object({
   workspaceId: z.string().uuid(),
 });
 
+const requiredFacebookReadScopes = ["pages_read_engagement", "pages_read_user_content"];
+
 type SupabaseServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
 
 type FacebookAccountRow = {
@@ -89,9 +91,10 @@ export async function POST(request: Request) {
   const accounts = ((accountsResult.data ?? []) as FacebookAccountRow[]).filter(
     (account) => account.access_token_encrypted,
   );
-  const eligibleAccounts = accounts.filter((account) =>
-    (account.scopes ?? []).includes("pages_read_engagement"),
-  );
+  const eligibleAccounts = accounts.filter((account) => {
+    const scopes = account.scopes ?? [];
+    return requiredFacebookReadScopes.every((scope) => scopes.includes(scope));
+  });
   const skippedForPermission = accounts.length - eligibleAccounts.length;
   let commentsFound = 0;
   let inserted = 0;
@@ -130,8 +133,10 @@ export async function POST(request: Request) {
 
   const message =
     eligibleAccounts.length === 0
-      ? "No hay cuentas Facebook con pages_read_engagement concedido."
-      : `Sincronizacion Facebook: ${commentsFound} comentario(s), ${inserted} nuevo(s), ${updated} actualizado(s).`;
+      ? "No hay cuentas Facebook con pages_read_engagement y pages_read_user_content concedidos."
+      : errors.length > 0
+        ? `Meta bloqueo la sincronizacion en ${errors.length} cuenta(s).`
+        : `Sincronizacion Facebook: ${commentsFound} comentario(s), ${inserted} nuevo(s), ${updated} actualizado(s).`;
 
   return NextResponse.json({
     ok: errors.length === 0,

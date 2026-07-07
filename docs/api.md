@@ -206,7 +206,7 @@ Comportamiento:
 - valida sesion Supabase;
 - valida que el workspace pertenezca al usuario;
 - selecciona cuentas Facebook reales del workspace;
-- omite cuentas sin `pages_read_engagement`;
+- omite cuentas sin `pages_read_engagement` y `pages_read_user_content`;
 - descifra page tokens solo en servidor;
 - consulta publicaciones y comentarios recientes de Facebook;
 - guarda contactos, conversaciones y mensajes en `contacts`, `inbox_items` e `inbox_messages`.
@@ -231,4 +231,4 @@ Respuesta:
 }
 ```
 
-Si no existe `pages_read_engagement`, responde controlado con `eligible = 0`.
+Si no existen `pages_read_engagement` y `pages_read_user_content`, responde controlado con `eligible = 0`.

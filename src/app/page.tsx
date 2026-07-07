@@ -76,6 +76,7 @@ const networkMeta: Record<
 const metaRequiredScopes = [
   "pages_show_list",
   "pages_read_engagement",
+  "pages_read_user_content",
   "pages_manage_engagement",
   "pages_messaging",
   "pages_manage_metadata",
@@ -87,8 +88,8 @@ const metaRequiredScopes = [
 
 const metaCapabilityChecks = [
   {
-    label: "Leer comentarios Facebook",
-    scopes: ["pages_read_engagement"],
+    label: "Leer posts/comentarios Facebook",
+    scopes: ["pages_read_engagement", "pages_read_user_content"],
   },
   {
     label: "Responder/moderar Facebook",
@@ -1044,7 +1045,15 @@ export default function Home() {
     });
     const payload = await response.json();
 
-    setMetaConnectionMessage(payload.message ?? "Sincronizacion finalizada.");
+    const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
+    const errorDetail =
+      firstError && typeof firstError.message === "string"
+        ? ` Error: ${firstError.account ? `${firstError.account}: ` : ""}${firstError.message}`
+        : "";
+
+    setMetaConnectionMessage(
+      `${payload.message ?? "Sincronizacion finalizada."}${errorDetail}`,
+    );
 
     if (!response.ok || !payload.ok) {
       return;
