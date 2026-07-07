@@ -18,7 +18,9 @@ import {
   Search,
   Send,
   Settings,
+  Smile,
   Sparkles,
+  ThumbsUp,
   Trash2,
   X,
 } from "lucide-react";
@@ -156,6 +158,8 @@ type InboxItemRow = {
   account_id: string;
   source: InboxSource;
   status: InboxItem["status"];
+  provider_comment_id: string | null;
+  provider_post_id: string | null;
   title: string;
   preview: string;
   is_liked: boolean;
@@ -174,6 +178,7 @@ type SupabaseInboxData = {
 
 type InboxView = "active" | "archived";
 type BulkInboxAction = "mark_read" | "mark_unread" | "archive" | "unarchive";
+type ReactionKind = "like" | "love" | "smile";
 
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
@@ -196,6 +201,7 @@ export default function Home() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState(items[0]?.id);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [itemReactions, setItemReactions] = useState<Record<string, ReactionKind>>({});
   const [isBulkActionRunning, setIsBulkActionRunning] = useState(false);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
@@ -209,6 +215,7 @@ export default function Home() {
   const commentSyncInFlight = useRef(false);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
+  const [openOriginalPostMenuItemId, setOpenOriginalPostMenuItemId] = useState<string | null>(null);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
   const [quickReplyDraft, setQuickReplyDraft] =
     useState<QuickReplyDraft>(emptyQuickReplyDraft);
@@ -267,6 +274,10 @@ export default function Home() {
   }, [inboxView, items, network, query, visibleAccountSet]);
 
   const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
+  const selectedReaction = selectedItem
+    ? itemReactions[selectedItem.id] ?? (selectedItem.liked ? "like" : null)
+    : null;
+  const selectedOriginalPostUrl = selectedItem ? resolveOriginalPostUrl(selectedItem) : null;
   const selectedItemSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const filteredItemIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
   const selectedVisibleCount = filteredItemIds.filter((id) => selectedItemSet.has(id)).length;
@@ -533,6 +544,8 @@ export default function Home() {
         account_id,
         source,
         status,
+        provider_comment_id,
+        provider_post_id,
         title,
         preview,
         is_liked,
@@ -655,6 +668,8 @@ export default function Home() {
           source: item.source,
           status: item.status,
           provider_thread_id: item.id,
+          provider_comment_id: item.providerCommentId,
+          provider_post_id: item.providerPostId,
           title: item.title,
           preview: item.preview,
           is_liked: item.liked,
@@ -1156,7 +1171,8 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         itemId: selectedItem.id,
-        externalId: selectedItem.id,
+        externalId:
+          selectedItem.providerCommentId ?? selectedItem.providerPostId ?? selectedItem.id,
         action,
         message,
       }),
@@ -1170,6 +1186,33 @@ export default function Home() {
         item.id === selectedItem.id ? applyInboxActionToItem(item, action, message) : item,
       ),
     );
+  }
+
+  function openOriginalPost() {
+    if (!selectedOriginalPostUrl) {
+      setNotice("Esta conversacion todavia no tiene URL original disponible.");
+      setOpenOriginalPostMenuItemId(null);
+      return;
+    }
+
+    window.open(selectedOriginalPostUrl, "_blank", "noopener,noreferrer");
+    setOpenOriginalPostMenuItemId(null);
+  }
+
+  function reactToSelectedItem(reaction: ReactionKind) {
+    if (!selectedItem) return;
+
+    const isRemovingReaction = selectedReaction === reaction;
+    setItemReactions((current) => {
+      const next = { ...current };
+      if (isRemovingReaction) {
+        delete next[selectedItem.id];
+      } else {
+        next[selectedItem.id] = reaction;
+      }
+      return next;
+    });
+    void runAction(isRemovingReaction ? "unlike" : "like");
   }
 
   function toggleSelectedItem(itemId: string, checked: boolean) {
@@ -1679,7 +1722,7 @@ export default function Home() {
         <section className="flex min-h-[620px] min-w-0 flex-col bg-[#fbfcfd] lg:h-screen lg:overflow-hidden">
           {selectedItem ? (
             <>
-              <ConversationHeader item={selectedItem} />
+              <ConversationHeader item={selectedItem} onBlock={() => void runAction("block")} />
               <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
                 <div className="mx-auto max-w-3xl space-y-4">
                   <div className="rounded-md border border-slate-200 bg-white p-4">
@@ -1711,10 +1754,42 @@ export default function Home() {
                       ) : null}
                     </div>
                     <div className="mt-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                        Publicacion / contexto
-                      </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          Publicacion / contexto
+                        </p>
+                        <div className="relative">
+                          <button
+                            className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            onClick={() =>
+                              setOpenOriginalPostMenuItemId((current) =>
+                                current === selectedItem.id ? null : selectedItem.id,
+                              )
+                            }
+                            title="Opciones de publicacion"
+                          >
+                            <ExternalLink size={15} />
+                          </button>
+                          {openOriginalPostMenuItemId === selectedItem.id ? (
+                            <div className="absolute right-0 top-9 z-20 w-56 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                              <button
+                                className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                                disabled={!selectedOriginalPostUrl}
+                                onClick={openOriginalPost}
+                              >
+                                <ExternalLink size={15} />
+                                Abrir publicacion original
+                              </button>
+                              {!selectedOriginalPostUrl ? (
+                                <p className="px-2 py-1 text-xs leading-4 text-slate-400">
+                                  Falta URL original en este item.
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                         {selectedItem.title}
                       </p>
                     </div>
@@ -1740,6 +1815,16 @@ export default function Home() {
                         >
                           {message.sentAt}
                         </p>
+                        {message.author === "contact" ? (
+                          <MessageModerationActions
+                            hidden={selectedItem.hidden}
+                            reaction={selectedReaction}
+                            onHideToggle={() =>
+                              void runAction(selectedItem.hidden ? "unhide" : "hide")
+                            }
+                            onReact={reactToSelectedItem}
+                          />
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -1913,36 +1998,17 @@ export default function Home() {
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex gap-2">
-                      <ActionButton
-                        active={selectedItem.liked}
-                        title={selectedItem.liked ? "Quitar like" : "Dar like"}
-                        onClick={() => void runAction(selectedItem.liked ? "unlike" : "like")}
-                      >
-                        <Heart size={17} />
-                      </ActionButton>
-                      <ActionButton
-                        active={selectedItem.hidden}
-                        title={selectedItem.hidden ? "Mostrar" : "Ocultar"}
-                        onClick={() => void runAction(selectedItem.hidden ? "unhide" : "hide")}
-                      >
-                        {selectedItem.hidden ? <Eye size={17} /> : <EyeOff size={17} />}
-                      </ActionButton>
-                      <ActionButton title="Bloquear usuario" onClick={() => void runAction("block")}>
-                        <Ban size={17} />
-                      </ActionButton>
-                      <ActionButton
-                        active={selectedItem.status === "archived"}
-                        title={selectedItem.status === "archived" ? "Desarchivar" : "Archivar"}
-                        onClick={() =>
-                          void runAction(
-                            selectedItem.status === "archived" ? "unarchive" : "archive",
-                          )
-                        }
-                      >
-                        <Archive size={17} />
-                      </ActionButton>
-                    </div>
+                    <ActionButton
+                      active={selectedItem.status === "archived"}
+                      title={selectedItem.status === "archived" ? "Desarchivar" : "Archivar"}
+                      onClick={() =>
+                        void runAction(
+                          selectedItem.status === "archived" ? "unarchive" : "archive",
+                        )
+                      }
+                    >
+                      <Archive size={17} />
+                    </ActionButton>
                     <p className="text-xs text-slate-500">{notice}</p>
                   </div>
                 </div>
@@ -2029,12 +2095,12 @@ function Badge({ source }: { source: InboxSource }) {
   );
 }
 
-function ConversationHeader({ item }: { item: InboxItem }) {
+function ConversationHeader({ item, onBlock }: { item: InboxItem; onBlock: () => void }) {
   const Icon = networkIcon[item.network];
 
   return (
     <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4">
+      <div className="mx-auto flex w-full max-w-3xl items-center gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid size-11 shrink-0 place-items-center rounded-md bg-slate-900 text-sm font-semibold text-white">
             {item.avatarInitials}
@@ -2043,6 +2109,17 @@ function ConversationHeader({ item }: { item: InboxItem }) {
             <div className="flex items-center gap-2">
               <h2 className="truncate text-lg font-semibold">{item.contactName}</h2>
               <Icon size={17} className="shrink-0 text-slate-500" />
+              <button
+                className={`grid size-8 shrink-0 place-items-center rounded-md border ${
+                  item.blocked
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+                onClick={onBlock}
+                title={item.blocked ? "Usuario bloqueado" : "Bloquear usuario"}
+              >
+                <Ban size={15} />
+              </button>
             </div>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
               <NetworkBadge network={item.network} />
@@ -2051,19 +2128,80 @@ function ConversationHeader({ item }: { item: InboxItem }) {
             </div>
           </div>
         </div>
-        <div className="hidden items-center gap-2 sm:flex">
-          <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-            {item.assignee}
-          </span>
-          <span className="grid size-9 place-items-center rounded-md border border-slate-200">
-            <MessageCircle size={17} />
-          </span>
-          <span className="grid size-9 place-items-center rounded-md border border-slate-200">
-            <Sparkles size={17} />
-          </span>
-        </div>
       </div>
     </header>
+  );
+}
+
+function MessageModerationActions({
+  hidden,
+  reaction,
+  onHideToggle,
+  onReact,
+}: {
+  hidden: boolean;
+  reaction: ReactionKind | null;
+  onHideToggle: () => void;
+  onReact: (reaction: ReactionKind) => void;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
+      <SmallActionButton
+        active={reaction === "like"}
+        title={reaction === "like" ? "Quitar me gusta" : "Me gusta"}
+        onClick={() => onReact("like")}
+      >
+        <ThumbsUp size={14} />
+      </SmallActionButton>
+      <SmallActionButton
+        active={reaction === "love"}
+        title={reaction === "love" ? "Quitar me encanta" : "Me encanta"}
+        onClick={() => onReact("love")}
+      >
+        <Heart size={14} />
+      </SmallActionButton>
+      <SmallActionButton
+        active={reaction === "smile"}
+        title={reaction === "smile" ? "Quitar reaccion" : "Me divierte"}
+        onClick={() => onReact("smile")}
+      >
+        <Smile size={14} />
+      </SmallActionButton>
+      <SmallActionButton
+        active={hidden}
+        title={hidden ? "Mostrar comentario" : "Ocultar comentario"}
+        onClick={onHideToggle}
+      >
+        {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+      </SmallActionButton>
+    </div>
+  );
+}
+
+function SmallActionButton({
+  active,
+  title,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  title: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      className={`grid size-7 place-items-center rounded-md border ${
+        active
+          ? "border-slate-950 bg-slate-950 text-white"
+          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+      }`}
+      onClick={onClick}
+      title={title}
+      type="button"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -2101,6 +2239,18 @@ function NetworkBadge({ network }: { network: Network }) {
       {meta.shortLabel}
     </span>
   );
+}
+
+function resolveOriginalPostUrl(item: InboxItem) {
+  if (item.originalUrl) {
+    return item.originalUrl;
+  }
+
+  if (item.network === "facebook" && item.providerPostId) {
+    return `https://www.facebook.com/${encodeURIComponent(item.providerPostId)}`;
+  }
+
+  return null;
 }
 
 function createLocalId() {
@@ -2193,6 +2343,8 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     preview: row.preview,
     receivedAt: formatTimestamp(row.received_at),
     assignee: "Sin asignar",
+    providerPostId: row.provider_post_id ?? undefined,
+    providerCommentId: row.provider_comment_id ?? undefined,
     unreadCount: row.unread_count,
     liked: row.is_liked,
     hidden: row.is_hidden,

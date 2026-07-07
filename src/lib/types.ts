@@ -27,6 +27,9 @@ export type InboxItem = {
   assignee: string;
   campaign?: string;
   postTitle?: string;
+  providerPostId?: string;
+  providerCommentId?: string;
+  originalUrl?: string;
   unreadCount: number;
   liked: boolean;
   hidden: boolean;

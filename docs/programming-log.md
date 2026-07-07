@@ -232,3 +232,10 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop/movil con navegador integrado. Cards de cuenta a 78px de alto, titulos a 14px, boton `Anadir cuenta` a 40px, sin overflow horizontal ni errores de consola.
 - Pendiente: seguir con refinamiento global de UI/UX antes de publicar en Vercel y configurar Webhooks Meta.
+
+### Reorganizacion del panel de conversacion
+
+- Resumen: se movio bloqueo de usuario a la cabecera del autor, se quitaron controles sin funcionalidad de la esquina superior derecha, se agrego menu para abrir publicacion original, se dejaron reacciones/ocultar junto al comentario recibido y el footer del composer quedo con responder, respuestas rapidas, enviar y archivar.
+- Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/demo-data.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop con menu `Abrir publicacion original`, sin `Sin asignar` ni iconos muertos, sin overflow horizontal; smoke movil sin overflow.
+- Pendiente: persistir permalink exacto de Meta en Supabase y ampliar `/api/inbox/action` si se quieren reacciones diferenciadas reales mas alla de `like/unlike`.

@@ -33,11 +33,13 @@ Payload:
 ```json
 {
   "itemId": "item-1001",
-  "externalId": "item-1001",
+  "externalId": "provider-comment-or-post-id",
   "action": "reply",
   "message": "Texto de respuesta"
 }
 ```
+
+`itemId` es el UUID interno de `inbox_items`. `externalId` debe ser el ID real del comentario/post/mensaje del proveedor cuando exista; la UI usa `provider_comment_id` y cae a `provider_post_id` o al ID interno solo como fallback demo.
 
 Acciones soportadas:
 
@@ -74,6 +76,8 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 - `mark_unread`: marca `inbox_items.status = new` y deja `unread_count = 1`.
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
+
+Nota: la UI puede mostrar varias reacciones visuales sobre un comentario, pero la API actual solo persiste `like`/`unlike`. Para reacciones diferenciadas en Meta se debe ampliar este endpoint y `executeMetaAction`.
 
 ### `GET /api/meta/webhook`
 

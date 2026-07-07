@@ -58,6 +58,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La seleccion por checkbox opera sobre los items visibles y reutiliza `/api/inbox/action` para marcar leido/no leido, archivar y desarchivar.
 - En desktop, el shell opera como tres paneles de altura fija: cuentas con scroll propio, bandeja con scroll propio y conversacion con footer fijo para composer/respuestas/acciones.
 - La columna de cuentas muestra nombres completos, ojo global, ojo por cuenta, menu de cuenta y boton fijo para anadir cuenta.
+- El panel de conversacion separa contexto, mensaje y composer: el contexto muestra el texto completo de la publicacion; las acciones de reaccion/ocultar viven junto al mensaje recibido; bloquear vive en la cabecera del autor; archivar queda en el footer del composer.
+- Para abrir la publicacion original, la UI usa `originalUrl` si existe y, en Facebook, deriva una URL desde `provider_post_id`. El permalink exacto de Meta queda como mejora de datos persistidos cuando se agregue una columna dedicada.
 
 ## Sincronizacion de comentarios Facebook
 
@@ -66,6 +68,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Solo procesa cuentas con `pages_read_engagement` y `pages_read_user_content` concedidos.
 - Lee las ultimas publicaciones publicadas y consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
+- Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La UI ejecuta auto-sincronizacion cada 15 segundos mientras la app esta abierta para no depender del boton manual durante pruebas locales.
 - Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion de app/Page y procesamiento de eventos `feed`.
