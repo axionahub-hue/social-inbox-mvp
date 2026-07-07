@@ -7,7 +7,12 @@ export type InboxSource =
   | "ad_comment";
 
 export type InboxStatus = "new" | "open" | "responded" | "archived";
-export type IngestSource = "webhook" | "polling_fast" | "polling_full" | "unknown";
+export type IngestSource =
+  | "webhook"
+  | "polling_fast"
+  | "polling_full"
+  | "ads_manual"
+  | "unknown";
 
 export type Sentiment = "hot" | "neutral" | "support";
 

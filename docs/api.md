@@ -320,3 +320,56 @@ Comportamiento:
 - exige scope `ads_read`;
 - consulta `/me/adaccounts` para listar cuentas publicitarias visibles;
 - si falta schema, reautorizacion o permisos, responde `ready = false` con `reason`.
+
+### `POST /api/meta/sync/ad-comments`
+
+Sincroniza comentarios de anuncios Meta detectables por Marketing API.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Payload:
+
+```json
+{
+  "workspaceId": "uuid-del-workspace"
+}
+```
+
+Comportamiento:
+
+- valida sesion Supabase;
+- valida que el workspace pertenezca al usuario;
+- exige token largo de usuario Meta en `meta_connections`;
+- exige scope `ads_read`;
+- lista cuentas publicitarias visibles con Marketing API;
+- consulta anuncios recientes y sus creatives;
+- toma `effective_object_story_id` u `object_story_id` como post/story asociado al anuncio;
+- filtra solo anuncios cuyo Page ID corresponde a paginas Facebook conectadas en el workspace;
+- lee comentarios del post/story usando el page token cifrado;
+- guarda contactos, conversaciones y mensajes como `source = ad_comment`;
+- marca `ingest_source = ads_manual` y guarda `provider_ad_id`.
+
+Respuesta:
+
+```json
+{
+  "ok": true,
+  "message": "Sincronizacion Ads: 2 comentario(s), 1 nuevo(s), 1 actualizado(s).",
+  "targets": {
+    "found": 12,
+    "matchedPages": 4
+  },
+  "comments": {
+    "found": 2,
+    "inserted": 1,
+    "updated": 1
+  },
+  "errors": []
+}
+```
+
+Limitacion: esta primera version cubre anuncios cuyo creative expone `effective_object_story_id` u `object_story_id`. Algunos formatos de anuncio pueden requerir campos adicionales de creative o lectura por Ad Creative API.

@@ -18,6 +18,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `src/app/api/meta/oauth/callback/route.ts`: callback OAuth Meta con `state` firmado.
 - `src/app/api/meta/accounts/[accountId]/route.ts`: desconexion de cuentas conectadas del workspace.
 - `src/app/api/meta/sync/comments/route.ts`: sincronizacion manual de comentarios organicos de Facebook.
+- `src/app/api/meta/sync/ad-comments/route.ts`: sincronizacion manual de comentarios de anuncios Meta via Marketing API.
 - `supabase/schema.sql`: modelo relacional inicial.
 
 ## Flujo de datos previsto
@@ -74,7 +75,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Lee las ultimas publicaciones publicadas, consulta cada post individual para obtener `message` completo y luego consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
-- Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full` o quedo como `unknown`.
+- Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full`, `ads_manual` o quedo como `unknown`.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
@@ -87,7 +88,10 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los comentarios de Ads no se tratan como comentarios organicos de Page.
 - La base Ads usa Marketing API y requiere `ads_read` mas token largo de usuario Meta guardado en `meta_connections`.
 - `/api/meta/ads/diagnostics` valida si existe schema/token/scope y lista `/me/adaccounts`.
-- El siguiente paso funcional sera mapear ads/creatives hacia `effective_object_story_id` u `object_story_id` para leer comentarios desde el post/story asociado y normalizarlos como `source = ad_comment`.
+- `/api/meta/sync/ad-comments` lista anuncios recientes, lee el creative y usa `effective_object_story_id` u `object_story_id` para encontrar el post/story asociado al anuncio.
+- La sincronizacion filtra solo Pages conectadas al workspace y usa el page token cifrado para leer comentarios.
+- Los comentarios importados se normalizan como `source = ad_comment`, `ingest_source = ads_manual` y guardan `provider_ad_id`.
+- Esta primera version puede no cubrir todos los formatos de anuncio; si un creative no expone story/post asociado, se debe ampliar la lectura de campos de creative.
 
 ## Auth y workspace
 

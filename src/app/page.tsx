@@ -59,6 +59,7 @@ const ingestSourceLabels: Record<IngestSource, string> = {
   webhook: "Webhook",
   polling_fast: "Polling rapido",
   polling_full: "Sync manual",
+  ads_manual: "Ads manual",
   unknown: "Origen pendiente",
 };
 
@@ -66,6 +67,7 @@ const ingestSourceColors: Record<IngestSource, string> = {
   webhook: "bg-violet-50 text-violet-700 ring-violet-200",
   polling_fast: "bg-cyan-50 text-cyan-700 ring-cyan-200",
   polling_full: "bg-slate-100 text-slate-700 ring-slate-200",
+  ads_manual: "bg-amber-50 text-amber-800 ring-amber-200",
   unknown: "bg-slate-50 text-slate-500 ring-slate-200",
 };
 
@@ -300,6 +302,7 @@ export default function Home() {
     useState<MetaAdsDiagnostics | null>(null);
   const [isMetaWebhookDiagnosticsLoading, setIsMetaWebhookDiagnosticsLoading] = useState(false);
   const [isMetaAdsDiagnosticsLoading, setIsMetaAdsDiagnosticsLoading] = useState(false);
+  const [isMetaAdCommentsSyncing, setIsMetaAdCommentsSyncing] = useState(false);
   const [appOrigin] = useState(() =>
     typeof window === "undefined" ? "http://localhost:3100" : window.location.origin,
   );
@@ -1386,6 +1389,58 @@ export default function Home() {
     }
   }
 
+  async function syncMetaAdComments() {
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar Ads.");
+      return;
+    }
+
+    setIsMetaAdCommentsSyncing(true);
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+
+      if (!accessToken) {
+        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+        return;
+      }
+
+      const response = await fetch("/api/meta/sync/ad-comments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const payload = await response.json();
+      const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
+      const errorDetail =
+        firstError && typeof firstError.message === "string"
+          ? ` Error: ${firstError.target ? `${firstError.target}: ` : ""}${firstError.message}`
+          : "";
+
+      setMetaConnectionMessage(`${payload.message ?? "Sincronizacion Ads finalizada."}${errorDetail}`);
+
+      if (!response.ok || !payload.ok) {
+        return;
+      }
+
+      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+      setChannelList(inboxData.channels);
+      setItems(inboxData.items);
+      setInboxSource("supabase");
+      setNotice(`${payload.comments?.inserted ?? 0} comentario(s) de Ads nuevo(s) importado(s).`);
+    } catch {
+      setMetaConnectionMessage("No se pudo sincronizar comentarios de Ads.");
+    } finally {
+      setIsMetaAdCommentsSyncing(false);
+    }
+  }
+
   useEffect(() => {
     if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
       return;
@@ -1944,6 +1999,14 @@ export default function Home() {
                   ) : null}
                 </div>
               ) : null}
+              <button
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isMetaAdCommentsSyncing}
+                onClick={() => void syncMetaAdComments()}
+              >
+                <MessageCircle size={16} />
+                {isMetaAdCommentsSyncing ? "Sincronizando Ads..." : "Sincronizar comentarios Ads"}
+              </button>
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments
                   ? "Auto-sinc rapida activa mientras la app este abierta. Webhooks Meta se diagnostican arriba."

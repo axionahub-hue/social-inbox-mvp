@@ -121,6 +121,33 @@ type MetaAdAccountsResponse = {
   };
 };
 
+type MetaAd = {
+  id: string;
+  name?: string;
+  effective_status?: string;
+  updated_time?: string;
+  campaign?: {
+    id?: string;
+    name?: string;
+  };
+  creative?: {
+    id?: string;
+    name?: string;
+    effective_object_story_id?: string;
+    object_story_id?: string;
+  };
+};
+
+type MetaAdsResponse = {
+  data?: MetaAd[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
 type MetaComment = {
   id: string;
   message?: string;
@@ -183,6 +210,16 @@ export type MetaOrganicComment = {
   createdTime: string | null;
   isHidden: boolean;
   permalink: string | null;
+};
+
+export type MetaAdCommentTarget = {
+  adAccountId: string;
+  adAccountName: string;
+  adId: string;
+  adName: string;
+  campaignName: string | null;
+  postId: string;
+  pageId: string;
 };
 
 type MetaPageSubscriptionResponse = {
@@ -605,6 +642,95 @@ export async function fetchMetaAdAccounts(accessToken: string) {
   }
 
   return accounts.data;
+}
+
+export async function fetchMetaAdCommentTargets({
+  accessToken,
+  adAccountLimit = 25,
+  adsPerAccountLimit = 25,
+}: {
+  accessToken: string;
+  adAccountLimit?: number;
+  adsPerAccountLimit?: number;
+}) {
+  const adAccounts = (await fetchMetaAdAccounts(accessToken)).slice(0, adAccountLimit);
+  const targets = await Promise.all(
+    adAccounts.map(async (adAccount) => {
+      const ads = await requestPagedGraph<MetaAdsResponse, MetaAd>(`${adAccount.id}/ads`, {
+        fields:
+          "id,name,effective_status,updated_time,campaign{id,name},creative{id,name,effective_object_story_id,object_story_id}",
+        limit: `${adsPerAccountLimit}`,
+        access_token: accessToken,
+      });
+
+      if (!ads.ok) {
+        return [];
+      }
+
+      return ads.data
+        .map((ad) => {
+          const postId = ad.creative?.effective_object_story_id ?? ad.creative?.object_story_id;
+          const pageId = postId?.split("_")[0];
+
+          if (!postId || !pageId) {
+            return null;
+          }
+
+          return {
+            adAccountId: adAccount.id,
+            adAccountName: adAccount.name ?? adAccount.id,
+            adId: ad.id,
+            adName: ad.name ?? ad.id,
+            campaignName: ad.campaign?.name ?? null,
+            postId,
+            pageId,
+          } satisfies MetaAdCommentTarget;
+        })
+        .filter((target): target is MetaAdCommentTarget => Boolean(target));
+    }),
+  );
+
+  return targets.flat();
+}
+
+export async function fetchMetaPostComments({
+  accessToken,
+  postId,
+  commentsLimit = 25,
+}: {
+  accessToken: string;
+  postId: string;
+  commentsLimit?: number;
+}) {
+  const fullPost = await fetchMetaPostDetail({
+    accessToken,
+    fallbackPost: {
+      id: postId,
+    },
+  });
+  const comments = await requestGraph<MetaCommentsResponse>(`${postId}/comments`, {
+    fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
+    order: "reverse_chronological",
+    limit: `${commentsLimit}`,
+    access_token: accessToken,
+  });
+
+  if (comments.error) {
+    throw new Error(comments.error.message ?? `No se pudieron leer comentarios de ${postId}.`);
+  }
+
+  return (comments.data ?? []).map((comment): MetaOrganicComment => ({
+    postId,
+    postMessage: fullPost.message ?? null,
+    postPermalink: fullPost.permalink_url ?? null,
+    commentId: comment.id,
+    message: comment.message ?? "",
+    fromId: comment.from?.id ?? null,
+    fromName: comment.from?.name ?? null,
+    createdTime: comment.created_time ?? fullPost.created_time ?? null,
+    isHidden: Boolean(comment.is_hidden),
+    permalink: comment.permalink_url ?? null,
+  }));
 }
 
 async function fetchMetaPostDetail({

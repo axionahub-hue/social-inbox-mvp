@@ -312,3 +312,10 @@
 - Resumen: se agrego `ads_read` como scope objetivo, tabla `meta_connections` para guardar user token largo cifrado, guardado del token en OAuth callback, endpoint `/api/meta/ads/diagnostics` y boton `Diagnosticar Ads` en Configuracion Meta.
 - Areas tocadas: `supabase/schema.sql`, `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/api/meta/ads/diagnostics/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion pendiente: ejecutar SQL de `meta_connections`, agregar `ads_read` en Vercel/Meta Login config, reautorizar OAuth y confirmar cuentas publicitarias via diagnostico.
+
+### Sincronizacion manual de comentarios de Ads
+
+- Resumen: se agrego `/api/meta/sync/ad-comments` para descubrir anuncios recientes por Marketing API, resolver el post/story asociado desde `effective_object_story_id` u `object_story_id`, leer comentarios con page token y persistirlos como `source = ad_comment`, `ingest_source = ads_manual` y `provider_ad_id`. La UI suma boton `Sincronizar comentarios Ads`.
+- Areas tocadas: `src/lib/meta.ts`, `src/lib/types.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con comentario real en anuncio.
+- Pendiente: ampliar campos de creative si algun formato de anuncio no expone story/post asociado.

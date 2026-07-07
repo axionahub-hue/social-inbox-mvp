@@ -1,5 +1,6 @@
 import type { MetaOrganicComment } from "@/lib/meta";
 import { createServiceSupabaseClient } from "@/lib/supabase";
+import type { InboxSource } from "@/lib/types";
 
 export type SupabaseServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
 
@@ -10,13 +11,17 @@ export async function persistFacebookComment({
   accountName,
   comment,
   ingestSource = "unknown",
+  source = "post_comment",
+  providerAdId = null,
 }: {
   supabase: SupabaseServiceClient;
   workspaceId: string;
   accountId: string;
   accountName: string;
   comment: MetaOrganicComment;
-  ingestSource?: "webhook" | "polling_fast" | "polling_full" | "unknown";
+  ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_manual" | "unknown";
+  source?: InboxSource;
+  providerAdId?: string | null;
 }) {
   const contactId = await ensureFacebookContact({
     supabase,
@@ -45,9 +50,11 @@ export async function persistFacebookComment({
     const updatePayload = {
       title,
       preview,
+      source,
       is_hidden: comment.isHidden,
       ingest_source: ingestSource,
       provider_post_id: comment.postId,
+      provider_ad_id: providerAdId,
       updated_at: now,
     };
     const updateResult = await supabase
@@ -65,8 +72,10 @@ export async function persistFacebookComment({
         .update({
           title,
           preview,
+          source,
           is_hidden: comment.isHidden,
           provider_post_id: comment.postId,
+          provider_ad_id: providerAdId,
           updated_at: now,
         })
         .eq("id", existingItem.data.id);
@@ -90,11 +99,12 @@ export async function persistFacebookComment({
     workspace_id: workspaceId,
     account_id: accountId,
     contact_id: contactId,
-    source: "post_comment",
+    source,
     status: "new",
     provider_thread_id: comment.postId,
     provider_comment_id: comment.commentId,
     provider_post_id: comment.postId,
+    provider_ad_id: providerAdId,
     title,
     preview,
     is_hidden: comment.isHidden,
@@ -116,11 +126,12 @@ export async function persistFacebookComment({
         workspace_id: workspaceId,
         account_id: accountId,
         contact_id: contactId,
-        source: "post_comment",
+        source,
         status: "new",
         provider_thread_id: comment.postId,
         provider_comment_id: comment.commentId,
         provider_post_id: comment.postId,
+        provider_ad_id: providerAdId,
         title,
         preview,
         is_hidden: comment.isHidden,
