@@ -207,6 +207,31 @@ type RunActionOptions = {
   recipientExternalId?: string;
 };
 
+type MetaWebhookDiagnostics = {
+  app?: {
+    pageFeedActive: boolean;
+    callbackUrl: string | null;
+    fields: Array<{ name?: string; version?: string }>;
+    error: string | null;
+  };
+  pages?: Array<{
+    pageId: string;
+    pageName: string;
+    subscribed: boolean;
+    fields: string[];
+    error: string | null;
+  }>;
+  latestEvents?: Array<{
+    id: string;
+    eventType: string;
+    createdAt: string;
+    processedAt: string | null;
+    entryIds: string[];
+    changes: Array<{ field?: string; item?: string }>;
+  }>;
+  latestEventsError?: string | null;
+};
+
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
   category: "General",
@@ -252,6 +277,9 @@ export default function Home() {
     useState<QuickReplyDraft>(emptyQuickReplyDraft);
   const [composer, setComposer] = useState("");
   const [notice, setNotice] = useState("Listo para conectar Meta cuando tengas permisos.");
+  const [metaWebhookDiagnostics, setMetaWebhookDiagnostics] =
+    useState<MetaWebhookDiagnostics | null>(null);
+  const [isMetaWebhookDiagnosticsLoading, setIsMetaWebhookDiagnosticsLoading] = useState(false);
   const [appOrigin] = useState(() =>
     typeof window === "undefined" ? "http://localhost:3100" : window.location.origin,
   );
@@ -1252,6 +1280,49 @@ export default function Home() {
     }
   }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
 
+  async function runMetaWebhookDiagnostics() {
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      setMetaConnectionMessage("Inicia sesion Supabase antes de diagnosticar Webhooks.");
+      return;
+    }
+
+    setIsMetaWebhookDiagnosticsLoading(true);
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+
+      if (!accessToken) {
+        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+        return;
+      }
+
+      const response = await fetch("/api/meta/webhook/diagnostics", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setMetaConnectionMessage(payload.message ?? "No se pudo diagnosticar Webhooks Meta.");
+        return;
+      }
+
+      setMetaWebhookDiagnostics(payload);
+      setMetaConnectionMessage("Diagnostico Webhooks actualizado.");
+    } catch {
+      setMetaConnectionMessage("No se pudo diagnosticar Webhooks Meta.");
+    } finally {
+      setIsMetaWebhookDiagnosticsLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
       return;
@@ -1716,9 +1787,61 @@ export default function Home() {
                 <MessageCircle size={16} />
                 Sincronizar comentarios FB
               </button>
+              <button
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
+                disabled={isMetaWebhookDiagnosticsLoading}
+                onClick={() => void runMetaWebhookDiagnostics()}
+              >
+                <Settings size={16} />
+                {isMetaWebhookDiagnosticsLoading ? "Diagnosticando..." : "Diagnosticar webhooks"}
+              </button>
+              {metaWebhookDiagnostics ? (
+                <div className="mt-3 rounded-md border border-slate-200 bg-white p-2 text-xs leading-5 text-slate-600">
+                  <p className="font-semibold text-slate-700">Webhooks Meta</p>
+                  <p>
+                    App Page/feed:{" "}
+                    <span
+                      className={
+                        metaWebhookDiagnostics.app?.pageFeedActive
+                          ? "font-semibold text-emerald-700"
+                          : "font-semibold text-amber-700"
+                      }
+                    >
+                      {metaWebhookDiagnostics.app?.pageFeedActive ? "Activo" : "No activo"}
+                    </span>
+                  </p>
+                  <p className="break-all">
+                    Callback: {metaWebhookDiagnostics.app?.callbackUrl ?? "No reportado"}
+                  </p>
+                  <p>
+                    Paginas feed:{" "}
+                    {(metaWebhookDiagnostics.pages ?? []).filter((page) => page.subscribed).length}
+                    /{metaWebhookDiagnostics.pages?.length ?? 0}
+                  </p>
+                  <div className="mt-2 grid gap-1">
+                    {(metaWebhookDiagnostics.pages ?? []).map((page) => (
+                      <div className="flex items-center justify-between gap-2" key={page.pageId}>
+                        <span className="min-w-0 truncate">{page.pageName}</span>
+                        <span
+                          className={`shrink-0 rounded-md px-2 py-0.5 font-medium ${
+                            page.subscribed
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {page.subscribed ? "feed" : "sin feed"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2">
+                    Ultimos eventos guardados: {metaWebhookDiagnostics.latestEvents?.length ?? 0}
+                  </p>
+                </div>
+              ) : null}
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments
-                  ? "Auto-sinc activa cada 15 segundos mientras la app este abierta. Para eventos instantaneos 24/7 falta conectar Webhooks Meta en una URL publica."
+                  ? "Auto-sinc rapida activa mientras la app este abierta. Webhooks Meta se diagnostican arriba."
                   : "Auto-sinc pendiente hasta conceder permisos de lectura de comentarios."}
               </p>
             </div>

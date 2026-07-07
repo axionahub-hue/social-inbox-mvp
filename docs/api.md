@@ -269,3 +269,28 @@ Respuesta:
 ```
 
 Si no existen `pages_read_engagement` y `pages_read_user_content`, responde controlado con `eligible = 0`.
+
+### `POST /api/meta/webhook/diagnostics`
+
+Diagnostica la configuracion Webhooks Meta para el workspace autenticado.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Payload:
+
+```json
+{
+  "workspaceId": "uuid-del-workspace"
+}
+```
+
+Comportamiento:
+
+- valida sesion Supabase;
+- consulta `/{app-id}/subscriptions` con app token para confirmar objeto `Page` y campo `feed`;
+- consulta `/{page-id}/subscribed_apps` con page token por cada pagina Facebook conectada;
+- devuelve los ultimos eventos `webhook_events` guardados para comparar configuracion con entregas reales.

@@ -300,3 +300,9 @@
 - Resumen: se agrego `inbox_items.ingest_source` y badges de UI para distinguir `webhook`, `polling_fast`, `polling_full` y `unknown`. El persistidor compartido marca el origen al guardar comentarios y mantiene fallback si la columna todavia no existe en Supabase.
 - Areas tocadas: `supabase/schema.sql`, `src/lib/types.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion pendiente: ejecutar SQL de schema en Supabase para activar la columna y verificar que nuevos comentarios muestren `Polling rapido` o `Webhook` en la UI.
+
+### Diagnostico operativo de Webhooks Meta
+
+- Resumen: se agrego endpoint autenticado `/api/meta/webhook/diagnostics` y boton en Configuracion Meta para consultar el estado real de `Page/feed` en la app, suscripcion `feed` por pagina y ultimos eventos recibidos.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/webhook/diagnostics/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion pendiente: ejecutar diagnostico desde la app publica y comparar con comentarios organicos nuevos que sigan entrando por `Polling rapido`.

@@ -79,6 +79,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
 - Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page al campo `feed` y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
+- `/api/meta/webhook/diagnostics` compara configuracion real de Meta (`/{app-id}/subscriptions`, `/{page-id}/subscribed_apps`) contra ultimos eventos recibidos para distinguir endpoint sano de falta de entrega real por Meta.
 
 ## Auth y workspace
 

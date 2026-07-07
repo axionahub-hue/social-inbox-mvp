@@ -169,6 +169,32 @@ type MetaPageSubscriptionResponse = {
   };
 };
 
+type MetaAppSubscriptionsResponse = {
+  data?: Array<{
+    object?: string;
+    callback_url?: string;
+    active?: boolean;
+    fields?: Array<{
+      name?: string;
+      version?: string;
+    }>;
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
+type MetaPageSubscribedAppsResponse = {
+  data?: Array<{
+    id?: string;
+    name?: string;
+    subscribed_fields?: string[];
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
 export function isMetaConfigured() {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
@@ -517,6 +543,28 @@ export async function subscribeMetaPageToFeed({
     ok: Boolean(payload.success),
     message: payload.success ? "Pagina suscrita al webhook feed." : "Meta no confirmo la suscripcion.",
   };
+}
+
+export async function fetchMetaAppSubscriptions() {
+  if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) {
+    throw new Error("META_APP_ID y META_APP_SECRET son requeridos para diagnosticar webhooks.");
+  }
+
+  return requestGraph<MetaAppSubscriptionsResponse>(`${process.env.META_APP_ID}/subscriptions`, {
+    access_token: `${process.env.META_APP_ID}|${process.env.META_APP_SECRET}`,
+  });
+}
+
+export async function fetchMetaPageSubscribedApps({
+  accessToken,
+  pageId,
+}: {
+  accessToken: string;
+  pageId: string;
+}) {
+  return requestGraph<MetaPageSubscribedAppsResponse>(`${pageId}/subscribed_apps`, {
+    access_token: accessToken,
+  });
 }
 
 async function fetchMetaPostDetail({
