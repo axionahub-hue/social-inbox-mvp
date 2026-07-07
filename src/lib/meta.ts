@@ -892,17 +892,25 @@ export async function executeMetaAction(input: MetaActionInput) {
 
   const endpoint = resolveActionEndpoint(input);
   const body = resolveActionBody(input);
+  const method = input.action === "unlike" || input.action === "unblock" ? "DELETE" : "POST";
+  const url = new URL(`${graphBaseUrl}/${endpoint}`);
+  const requestInit: RequestInit = {
+    method,
+  };
 
-  const response = await fetch(`${graphBaseUrl}/${endpoint}`, {
-    method: input.action === "unlike" || input.action === "unblock" ? "DELETE" : "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      ...body,
+  if (method === "DELETE") {
+    url.searchParams.set("access_token", input.accessToken);
+  } else {
+    requestInit.headers = {
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
+    requestInit.body = new URLSearchParams({
+      ...stringifyMetaActionBody(body),
       access_token: input.accessToken,
-    }),
-  });
+    });
+  }
+
+  const response = await fetch(url, requestInit);
 
   const payload = await response.json();
 
@@ -1107,7 +1115,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
   }
 }
 
-function resolveActionBody(input: MetaActionInput) {
+function resolveActionBody(input: MetaActionInput): Record<string, string | boolean> {
   switch (input.action) {
     case "reply":
       return { message: input.message ?? "" };
@@ -1118,6 +1126,12 @@ function resolveActionBody(input: MetaActionInput) {
     default:
       return {};
   }
+}
+
+function stringifyMetaActionBody(body: Record<string, string | boolean>) {
+  return Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [key, typeof value === "boolean" ? String(value) : value]),
+  );
 }
 
 function resolveInternalActionMessage(action: InboxAction) {

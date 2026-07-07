@@ -333,3 +333,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar que el boton `Sincronizar comentarios Ads` no quede tildado.
 - Pendiente: convertir Ads en ingest automatico incremental para no depender de una pasada manual.
+
+### Acciones reales sobre comentarios Facebook
+
+- Resumen: `/api/inbox/action` ahora recibe el bearer token Supabase desde la UI, valida que el item pertenezca al usuario, descifra el page token server-side y ejecuta acciones reales contra Meta para comentarios Facebook: respuesta publica, private reply, like/unlike y ocultar/mostrar. Las acciones internas siguen sin llamar a Meta.
+- Areas tocadas: `src/app/page.tsx`, `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con comentario real.
+- Pendiente: bloqueo/desbloqueo real de usuarios de Page, reacciones diferenciadas, Messenger/DM e Instagram comments.

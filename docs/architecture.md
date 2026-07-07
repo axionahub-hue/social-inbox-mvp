@@ -131,6 +131,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los tokens de Meta no deben exponerse al cliente.
 - Los tokens de Meta no deben guardarse sin cifrado server-side.
 - Las acciones contra Meta siempre pasan por API server-side.
+- `/api/inbox/action` recibe el bearer token Supabase desde la UI, valida que el item pertenezca al usuario y solo entonces descifra el page token para ejecutar acciones reales.
+- Las acciones reales cableadas en este corte aplican a comentarios Facebook: respuesta publica, private reply, like/unlike y ocultar/mostrar. Bloquear usuario y reacciones diferenciadas quedan como pasos separados.
 - Los webhooks se validan con `META_WEBHOOK_VERIFY_TOKEN` y `META_APP_SECRET`.
 - Supabase debe usar RLS antes de tener mas de un usuario real.
 - El modo demo no debe mezclarse con datos reales: se identifica con `provider_mode = demo`.

@@ -72,7 +72,17 @@ Respuesta demo:
 }
 ```
 
-Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_items`, tambien persiste:
+Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_items`, el endpoint valida sesion Supabase por `Authorization: Bearer SUPABASE_ACCESS_TOKEN` antes de persistir o ejecutar contra Meta.
+
+Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `provider_comment_id` y page token cifrado, ejecuta contra Meta:
+
+- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`.
+- `reply` con `replyMode = private_message`: `/{comment-id}/private_replies`.
+- `like`: `/{comment-id}/likes`.
+- `unlike`: `DELETE /{comment-id}/likes`.
+- `hide`/`unhide`: actualiza `is_hidden` sobre `/{comment-id}`.
+
+Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 
 - `reply`: inserta un mensaje agente en `inbox_messages`, marca `status = responded`, limpia `unread_count` y actualiza `preview`.
 - `like`/`unlike`: actualiza `inbox_items.is_liked`.
@@ -86,7 +96,7 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 
-Nota: la UI puede mostrar varias reacciones visuales sobre un comentario, pero la API actual solo persiste `like`/`unlike`. Para reacciones diferenciadas en Meta se debe ampliar este endpoint y `executeMetaAction`.
+Nota: `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. La UI puede mostrar varias reacciones visuales sobre un comentario, pero la API actual solo ejecuta/persiste `like`/`unlike`; para reacciones diferenciadas se debe ampliar este endpoint y `executeMetaAction`.
 
 ### `GET /api/meta/webhook`
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { executeMetaAction } from "@/lib/meta";
+import { decryptMetaToken, executeMetaAction, type MetaActionInput } from "@/lib/meta";
 import { createServiceSupabaseClient } from "@/lib/supabase";
 
 const actionSchema = z.object({
@@ -35,10 +35,28 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceSupabaseClient();
-  const result = await executeMetaAction(parsed.data);
-  let persisted = false;
+  let actionInput: MetaActionInput = parsed.data;
+  let canPersist = false;
 
   if (supabase) {
+    const resolved = await resolveAuthenticatedActionInput({
+      supabase,
+      request,
+      input: parsed.data,
+    });
+
+    if (resolved.response) {
+      return resolved.response;
+    }
+
+    actionInput = resolved.input;
+    canPersist = resolved.canPersist;
+  }
+
+  const result = await executeMetaAction(actionInput);
+  let persisted = false;
+
+  if (supabase && canPersist) {
     if (result.ok) {
       persisted = await persistInboxAction({
         supabase,
@@ -59,11 +77,129 @@ export async function POST(request: Request) {
         persisted,
         replyMode: parsed.data.replyMode ?? null,
         recipientExternalId: parsed.data.recipientExternalId ?? null,
+        metaMode: actionInput.accessToken ? "real" : "none",
       },
     });
   }
 
   return NextResponse.json({ ...result, persisted }, { status: result.ok ? 200 : 502 });
+}
+
+async function resolveAuthenticatedActionInput({
+  supabase,
+  request,
+  input,
+}: {
+  supabase: NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
+  request: Request;
+  input: z.infer<typeof actionSchema>;
+}): Promise<{
+  input: MetaActionInput;
+  canPersist: boolean;
+  response?: NextResponse;
+}> {
+  const internalActions = new Set(["archive", "unarchive", "mark_read", "mark_unread"]);
+  const metaFacebookCommentActions = new Set(["reply", "like", "unlike", "hide", "unhide"]);
+  const accessToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+
+  if (!accessToken) {
+    return { input, canPersist: false };
+  }
+
+  const userResult = await supabase.auth.getUser(accessToken);
+  const user = userResult.data.user;
+
+  if (userResult.error || !user) {
+    return {
+      input,
+      canPersist: false,
+      response: NextResponse.json(
+        { ok: false, message: "Sesion Supabase invalida o expirada." },
+        { status: 401 },
+      ),
+    };
+  }
+
+  const itemResult = await supabase
+    .from("inbox_items")
+    .select(
+      `
+      id,
+      workspace_id,
+      source,
+      provider_comment_id,
+      provider_post_id,
+      connected_accounts (
+        network,
+        access_token_encrypted
+      )
+    `,
+    )
+    .eq("id", input.itemId)
+    .maybeSingle();
+
+  if (itemResult.error) {
+    return {
+      input,
+      canPersist: false,
+      response: NextResponse.json({ ok: false, message: itemResult.error.message }, { status: 500 }),
+    };
+  }
+
+  if (!itemResult.data?.id) {
+    return { input, canPersist: false };
+  }
+
+  const workspaceResult = await supabase
+    .from("workspaces")
+    .select("id")
+    .eq("id", itemResult.data.workspace_id as string)
+    .eq("owner_user_id", user.id)
+    .maybeSingle();
+
+  if (workspaceResult.error || !workspaceResult.data?.id) {
+    return {
+      input,
+      canPersist: false,
+      response: NextResponse.json(
+        { ok: false, message: "Item no pertenece al usuario autenticado." },
+        { status: 403 },
+      ),
+    };
+  }
+
+  if (internalActions.has(input.action)) {
+    return { input, canPersist: true };
+  }
+
+  if (!metaFacebookCommentActions.has(input.action)) {
+    return { input, canPersist: true };
+  }
+
+  const account = firstOrNull(itemResult.data.connected_accounts);
+  const providerCommentId = itemResult.data.provider_comment_id as string | null;
+
+  if (
+    account?.network !== "facebook" ||
+    !account.access_token_encrypted ||
+    !providerCommentId ||
+    (itemResult.data.source !== "post_comment" && itemResult.data.source !== "ad_comment")
+  ) {
+    return { input, canPersist: true };
+  }
+
+  return {
+    input: {
+      ...input,
+      externalId: providerCommentId,
+      accessToken: decryptMetaToken(account.access_token_encrypted),
+    },
+    canPersist: true,
+  };
+}
+
+function firstOrNull<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
 async function persistInboxAction({

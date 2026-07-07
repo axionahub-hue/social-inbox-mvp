@@ -62,7 +62,7 @@ En una conversacion seleccionada se puede:
 - desarchivar desde la vista `Archivados`.
 - marcar leido/no leido desde la barra de seleccion.
 
-En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear/desbloquear, archivar, desarchivar y marcar leido/no leido tambien actualizan las tablas del workspace. Las reacciones visuales multiples usan por ahora la persistencia `like/unlike`; para enviar reacciones diferenciadas a Meta hace falta ampliar la accion server-side.
+En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear/desbloquear, archivar, desarchivar y marcar leido/no leido tambien actualizan las tablas del workspace. Para comentarios Facebook reales, responder sobre comentario, responder por mensaje interno, like/unlike y ocultar/mostrar ya intentan ejecutarse contra Meta usando el page token server-side. Bloquear/desbloquear usuario sigue siendo estado interno hasta cablear el endpoint Meta correspondiente. Las reacciones visuales multiples usan por ahora la persistencia `like/unlike`; para enviar reacciones diferenciadas a Meta hace falta ampliar la accion server-side.
 
 Cuando el item es comentario, el selector del composer muestra:
 

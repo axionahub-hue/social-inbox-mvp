@@ -1470,9 +1470,14 @@ export default function Home() {
   async function runAction(action: InboxAction, message?: string, options?: RunActionOptions) {
     if (!selectedItem) return;
 
+    const session = supabase ? await supabase.auth.getSession() : null;
+    const accessToken = session?.data.session?.access_token;
     const response = await fetch("/api/inbox/action", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       body: JSON.stringify({
         itemId: selectedItem.id,
         externalId:
@@ -1562,11 +1567,16 @@ export default function Home() {
     setNotice(`${targetIds.length} conversacion(es) actualizada(s). Guardando cambios...`);
 
     try {
+      const session = supabase ? await supabase.auth.getSession() : null;
+      const accessToken = session?.data.session?.access_token;
       const results = await Promise.all(
         targetIds.map((itemId) =>
           fetch("/api/inbox/action", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
             body: JSON.stringify({
               itemId,
               externalId: itemId,
