@@ -62,7 +62,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `POST /api/meta/sync/comments` usa page tokens cifrados guardados en `connected_accounts`.
 - El endpoint descifra tokens solo server-side.
 - Solo procesa cuentas con `pages_read_engagement` y `pages_read_user_content` concedidos.
-- Lee publicaciones recientes y hasta 50 comentarios por publicacion en este bloque inicial.
+- Lee las ultimas publicaciones publicadas y consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La sincronizacion manual es una etapa previa a webhooks reales; evita bloquear la experiencia mientras se configuran suscripciones Meta.

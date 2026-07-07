@@ -128,6 +128,16 @@ type MetaPostsResponse = {
   };
 };
 
+type MetaCommentsResponse = {
+  data?: MetaComment[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
 export type MetaOrganicComment = {
   postId: string;
   postMessage: string | null;
@@ -358,19 +368,30 @@ export async function fetchMetaOrganicComments({
   accessToken: string;
   pageId: string;
 }) {
-  const posts = await requestPagedGraph<MetaPostsResponse, MetaPost>(`${pageId}/feed`, {
-    fields:
-      "id,message,permalink_url,created_time,comments.limit(50){id,message,from{id,name},created_time,is_hidden,permalink_url}",
-    limit: "25",
+  const posts = await requestGraph<MetaPostsResponse>(`${pageId}/published_posts`, {
+    fields: "id,message,permalink_url,created_time",
+    limit: "50",
     access_token: accessToken,
   });
 
-  if (!posts.ok) {
-    throw new Error(posts.errorMessage ?? "No se pudieron leer comentarios de Facebook.");
+  if (posts.error) {
+    throw new Error(posts.error.message ?? "No se pudieron leer publicaciones de Facebook.");
   }
 
-  return posts.data.flatMap((post) =>
-    (post.comments?.data ?? []).map((comment): MetaOrganicComment => ({
+  const commentsByPost = await Promise.all(
+    (posts.data ?? []).map(async (post) => {
+      const comments = await requestGraph<MetaCommentsResponse>(`${post.id}/comments`, {
+        fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
+        order: "reverse_chronological",
+        limit: "100",
+        access_token: accessToken,
+      });
+
+      if (comments.error) {
+        throw new Error(comments.error.message ?? `No se pudieron leer comentarios de ${post.id}.`);
+      }
+
+      return (comments.data ?? []).map((comment): MetaOrganicComment => ({
       postId: post.id,
       postMessage: post.message ?? null,
       postPermalink: post.permalink_url ?? null,
@@ -381,8 +402,11 @@ export async function fetchMetaOrganicComments({
       createdTime: comment.created_time ?? post.created_time ?? null,
       isHidden: Boolean(comment.is_hidden),
       permalink: comment.permalink_url ?? null,
-    })),
+      }));
+    }),
   );
+
+  return commentsByPost.flat();
 }
 
 export function resolveMetaTokenExpiresAt(expiresInSeconds?: number) {

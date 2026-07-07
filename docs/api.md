@@ -212,7 +212,7 @@ Comportamiento:
 - selecciona cuentas Facebook reales del workspace;
 - omite cuentas sin `pages_read_engagement` y `pages_read_user_content`;
 - descifra page tokens solo en servidor;
-- consulta publicaciones y comentarios recientes de Facebook;
+- consulta publicaciones recientes y luego el edge `/comments` de cada post con `order=reverse_chronological`;
 - guarda contactos, conversaciones y mensajes en `contacts`, `inbox_items` e `inbox_messages`.
 
 Respuesta:

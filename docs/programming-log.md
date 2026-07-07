@@ -196,3 +196,10 @@
 - Resumen: se cambio la barra masiva para aplicar cambios optimistas en la UI antes de esperar la respuesta del endpoint, limpiar la seleccion inmediatamente y mostrar estado de guardado. Esto corrige la percepcion de que `Leido` no hacia nada cuando la persistencia demoraba.
 - Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke de seleccionar una conversacion y pulsar `Leido`; el badge desaparece inmediatamente y luego se confirma guardado.
+
+### Sincronizacion de comentarios recientes
+
+- Resumen: se diagnostico que un comentario organico nuevo aparecia en Graph API al consultar `{post-id}/comments?order=reverse_chronological`, pero no entraba por los comentarios embebidos del listado de posts. Se cambio `fetchMetaOrganicComments` para leer publicaciones recientes y consultar comentarios por post con orden inverso cronologico.
+- Areas tocadas: `src/lib/meta.ts`, `docs/architecture.md`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion: consulta directa a Graph encontro un comentario reciente en `Academia Expertos de la Musica`; `npm run lint`, `npm run build`.
+- Pendiente: ejecutar `Sincronizar comentarios FB` desde la app y confirmar que inserta el comentario reciente.
