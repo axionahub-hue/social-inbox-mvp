@@ -165,11 +165,14 @@ export default function Home() {
       ? false
       : new URLSearchParams(window.location.search).has("meta_oauth"),
   );
-  const [metaConnectionMessage, setMetaConnectionMessage] = useState(() =>
-    typeof window === "undefined"
-      ? "Configura la app Meta y usa OAuth cuando tengas credenciales."
-      : resolveMetaOAuthMessage(new URLSearchParams(window.location.search).get("meta_oauth")),
-  );
+  const [metaConnectionMessage, setMetaConnectionMessage] = useState(() => {
+    if (typeof window === "undefined") {
+      return "Configura la app Meta y usa OAuth cuando tengas credenciales.";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    return resolveMetaOAuthMessage(params.get("meta_oauth"), params);
+  });
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
   const hiddenAccountCount = channelList.length - visibleAccountIds.length;
@@ -1819,10 +1822,28 @@ function formatTimestamp(value: string | null) {
   }).format(date);
 }
 
-function resolveMetaOAuthMessage(result: string | null) {
+function resolveMetaOAuthMessage(result: string | null, params?: URLSearchParams) {
   switch (result) {
+    case "accounts_saved": {
+      const pages = params?.get("pages") ?? "0";
+      const instagram = params?.get("instagram") ?? "0";
+      const missingPageTokens = Number(params?.get("missing_page_tokens") ?? "0");
+      const scopeText = params?.get("scopes") || "sin scopes reportados";
+      const tokenWarning =
+        missingPageTokens > 0
+          ? ` ${missingPageTokens} pagina(s) no devolvieron token; falta ampliar permisos.`
+          : "";
+
+      return `Meta conectado: ${pages} pagina(s), ${instagram} Instagram. Scopes: ${scopeText}.${tokenWarning}`;
+    }
     case "code_received":
       return "Meta devolvio un codigo OAuth valido. Siguiente paso: intercambio de token con cifrado antes de guardar cuentas reales.";
+    case "token_exchange_error":
+      return "Meta devolvio codigo, pero fallo el intercambio de token o el guardado de cuentas. Revisa permisos y logs del servidor.";
+    case "supabase_missing":
+      return "No se pudo guardar Meta porque Supabase service role no esta configurado.";
+    case "workspace_not_found":
+      return "No se pudo guardar Meta porque el workspace no coincide con tu sesion.";
     case "invalid_state":
       return "Meta devolvio un estado invalido o expirado. Reintenta desde Conectar cuenta Meta.";
     case "missing_code":

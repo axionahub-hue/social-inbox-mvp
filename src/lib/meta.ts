@@ -34,6 +34,48 @@ export type MetaActionInput = {
   message?: string;
 };
 
+type MetaTokenResponse = {
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
+  error?: {
+    message?: string;
+  };
+};
+
+type MetaPermissionRow = {
+  permission: string;
+  status: "granted" | "declined" | "expired" | string;
+};
+
+type MetaPermissionsResponse = {
+  data?: MetaPermissionRow[];
+  error?: {
+    message?: string;
+  };
+};
+
+type MetaInstagramAccount = {
+  id: string;
+  name?: string;
+  username?: string;
+};
+
+export type MetaPageAccount = {
+  id: string;
+  name: string;
+  username?: string;
+  access_token?: string;
+  instagram_business_account?: MetaInstagramAccount;
+};
+
+type MetaPagesResponse = {
+  data?: MetaPageAccount[];
+  error?: {
+    message?: string;
+  };
+};
+
 export function isMetaConfigured() {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
@@ -62,6 +104,85 @@ export function buildMetaOAuthUrl({
   });
 
   return `${facebookDialogBaseUrl}?${params.toString()}`;
+}
+
+export async function exchangeMetaCodeForToken({
+  code,
+  origin,
+}: {
+  code: string;
+  origin: string;
+}) {
+  return requestMetaToken({
+    client_id: process.env.META_APP_ID ?? "",
+    client_secret: process.env.META_APP_SECRET ?? "",
+    redirect_uri: getMetaOAuthRedirectUri(origin),
+    code,
+  });
+}
+
+export async function exchangeMetaLongLivedToken(shortLivedToken: string) {
+  return requestMetaToken({
+    grant_type: "fb_exchange_token",
+    client_id: process.env.META_APP_ID ?? "",
+    client_secret: process.env.META_APP_SECRET ?? "",
+    fb_exchange_token: shortLivedToken,
+  });
+}
+
+export async function fetchMetaGrantedScopes(accessToken: string) {
+  const payload = await requestGraph<MetaPermissionsResponse>("me/permissions", {
+    access_token: accessToken,
+  });
+
+  return (payload.data ?? [])
+    .filter((permission) => permission.status === "granted")
+    .map((permission) => permission.permission);
+}
+
+export async function fetchMetaPageAccounts(accessToken: string) {
+  const withInstagram = await requestGraph<MetaPagesResponse>("me/accounts", {
+    fields: "id,name,username,access_token,instagram_business_account{id,name,username}",
+    access_token: accessToken,
+  });
+
+  if (!withInstagram.error) {
+    return withInstagram.data ?? [];
+  }
+
+  const pagesOnly = await requestGraph<MetaPagesResponse>("me/accounts", {
+    fields: "id,name,username,access_token",
+    access_token: accessToken,
+  });
+
+  if (pagesOnly.error) {
+    throw new Error(pagesOnly.error.message ?? "No se pudieron leer paginas de Meta.");
+  }
+
+  return pagesOnly.data ?? [];
+}
+
+export function encryptMetaToken(token: string) {
+  const key = createMetaTokenEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  return [
+    "v1",
+    iv.toString("base64url"),
+    tag.toString("base64url"),
+    encrypted.toString("base64url"),
+  ].join(":");
+}
+
+export function resolveMetaTokenExpiresAt(expiresInSeconds?: number) {
+  if (!expiresInSeconds) {
+    return null;
+  }
+
+  return new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 }
 
 export function createMetaOAuthState(payload: Omit<MetaOAuthStatePayload, "exp" | "nonce">) {
@@ -225,6 +346,67 @@ function resolveMetaOAuthScopes() {
   }
 
   return [...new Set(configuredScopes)];
+}
+
+async function requestMetaToken(params: Record<string, string>) {
+  const url = new URL(`${graphBaseUrl}/oauth/access_token`);
+
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  const response = await fetch(url);
+  const payload = (await response.json()) as MetaTokenResponse;
+
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error?.message ?? "Meta no devolvio access token.");
+  }
+
+  return {
+    accessToken: payload.access_token,
+    expiresIn: payload.expires_in,
+  };
+}
+
+async function requestGraph<T>(path: string, params: Record<string, string>) {
+  const url = new URL(`${graphBaseUrl}/${path}`);
+
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  const response = await fetch(url);
+  const payload = (await response.json()) as T;
+
+  if (!response.ok) {
+    return {
+      ...(typeof payload === "object" && payload ? payload : {}),
+      error: {
+        message: readMetaErrorMessage(payload) ?? "Meta rechazo la consulta.",
+      },
+    } as T;
+  }
+
+  return payload;
+}
+
+function readMetaErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) {
+    return null;
+  }
+
+  const error = (payload as { error?: { message?: unknown } }).error;
+  return typeof error?.message === "string" ? error.message : null;
+}
+
+function createMetaTokenEncryptionKey() {
+  const secret = process.env.META_TOKEN_ENCRYPTION_KEY || process.env.META_APP_SECRET;
+
+  if (!secret) {
+    throw new Error("META_TOKEN_ENCRYPTION_KEY or META_APP_SECRET is required to encrypt Meta tokens.");
+  }
+
+  return crypto.createHash("sha256").update(secret).digest();
 }
 
 function resolveActionEndpoint(input: MetaActionInput) {

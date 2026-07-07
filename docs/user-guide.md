@@ -83,11 +83,11 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - permisos objetivo de la integracion;
 - boton `Iniciar OAuth Meta`.
 
-El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. La app todavia no guarda tokens reales hasta implementar cifrado server-side.
+El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
 
 ## Limitaciones actuales
 
-- OAuth Meta esta preparado hasta recepcion de `code`, pero todavia no guarda tokens ni cuentas reales.
+- Con `pages_show_list`, Meta puede detectar paginas, pero no garantiza comentarios, ads ni DMs hasta ampliar permisos.
 - Los datos del inbox autenticado todavia son seed demo en Supabase hasta conectar Meta real.
 - Las acciones se guardan en Supabase, pero todavia no se envian a Meta real sin OAuth/tokens.
 - Las respuestas rapidas y preferencias se guardan en el navegador si no hay sesion Supabase.

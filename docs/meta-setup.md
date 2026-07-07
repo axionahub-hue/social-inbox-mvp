@@ -2,15 +2,15 @@
 
 ## Objetivo
 
-Preparar la conexion OAuth de Facebook/Instagram sin guardar tokens sin cifrar. Este bloque deja listo el inicio de OAuth, callback y permisos esperados; el intercambio y persistencia de tokens reales queda para el siguiente bloque con cifrado.
+Preparar la conexion OAuth de Facebook/Instagram sin guardar tokens sin cifrar. El flujo inicia OAuth, valida callback, intercambia `code`, cifra page tokens y guarda cuentas detectadas en Supabase.
 
 ## Estado actual
 
 - La UI tiene un panel `Configuracion Meta`.
 - El panel muestra la callback URL que debe cargarse en Meta Developers.
 - `POST /api/meta/oauth/start` valida sesion Supabase y construye la URL OAuth.
-- `GET /api/meta/oauth/callback` valida `state` firmado y detecta que Meta devolvio `code`.
-- No se guardan tokens Meta todavia.
+- `GET /api/meta/oauth/callback` valida `state`, intercambia token, lee paginas e Instagram vinculado y guarda cuentas.
+- Los tokens se cifran server-side antes de persistirse.
 
 ## Variables de entorno
 
@@ -19,8 +19,11 @@ META_APP_ID=
 META_APP_SECRET=
 META_GRAPH_VERSION=v25.0
 META_OAUTH_SCOPES=pages_show_list
+META_TOKEN_ENCRYPTION_KEY=
 META_WEBHOOK_VERIFY_TOKEN=
 ```
+
+`META_TOKEN_ENCRYPTION_KEY` debe usarse como clave dedicada en Vercel/produccion. En desarrollo local, si falta, la app usa `META_APP_SECRET` como fallback server-side para no guardar tokens en texto plano.
 
 ## Callback local
 
@@ -67,13 +70,23 @@ Para ampliar permisos sin tocar codigo, configurar `META_OAUTH_SCOPES` con valor
 8. Abrir `Configuracion Meta`.
 9. Tocar `Iniciar OAuth Meta`.
 
+## Resultado esperado despues de OAuth
+
+Al volver a la app, `Configuracion Meta` debe indicar:
+
+- cantidad de paginas Facebook detectadas;
+- cantidad de cuentas Instagram profesionales detectadas;
+- scopes concedidos;
+- si alguna pagina no devolvio page token.
+
+Con solo `pages_show_list`, es normal detectar paginas sin poder leer comentarios, ads o DMs todavia.
+
 ## Siguiente bloque tecnico
 
-- Agregar cifrado de tokens server-side.
-- Intercambiar `code` por access token en callback.
-- Obtener paginas/cuentas disponibles.
-- Guardar cuentas reales en `connected_accounts`.
-- Mantener tokens fuera del cliente.
+- Ampliar `META_OAUTH_SCOPES` gradualmente segun permisos habilitados por Meta.
+- Suscribir webhooks reales.
+- Normalizar eventos webhook a inbox.
+- Ejecutar acciones reales contra Meta usando page tokens cifrados.
 
 ## Referencias oficiales
 

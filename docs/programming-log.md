@@ -118,5 +118,12 @@
 
 - Resumen: se ajusto el inicio OAuth para pedir `pages_show_list` por defecto y permitir ampliar scopes con `META_OAUTH_SCOPES`, evitando que Meta bloquee la prueba local por permisos avanzados todavia no habilitados.
 - Areas tocadas: `src/lib/meta.ts`, `src/app/page.tsx`, `.env.example`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
-- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `git diff --check`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `GET /api/meta/oauth/callback` con `state` invalido redirige a `meta_oauth=invalid_state`, `git diff --check`.
 - Pendiente: reintentar `Iniciar OAuth Meta` y, si vuelve con `code_received`, implementar cifrado e intercambio de token.
+
+### Callback OAuth Meta con guardado de cuentas
+
+- Resumen: se implemento intercambio de `code` por token, extension a token largo, lectura de permisos concedidos, lectura de paginas/Instagram vinculado, cifrado AES-GCM de page tokens y upsert de cuentas reales en `connected_accounts`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `.env.example`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `git diff --check`.
+- Pendiente: ampliar permisos Meta y suscribir webhooks reales para comentarios, ads y DMs.

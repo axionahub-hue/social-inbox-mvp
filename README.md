@@ -14,6 +14,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - RLS inicial por workspace/usuario en el esquema de Supabase.
 - Endpoint de acciones preparado para responder, like/unlike, ocultar/mostrar, bloquear, archivar y desarchivar.
 - Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
+- Callback OAuth Meta intercambia `code`, cifra tokens server-side y guarda cuentas detectadas.
 - Esquema inicial de Supabase en `supabase/schema.sql`.
 
 ## Documentacion operativa
@@ -75,6 +76,8 @@ La app esta preparada para conectar:
 
 El OAuth local pide `pages_show_list` por defecto para validar el flujo sin bloquearse por permisos avanzados. La lista se puede ampliar con `META_OAUTH_SCOPES` cuando Meta habilite los permisos necesarios para la app.
 
+El callback intercambia el `code` por token, intenta extenderlo, lee paginas disponibles e Instagram profesional conectado, y guarda cuentas en `connected_accounts`. Los page tokens se guardan cifrados con `META_TOKEN_ENCRYPTION_KEY` o, en desarrollo, con `META_APP_SECRET` como fallback server-side.
+
 Permisos objetivo para la primera integracion real:
 
 - `pages_show_list`
@@ -104,7 +107,7 @@ Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. 
 
 ## Proximos pasos tecnicos
 
-1. Agregar cifrado server-side para tokens Meta.
-2. Intercambiar `code` OAuth por token y guardar cuentas reales.
+1. Ampliar permisos Meta de forma incremental y diagnosticar scopes concedidos.
+2. Suscribir webhooks reales de Page/Instagram.
 3. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
 4. Agregar tests de acciones Meta y parsing de webhooks.

@@ -131,14 +131,23 @@ Si faltan `META_APP_ID` o `META_APP_SECRET`, responde `400` con las variables re
 
 Recibe el retorno OAuth de Meta.
 
-Estado actual:
+Comportamiento:
 
 - valida `state` firmado;
 - valida que exista `code`;
-- redirige a la app con `meta_oauth=code_received`;
-- no intercambia ni guarda tokens todavia.
+- valida que el workspace pertenezca al usuario del `state`;
+- intercambia el `code` por access token;
+- pide token largo;
+- lee permisos concedidos y paginas disponibles;
+- guarda paginas Facebook y cuentas Instagram profesionales vinculadas en `connected_accounts`;
+- cifra page tokens antes de guardarlos.
 
-El guardado real de cuentas queda bloqueado hasta implementar cifrado server-side para tokens Meta.
+Redirecciones relevantes:
+
+- `meta_oauth=accounts_saved`: guardado completado; incluye `pages`, `instagram`, `missing_page_tokens` y `scopes`.
+- `meta_oauth=token_exchange_error`: fallo el intercambio, lectura de cuentas o guardado.
+- `meta_oauth=supabase_missing`: falta service role.
+- `meta_oauth=workspace_not_found`: el workspace no corresponde al usuario del `state`.
 
 ## Reglas
 
