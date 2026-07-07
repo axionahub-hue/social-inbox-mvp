@@ -72,6 +72,7 @@ En modo demo, las respuestas quedan guardadas en el navegador. Con sesion Supaba
 ## Cuentas conectadas
 
 La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del fixture local; con sesion activa salen de `connected_accounts` en Supabase. Cada cuenta tiene un toggle para decidir si sus conversaciones aparecen en el inbox.
+Cada cuenta muestra una etiqueta de plataforma, por ejemplo `Facebook` o `Instagram`, para distinguir cuentas con nombres parecidos.
 
 La preferencia queda guardada en el navegador sin sesion y en `user_preferences` con sesion Supabase.
 

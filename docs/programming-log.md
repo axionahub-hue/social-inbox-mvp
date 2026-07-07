@@ -162,3 +162,10 @@
 - Areas tocadas: `src/app/api/meta/accounts/[accountId]/route.ts`, `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `DELETE /api/meta/accounts/[accountId]` sin sesion devuelve `401`, viewport 390px sin overflow horizontal, `git diff --check`.
 - Pendiente: usar la UI para desconectar paginas no deseadas y decidir si luego se agrega una lista persistente de ignoradas para futuros OAuth.
+
+### Etiquetas visuales de plataforma
+
+- Resumen: se agregaron etiquetas e iconos de plataforma en tarjetas de cuentas y toggles de cuentas visibles para distinguir Facebook/Instagram sin depender del nombre.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/account-filter-plan.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, viewport 390px sin overflow horizontal y con badges `FB`/`IG`, `git diff --check`.
+- Pendiente: ampliar `Network`, schema y metadata visual cuando se integren TikTok o Google Business Profile.

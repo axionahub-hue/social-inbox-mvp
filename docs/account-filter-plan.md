@@ -33,12 +33,14 @@ El inbox no debe filtrar solamente por `facebook` o `instagram`. La unidad real 
 
 - En el panel izquierdo, debajo de las tarjetas de cuentas conectadas, hay un bloque `Cuentas visibles`.
 - Cada cuenta muestra icono de red, nombre, contador de items y toggle mostrar/ocultar.
+- Cada cuenta muestra etiqueta de plataforma; no basta con inferir la red por el nombre de la cuenta.
 - Los filtros `Todo`, `Facebook`, `Instagram` se mantienen como filtro rapido.
 - Si no hay conversaciones visibles, la app muestra estado vacio claro y boton para mostrar todas las cuentas.
 
 ## Contrato tecnico aplicado
 
 `ChannelConnection` sigue representando cada cuenta conectada. En modo Supabase, `ChannelConnection.id` es el ID real de `connected_accounts`.
+Cuando se agreguen TikTok o Google Business Profile, se debe ampliar el contrato `Network`, el enum Supabase y el mapa visual de plataformas juntos.
 
 `InboxItem` apunta a una cuenta concreta:
 

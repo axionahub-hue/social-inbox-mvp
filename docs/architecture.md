@@ -70,6 +70,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `InboxItem.accountId` es la referencia estable a la cuenta conectada.
 - `InboxItem.accountName` es solo texto de presentacion.
 - El inbox combina busqueda textual, filtro por red y filtro por cuentas visibles.
+- La UI usa metadata visual por plataforma para mostrar etiqueta e icono de cada cuenta. Cuando se sumen TikTok o Google Business Profile, se debe ampliar `Network`, el enum `network` de Supabase y el mapa visual de plataformas en la misma entrega.
 - La preferencia de cuentas visibles se guarda en `localStorage` en modo demo.
 - Con Supabase autenticado, la preferencia se guarda por usuario/workspace en `user_preferences`.
 - El panel Meta calcula capacidades disponibles desde los scopes reales guardados en las cuentas conectadas.

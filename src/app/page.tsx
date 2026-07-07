@@ -53,6 +53,26 @@ const networkIcon = {
   instagram: Camera,
 };
 
+const networkMeta: Record<
+  Network,
+  {
+    label: string;
+    shortLabel: string;
+    badgeClass: string;
+  }
+> = {
+  facebook: {
+    label: "Facebook",
+    shortLabel: "FB",
+    badgeClass: "bg-blue-50 text-blue-700 ring-blue-200",
+  },
+  instagram: {
+    label: "Instagram",
+    shortLabel: "IG",
+    badgeClass: "bg-pink-50 text-pink-700 ring-pink-200",
+  },
+};
+
 const metaRequiredScopes = [
   "pages_show_list",
   "pages_read_engagement",
@@ -1138,9 +1158,10 @@ export default function Home() {
           </p>
 
           <div className="mt-6 space-y-3">
-            {channelList.map((channel) => {
-              const Icon = networkIcon[channel.network];
-              return (
+              {channelList.map((channel) => {
+                const Icon = networkIcon[channel.network];
+                const platform = networkMeta[channel.network];
+                return (
                 <div
                   className="rounded-md border border-slate-200 bg-slate-50 p-3"
                   key={channel.id}
@@ -1152,6 +1173,13 @@ export default function Home() {
                     <div className="min-w-0 flex-1">
                       <p className="break-words text-sm font-semibold leading-5">{channel.name}</p>
                       <p className="break-words text-xs leading-4 text-slate-500">{channel.handle}</p>
+                      <span
+                        className={`mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ${platform.badgeClass}`}
+                        title={platform.label}
+                      >
+                        <Icon size={12} />
+                        {platform.label}
+                      </span>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <span
@@ -1207,6 +1235,7 @@ export default function Home() {
             <div className="mt-3 space-y-2">
               {channelList.map((channel) => {
                 const Icon = networkIcon[channel.network];
+                const platform = networkMeta[channel.network];
                 const isVisible = visibleAccountSet.has(channel.id);
                 const accountItems = items.filter((item) => item.accountId === channel.id).length;
 
@@ -1223,8 +1252,15 @@ export default function Home() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block break-words text-sm font-medium leading-5">{channel.name}</span>
-                      <span className="mt-1 block text-xs text-slate-500">
-                        {accountItems} items
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${platform.badgeClass}`}
+                          title={platform.label}
+                        >
+                          <Icon size={11} />
+                          {platform.shortLabel}
+                        </span>
+                        <span>{accountItems} items</span>
                       </span>
                     </span>
                     <span
