@@ -155,3 +155,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, callback con `state` invalido redirige a `meta_oauth=invalid_state`, `git diff --check`.
 - Pendiente: agregar `business_management` a la configuracion Meta y a `META_OAUTH_SCOPES`, reintentar OAuth y comparar paginas devueltas.
+
+### Desconexion de cuentas Meta no deseadas
+
+- Resumen: se agrego endpoint autenticado para eliminar cuentas conectadas del workspace, boton de desconexion en el panel lateral, estados visuales `Real`, `Pendiente` y `Demo`, y nombres de cuenta multilínea para no recortar paginas largas.
+- Areas tocadas: `src/app/api/meta/accounts/[accountId]/route.ts`, `src/app/page.tsx`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `DELETE /api/meta/accounts/[accountId]` sin sesion devuelve `401`, viewport 390px sin overflow horizontal, `git diff --check`.
+- Pendiente: usar la UI para desconectar paginas no deseadas y decidir si luego se agrega una lista persistente de ignoradas para futuros OAuth.

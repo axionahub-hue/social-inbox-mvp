@@ -161,3 +161,24 @@ Redirecciones relevantes:
 - No guardar tokens Meta sin cifrado server-side.
 - No asumir que un evento webhook ya esta normalizado.
 - Guardar eventos crudos antes de procesarlos para poder depurar.
+
+### `DELETE /api/meta/accounts/[accountId]`
+
+Desconecta una cuenta del workspace autenticado.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Respuesta:
+
+```json
+{
+  "ok": true,
+  "message": "Cuenta desconectada: Nombre."
+}
+```
+
+Valida que la cuenta pertenezca a un workspace del usuario actual antes de eliminarla.

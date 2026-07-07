@@ -13,6 +13,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - Auth interna validada con Supabase email OTP y fallback demo local.
 - RLS inicial por workspace/usuario en el esquema de Supabase.
 - Endpoint de acciones preparado para responder, like/unlike, ocultar/mostrar, bloquear, archivar y desarchivar.
+- Endpoint para desconectar cuentas Meta no deseadas del workspace.
 - Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
 - Callback OAuth Meta intercambia `code`, cifra tokens server-side y guarda cuentas detectadas.
 - Esquema inicial de Supabase en `supabase/schema.sql`.

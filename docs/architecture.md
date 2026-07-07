@@ -16,6 +16,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `src/app/api/meta/webhook/route.ts`: callback para webhooks Meta.
 - `src/app/api/meta/oauth/start/route.ts`: inicio OAuth Meta con sesion Supabase validada.
 - `src/app/api/meta/oauth/callback/route.ts`: callback OAuth Meta con `state` firmado.
+- `src/app/api/meta/accounts/[accountId]/route.ts`: desconexion de cuentas conectadas del workspace.
 - `supabase/schema.sql`: modelo relacional inicial.
 
 ## Flujo de datos previsto
@@ -50,6 +51,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La UI muestra `Inbox: Supabase` o `Inbox: demo local` para hacer visible el origen de datos.
 - `ChannelConnection.id` representa el ID real de `connected_accounts` cuando hay sesion Supabase; en modo demo representa el ID local del fixture.
 - Las cuentas con `access_token_encrypted` se muestran como reales; las cuentas sin token cifrado quedan marcadas como demo.
+- Las cuentas descubiertas por Meta sin token cifrado quedan como `needs_review`; los fixtures locales quedan como `demo`.
+- El usuario puede desconectar cuentas no deseadas del workspace; la eliminacion borra la fila de `connected_accounts` y sus inbox relacionados por cascada.
 
 ## Auth y workspace
 

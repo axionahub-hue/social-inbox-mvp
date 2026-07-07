@@ -207,6 +207,7 @@ export default function Home() {
   const archivedCount = items.filter((item) => item.status === "archived").length;
   const activeCount = items.length - archivedCount;
   const realMetaChannels = channelList.filter((channel) => channel.status === "connected");
+  const reviewMetaChannels = channelList.filter((channel) => channel.status === "needs_review");
   const demoMetaChannels = channelList.filter((channel) => channel.status === "demo");
   const grantedMetaScopes = useMemo(
     () => [...new Set(realMetaChannels.flatMap((channel) => channel.scopes))],
@@ -849,6 +850,39 @@ export default function Home() {
     void persistSupabasePreferences(next);
   }
 
+  async function disconnectAccount(accountId: string) {
+    if (!supabase || !currentUser) {
+      setNotice("Inicia sesion Supabase para desconectar cuentas.");
+      return;
+    }
+
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+
+    if (!accessToken) {
+      setNotice("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    const response = await fetch(`/api/meta/accounts/${accountId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setNotice(payload.message ?? "No se pudo desconectar la cuenta.");
+      return;
+    }
+
+    setChannelList((current) => current.filter((channel) => channel.id !== accountId));
+    setVisibleAccountIds((current) => current.filter((id) => id !== accountId));
+    setItems((current) => current.filter((item) => item.accountId !== accountId));
+    setNotice(payload.message ?? "Cuenta desconectada.");
+  }
+
   function openNewQuickReply() {
     setIsQuickReplyPanelOpen(true);
     setEditingQuickReplyId(null);
@@ -1116,18 +1150,35 @@ export default function Home() {
                       <Icon size={18} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{channel.name}</p>
-                      <p className="truncate text-xs text-slate-500">{channel.handle}</p>
+                      <p className="break-words text-sm font-semibold leading-5">{channel.name}</p>
+                      <p className="break-words text-xs leading-4 text-slate-500">{channel.handle}</p>
                     </div>
-                    <span
-                      className={`rounded-md px-2 py-1 text-[11px] font-medium ${
-                        channel.status === "connected"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
-                      {channel.status === "connected" ? "Real" : "Demo"}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span
+                        className={`rounded-md px-2 py-1 text-[11px] font-medium ${
+                          channel.status === "connected"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : channel.status === "needs_review"
+                              ? "bg-amber-50 text-amber-800"
+                              : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {channel.status === "connected"
+                          ? "Real"
+                          : channel.status === "needs_review"
+                            ? "Pendiente"
+                            : "Demo"}
+                      </span>
+                      {currentUser ? (
+                        <button
+                          className="grid size-7 place-items-center rounded-md border border-slate-200 bg-white text-slate-600"
+                          onClick={() => void disconnectAccount(channel.id)}
+                          title="Desconectar cuenta"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   <p className="mt-3 text-xs text-slate-500">{channel.lastSync}</p>
                 </div>
@@ -1161,7 +1212,7 @@ export default function Home() {
 
                 return (
                   <button
-                    className="flex w-full items-center gap-3 rounded-md border border-slate-200 bg-slate-50 p-2 text-left"
+                    className="flex w-full items-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-2 text-left"
                     data-testid={`account-toggle-${channel.id}`}
                     key={channel.id}
                     onClick={() => toggleAccountVisibility(channel.id)}
@@ -1171,13 +1222,13 @@ export default function Home() {
                       <Icon size={16} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{channel.name}</span>
-                      <span className="block truncate text-xs text-slate-500">
+                      <span className="block break-words text-sm font-medium leading-5">{channel.name}</span>
+                      <span className="mt-1 block text-xs text-slate-500">
                         {accountItems} items
                       </span>
                     </span>
                     <span
-                      className={`h-6 w-11 rounded-full p-0.5 transition ${
+                      className={`mt-1 h-6 w-11 shrink-0 rounded-full p-0.5 transition ${
                         isVisible ? "bg-slate-950" : "bg-slate-300"
                       }`}
                     >
@@ -1247,7 +1298,7 @@ export default function Home() {
                 <p className="text-xs font-semibold text-slate-700">Diagnostico actual</p>
                 <div className="mt-2 grid gap-1 text-xs leading-5 text-slate-600">
                   <p>
-                    Reales: {realMetaChannels.length} | Demo: {demoMetaChannels.length}
+                    Reales: {realMetaChannels.length} | Pendientes: {reviewMetaChannels.length} | Demo: {demoMetaChannels.length}
                   </p>
                   <p>
                     Facebook real:{" "}
@@ -1825,13 +1876,15 @@ function mapQuickReplyRow(row: {
 
 function mapConnectedAccountRow(row: ConnectedAccountRow): ChannelConnection {
   const hasRealToken = Boolean(row.access_token_encrypted);
+  const isSeedDemo =
+    row.provider_account_id.startsWith("fb-") || row.provider_account_id.startsWith("ig-");
 
   return {
     id: row.id,
     network: row.network,
     name: row.name,
     handle: row.handle ?? "",
-    status: hasRealToken ? "connected" : "demo",
+    status: hasRealToken ? "connected" : isSeedDemo ? "demo" : "needs_review",
     scopes: row.scopes ?? [],
     lastSync: `Supabase ${formatTimestamp(row.updated_at)}`,
   };

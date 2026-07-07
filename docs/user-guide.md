@@ -75,6 +75,14 @@ La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del 
 
 La preferencia queda guardada en el navegador sin sesion y en `user_preferences` con sesion Supabase.
 
+Las cuentas pueden aparecer como:
+
+- `Real`: Meta devolvio page token y la app lo guardo cifrado.
+- `Pendiente`: Meta devolvio la pagina, pero no devolvio page token.
+- `Demo`: fixture local usado para probar la experiencia.
+
+Desde el panel de cuentas se puede desconectar una cuenta no deseada con el icono de eliminar. Esto la quita del workspace y de la bandeja.
+
 ## Configuracion Meta
 
 El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
