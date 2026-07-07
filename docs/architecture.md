@@ -74,7 +74,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La UI ejecuta auto-sincronizacion cada 15 segundos mientras la app esta abierta para no depender del boton manual durante pruebas locales.
-- Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion de app/Page y procesamiento de eventos `feed`.
+- Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica y suscripcion de app/Page. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
 
 ## Auth y workspace
 

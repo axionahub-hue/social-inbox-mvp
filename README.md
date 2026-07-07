@@ -14,7 +14,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - RLS inicial por workspace/usuario en el esquema de Supabase.
 - Endpoint de acciones preparado para responder, like/unlike, ocultar/mostrar, bloquear, archivar y desarchivar.
 - Endpoint para desconectar cuentas Meta no deseadas del workspace.
-- Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
+- Endpoint de webhook Meta con verificacion de challenge, firma `x-hub-signature-256` y normalizacion inicial de comentarios Page/feed.
 - Callback OAuth Meta intercambia `code`, cifra tokens server-side y guarda cuentas detectadas.
 - Sincronizacion manual de comentarios organicos de Facebook cuando `pages_read_engagement` y `pages_read_user_content` estan concedidos.
 - Esquema inicial de Supabase en `supabase/schema.sql`.
@@ -28,6 +28,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - `docs/account-filter-plan.md`: plan para filtrar por cuentas conectadas visibles/ocultas.
 - `docs/supabase-setup.md`: guia operativa para conectar Supabase real.
 - `docs/meta-setup.md`: guia operativa para preparar OAuth Meta.
+- `docs/vercel-deploy.md`: guia para publicar en Vercel y conectar URLs HTTPS con Meta/Supabase.
 - `docs/work-directive.md`: pautas para no trabajar de memoria.
 - `docs/documentation-directive.md`: directiva para mantener documentacion viva.
 
@@ -108,6 +109,8 @@ https://TU-DOMINIO/api/meta/oauth/callback
 ## Vercel
 
 Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. Para uso comercial, revisar terminos y limites del plan antes de pasar a produccion.
+
+Detalle operativo: `docs/vercel-deploy.md`.
 
 ## Proximos pasos tecnicos
 

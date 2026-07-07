@@ -260,3 +260,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/app/api/inbox/action/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke mobile lista/detalle/volver sin overflow, smoke desktop tres columnas con `Bandeja`, `Respondidos` y `Archivados`.
 - Pendiente: probar con datos reales despues de desplegar Webhooks Meta para confirmar transicion automatica a `Respondidos` con acciones de respuesta reales.
+
+### Preparacion Vercel y procesamiento inicial de Webhooks Meta
+
+- Resumen: se factoriza la persistencia de comentarios en `src/lib/inbox-persistence.ts`, la sincronizacion manual reutiliza ese persistidor y `POST /api/meta/webhook` ahora procesa cambios `Page/feed` de comentarios `add|edited` para normalizarlos a inbox despues de guardar el evento crudo.
+- Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `README.md`, `docs/api.md`, `docs/architecture.md`, `docs/vercel-deploy.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, challenge webhook devuelve `hub.challenge`, firma invalida devuelve `403`, firma valida devuelve `200` con `processed: 0` cuando la pagina de prueba no esta conectada.
+- Pendiente: desplegar en Vercel, configurar variables, OAuth callback, Webhooks Page `feed` y probar evento real entrante.

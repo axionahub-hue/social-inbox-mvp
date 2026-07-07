@@ -109,7 +109,14 @@ Validacion:
 - `x-hub-signature-256`
 - `META_APP_SECRET`
 
-Si Supabase esta configurado, guarda el evento crudo en `webhook_events`.
+Si Supabase esta configurado:
+
+- guarda el evento crudo en `webhook_events`;
+- procesa cambios `Page/feed` con `item = comment` y `verb = add|edited`;
+- busca la pagina en `connected_accounts` por `provider_account_id`;
+- usa el page token cifrado para enriquecer comentario/publicacion;
+- persiste el comentario en `contacts`, `inbox_items` e `inbox_messages`;
+- marca `webhook_events.processed_at` cuando el procesamiento termina sin errores.
 
 ### `POST /api/meta/oauth/start`
 

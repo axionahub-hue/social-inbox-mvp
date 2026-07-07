@@ -428,6 +428,48 @@ export async function fetchMetaOrganicComments({
   return commentsByPost.flat();
 }
 
+export async function fetchMetaCommentContext({
+  accessToken,
+  commentId,
+  fallback,
+  postId,
+}: {
+  accessToken: string;
+  commentId: string;
+  fallback: Omit<MetaOrganicComment, "postMessage" | "postPermalink">;
+  postId: string;
+}): Promise<MetaOrganicComment> {
+  const [comment, post] = await Promise.all([
+    requestGraph<MetaComment & { error?: { message?: string } }>(commentId, {
+      fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
+      access_token: accessToken,
+    }),
+    fetchMetaPostDetail({
+      accessToken,
+      fallbackPost: {
+        id: postId,
+      },
+    }),
+  ]);
+
+  const hasComment = !comment.error;
+
+  return {
+    postId,
+    postMessage: post.message ?? null,
+    postPermalink: post.permalink_url ?? null,
+    commentId,
+    message: hasComment ? comment.message ?? fallback.message : fallback.message,
+    fromId: hasComment ? comment.from?.id ?? fallback.fromId : fallback.fromId,
+    fromName: hasComment ? comment.from?.name ?? fallback.fromName : fallback.fromName,
+    createdTime: hasComment
+      ? comment.created_time ?? fallback.createdTime
+      : fallback.createdTime,
+    isHidden: hasComment ? Boolean(comment.is_hidden) : fallback.isHidden,
+    permalink: hasComment ? comment.permalink_url ?? fallback.permalink : fallback.permalink,
+  };
+}
+
 async function fetchMetaPostDetail({
   accessToken,
   fallbackPost,
@@ -521,7 +563,7 @@ export function verifyMetaWebhookSignature(rawBody: string, signature: string | 
       .update(rawBody)
       .digest("hex");
 
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  return safeEqual(expected, signature);
 }
 
 export function verifyMetaWebhookChallenge(searchParams: URLSearchParams) {
