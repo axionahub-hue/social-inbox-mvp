@@ -368,3 +368,10 @@
 - Areas tocadas: `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar respuesta publica real y luego eliminarla.
 - Pendiente: confirmar si Meta permite borrar private replies/Messenger messages; por ahora el ID persistido principal es el reply publico.
+
+### Ajuste de private reply Facebook via Send API
+
+- Resumen: Meta rechazo `/{comment-id}/private_replies` con `GraphMethodException` subcode 33. Se cambio el envio privado Facebook a Messenger Send API `me/messages`, usando `recipient.comment_id` y `message.text` con el page token.
+- Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar respuesta publica con copia privada.
+- Pendiente: registrar si Meta devuelve errores de ventana/politica de Messenger para comentarios especificos.

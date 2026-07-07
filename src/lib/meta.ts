@@ -1138,9 +1138,7 @@ function createMetaTokenEncryptionKey() {
 function resolveActionEndpoint(input: MetaActionInput) {
   switch (input.action) {
     case "reply":
-      return input.replyMode === "private_message"
-        ? `${input.externalId}/private_replies`
-        : `${input.externalId}/comments`;
+      return input.replyMode === "private_message" ? "me/messages" : `${input.externalId}/comments`;
     case "like":
       return `${input.externalId}/likes`;
     case "unlike":
@@ -1164,6 +1162,13 @@ function resolveActionEndpoint(input: MetaActionInput) {
 function resolveActionBody(input: MetaActionInput): Record<string, string | boolean> {
   switch (input.action) {
     case "reply":
+      if (input.replyMode === "private_message") {
+        return {
+          recipient: JSON.stringify({ comment_id: input.externalId }),
+          message: JSON.stringify({ text: input.message ?? "" }),
+        };
+      }
+
       return { message: input.message ?? "" };
     case "hide":
       return { is_hidden: true };

@@ -78,8 +78,8 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `provider_comment_id` y page token cifrado, ejecuta contra Meta:
 
 - `reply` con `replyMode = public_comment`: `/{comment-id}/comments`.
-- `reply` con `replyMode = private_message`: `/{comment-id}/private_replies`.
-- Cuando `replyMode = public_comment`, despues de publicar en el comentario la app tambien intenta enviar copia del mismo texto por `private_replies`.
+- `reply` con `replyMode = private_message`: `me/messages` con `recipient.comment_id` y `message.text`.
+- Cuando `replyMode = public_comment`, despues de publicar en el comentario la app tambien intenta enviar copia del mismo texto por Messenger Send API usando `recipient.comment_id`.
 - `like`: `/{comment-id}/likes`.
 - `unlike`: `DELETE /{comment-id}/likes`.
 - `hide`/`unhide`: actualiza `is_hidden` sobre `/{comment-id}`.
