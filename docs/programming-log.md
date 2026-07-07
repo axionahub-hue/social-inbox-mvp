@@ -203,3 +203,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/architecture.md`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion: consulta directa a Graph encontro un comentario reciente en `Academia Expertos de la Musica`; `npm run lint`, `npm run build`.
 - Pendiente: ejecutar `Sincronizar comentarios FB` desde la app y confirmar que inserta el comentario reciente.
+
+### Auto-sincronizacion previa a webhooks
+
+- Resumen: se agrego auto-sincronizacion de comentarios Facebook mientras la app esta abierta, con bloqueo de concurrencia y aviso cuando entran comentarios nuevos. Se documento que el mecanismo definitivo para eventos instantaneos 24/7 son Webhooks Meta sobre URL HTTPS publica y campo Page `feed`.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, log con llamada automatica a `/api/meta/sync/comments`, smoke UI sin errores de consola ni overflow horizontal.
+- Pendiente: desplegar/publicar URL HTTPS y configurar Webhooks Meta reales.

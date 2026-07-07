@@ -206,6 +206,7 @@ export default function Home() {
   const hasLoadedVisibleAccounts = useRef(false);
   const hasLoadedQuickReplies = useRef(false);
   const hasLoadedRemoteWorkspace = useRef(false);
+  const commentSyncInFlight = useRef(false);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
@@ -240,6 +241,12 @@ export default function Home() {
   const grantedMetaScopes = useMemo(
     () => [...new Set(realMetaChannels.flatMap((channel) => channel.scopes))],
     [realMetaChannels],
+  );
+  const canAutoSyncFacebookComments = realMetaChannels.some(
+    (channel) =>
+      channel.network === "facebook" &&
+      channel.scopes.includes("pages_read_engagement") &&
+      channel.scopes.includes("pages_read_user_content"),
   );
   const workspaceBootstrap = useRef<{
     userId: string;
@@ -1026,51 +1033,99 @@ export default function Home() {
     window.location.href = payload.redirectUrl;
   }
 
-  async function syncFacebookComments() {
-    if (!supabase || !currentUser || !activeWorkspaceId) {
-      setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar comentarios.");
+  const syncFacebookComments = useCallback(async ({ automatic = false }: { automatic?: boolean } = {}) => {
+    if (commentSyncInFlight.current) {
       return;
     }
+
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      if (!automatic) {
+        setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar comentarios.");
+      }
+      return;
+    }
+
+    commentSyncInFlight.current = true;
 
     const session = await supabase.auth.getSession();
     const accessToken = session.data.session?.access_token;
 
     if (!accessToken) {
-      setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      if (!automatic) {
+        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      }
+      commentSyncInFlight.current = false;
       return;
     }
 
-    const response = await fetch("/api/meta/sync/comments", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        workspaceId: activeWorkspaceId,
-      }),
-    });
-    const payload = await response.json();
+    try {
+      const response = await fetch("/api/meta/sync/comments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const payload = await response.json();
 
-    const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
-    const errorDetail =
-      firstError && typeof firstError.message === "string"
-        ? ` Error: ${firstError.account ? `${firstError.account}: ` : ""}${firstError.message}`
-        : "";
+      const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
+      const errorDetail =
+        firstError && typeof firstError.message === "string"
+          ? ` Error: ${firstError.account ? `${firstError.account}: ` : ""}${firstError.message}`
+          : "";
 
-    setMetaConnectionMessage(
-      `${payload.message ?? "Sincronizacion finalizada."}${errorDetail}`,
-    );
+      const insertedCount =
+        typeof payload.comments?.inserted === "number" ? payload.comments.inserted : 0;
 
-    if (!response.ok || !payload.ok) {
+      if (!automatic || insertedCount > 0 || !payload.ok) {
+        setMetaConnectionMessage(
+          `${payload.message ?? "Sincronizacion finalizada."}${errorDetail}`,
+        );
+      }
+
+      if (!response.ok || !payload.ok) {
+        return;
+      }
+
+      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+      setChannelList(inboxData.channels);
+      setItems(inboxData.items);
+      setInboxSource("supabase");
+
+      if (insertedCount > 0) {
+        setNotice(`${insertedCount} comentario(s) nuevo(s) importado(s) automaticamente.`);
+      } else if (!automatic) {
+        setNotice("Sincronizacion manual finalizada sin comentarios nuevos.");
+      }
+    } catch {
+      if (!automatic) {
+        setMetaConnectionMessage("No se pudo sincronizar comentarios Facebook.");
+      }
+    } finally {
+      commentSyncInFlight.current = false;
+    }
+  }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
+
+  useEffect(() => {
+    if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
       return;
     }
 
-    const inboxData = await loadSupabaseInbox(activeWorkspaceId);
-    setChannelList(inboxData.channels);
-    setItems(inboxData.items);
-    setInboxSource("supabase");
-  }
+    const timeoutId = window.setTimeout(() => {
+      void syncFacebookComments({ automatic: true });
+    }, 10000);
+    const intervalId = window.setInterval(() => {
+      void syncFacebookComments({ automatic: true });
+    }, 120000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [activeWorkspaceId, canAutoSyncFacebookComments, currentUser, syncFacebookComments]);
 
   async function runAction(action: InboxAction, message?: string) {
     if (!selectedItem) return;
@@ -1495,6 +1550,11 @@ export default function Home() {
                 <MessageCircle size={16} />
                 Sincronizar comentarios FB
               </button>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {canAutoSyncFacebookComments
+                  ? "Auto-sinc activa mientras la app este abierta. Para eventos instantaneos 24/7 falta conectar Webhooks Meta en una URL publica."
+                  : "Auto-sinc pendiente hasta conceder permisos de lectura de comentarios."}
+              </p>
             </div>
           ) : null}
         </aside>

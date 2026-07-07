@@ -128,12 +128,24 @@ La app consulta `/me/accounts` con `limit=100` y sigue la paginacion de Meta, as
 ## Siguiente bloque tecnico
 
 - Ampliar `META_OAUTH_SCOPES` gradualmente segun permisos habilitados por Meta.
-- Suscribir webhooks reales.
+- Suscribir webhooks reales para Page `feed` y, luego, Instagram comments/messaging.
 - Normalizar eventos webhook a inbox.
 - Ejecutar acciones reales contra Meta usando page tokens cifrados.
+
+## Webhooks y notificaciones reales
+
+La auto-sincronizacion local sirve para desarrollo mientras la app esta abierta. Para eventos instantaneos reales, Meta necesita una URL publica HTTPS para:
+
+```text
+https://TU-DOMINIO/api/meta/webhook
+```
+
+En Meta Developers se debe configurar Webhooks para el objeto Page y suscribirse al campo `feed`, que es donde Meta entrega actividad de la pagina como comentarios. Despues tambien hay que suscribir cada Page/app con permisos suficientes; `localhost` no sirve como destino de webhook de Meta.
 
 ## Referencias oficiales
 
 - Manual OAuth/Login flow: https://developers.facebook.com/documentation/facebook-login/guides/advanced/manual-flow
 - Access tokens: https://developers.facebook.com/documentation/facebook-login/guides/access-tokens
 - Long-lived tokens: https://developers.facebook.com/documentation/facebook-login/guides/access-tokens/get-long-lived
+- Webhooks for Pages: https://developers.facebook.com/docs/graph-api/webhooks/getting-started/webhooks-for-pages/
+- Webhooks Page reference: https://developers.facebook.com/docs/graph-api/webhooks/reference/page/
