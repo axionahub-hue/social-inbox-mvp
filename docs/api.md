@@ -238,6 +238,7 @@ Comportamiento:
 - descifra page tokens solo en servidor;
 - en `mode = fast`, procesa cuentas en paralelo con limites reducidos;
 - consulta publicaciones recientes y luego el edge `/comments` de cada post con `order=reverse_chronological`;
+- filtra comentarios por `created_time` de las ultimas 72 horas;
 - guarda contactos, conversaciones y mensajes en `contacts`, `inbox_items` e `inbox_messages`.
 
 Respuesta:
@@ -245,7 +246,7 @@ Respuesta:
 ```json
 {
   "ok": true,
-  "message": "Sincronizacion Facebook: 3 comentario(s), 2 nuevo(s), 1 actualizado(s).",
+  "message": "Sincronizacion Facebook: 3 comentario(s) de las ultimas 72h, 2 nuevo(s), 1 actualizado(s).",
   "accounts": {
     "total": 4,
     "eligible": 4,
@@ -254,7 +255,8 @@ Respuesta:
   "comments": {
     "found": 3,
     "inserted": 2,
-    "updated": 1
+    "updated": 1,
+    "since": "2026-07-04T12:00:00.000Z"
   },
   "accountSummaries": [
     {
@@ -350,6 +352,7 @@ Comportamiento:
 - toma `effective_object_story_id` u `object_story_id` como post/story asociado al anuncio;
 - filtra solo anuncios cuyo Page ID corresponde a paginas Facebook conectadas en el workspace;
 - lee comentarios del post/story usando el page token cifrado;
+- filtra comentarios por `created_time` de las ultimas 72 horas;
 - guarda contactos, conversaciones y mensajes como `source = ad_comment`;
 - marca `ingest_source = ads_manual` y guarda `provider_ad_id`.
 
@@ -358,7 +361,7 @@ Respuesta:
 ```json
 {
   "ok": true,
-  "message": "Sincronizacion Ads: 2 comentario(s), 1 nuevo(s), 1 actualizado(s).",
+  "message": "Sincronizacion Ads: 2 comentario(s) de las ultimas 72h, 1 nuevo(s), 1 actualizado(s).",
   "targets": {
     "found": 12,
     "matchedPages": 4
@@ -366,7 +369,8 @@ Respuesta:
   "comments": {
     "found": 2,
     "inserted": 1,
-    "updated": 1
+    "updated": 1,
+    "since": "2026-07-04T12:00:00.000Z"
   },
   "errors": []
 }

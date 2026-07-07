@@ -73,6 +73,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El endpoint descifra tokens solo server-side.
 - Solo procesa cuentas con `pages_read_engagement` y `pages_read_user_content` concedidos.
 - Lee las ultimas publicaciones publicadas, consulta cada post individual para obtener `message` completo y luego consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
+- Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico salvo que se cree un flujo separado para eso.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full`, `ads_manual` o quedo como `unknown`.
@@ -90,6 +91,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `/api/meta/ads/diagnostics` valida si existe schema/token/scope y lista `/me/adaccounts`.
 - `/api/meta/sync/ad-comments` lista anuncios recientes, lee el creative y usa `effective_object_story_id` u `object_story_id` para encontrar el post/story asociado al anuncio.
 - La sincronizacion filtra solo Pages conectadas al workspace y usa el page token cifrado para leer comentarios.
+- Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico de Ads.
 - Los comentarios importados se normalizan como `source = ad_comment`, `ingest_source = ads_manual` y guardan `provider_ad_id`.
 - Esta primera version puede no cubrir todos los formatos de anuncio; si un creative no expone story/post asociado, se debe ampliar la lectura de campos de creative.
 

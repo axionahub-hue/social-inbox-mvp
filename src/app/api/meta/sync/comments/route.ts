@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  createRecentMetaCommentSince,
   decryptMetaToken,
   fetchMetaOrganicComments,
+  metaRecentCommentWindowHours,
 } from "@/lib/meta";
 import { persistFacebookComment } from "@/lib/inbox-persistence";
 import { createServiceSupabaseClient } from "@/lib/supabase";
@@ -119,6 +121,7 @@ export async function POST(request: Request) {
           postsWithCommentsLimit: 30,
         };
   const ingestSource = parsed.data.mode === "fast" ? "polling_fast" : "polling_full";
+  const recentSince = createRecentMetaCommentSince();
 
   const accountResults = await Promise.all(
     eligibleAccounts.map(async (account) => {
@@ -127,6 +130,7 @@ export async function POST(request: Request) {
         const comments = await fetchMetaOrganicComments({
           accessToken: pageToken,
           pageId: account.provider_account_id,
+          since: recentSince,
           ...syncOptions,
         });
         let accountInserted = 0;
@@ -193,7 +197,7 @@ export async function POST(request: Request) {
       ? "No hay cuentas Facebook con pages_read_engagement y pages_read_user_content concedidos."
         : errors.length > 0
         ? `Meta bloqueo la sincronizacion en ${errors.length} cuenta(s).`
-        : `Sincronizacion Facebook: ${commentsFound} comentario(s), ${inserted} nuevo(s), ${updated} actualizado(s).`;
+        : `Sincronizacion Facebook: ${commentsFound} comentario(s) de las ultimas ${metaRecentCommentWindowHours}h, ${inserted} nuevo(s), ${updated} actualizado(s).`;
 
   console.info("meta_comment_sync", {
     workspaceId: parsed.data.workspaceId,
@@ -202,6 +206,7 @@ export async function POST(request: Request) {
     commentsFound,
     inserted,
     updated,
+    recentSince,
     errors,
   });
 
@@ -217,6 +222,7 @@ export async function POST(request: Request) {
       found: commentsFound,
       inserted,
       updated,
+      since: recentSince,
     },
     accountSummaries,
     errors,

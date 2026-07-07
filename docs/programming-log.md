@@ -319,3 +319,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/lib/types.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con comentario real en anuncio.
 - Pendiente: ampliar campos de creative si algun formato de anuncio no expone story/post asociado.
+
+### Ventana operativa de 72 horas para comentarios
+
+- Resumen: se fijo una regla de producto para no importar historicos: las sincronizaciones de comentarios organicos Facebook y comentarios de Ads solo persisten comentarios con `created_time` dentro de las ultimas 72 horas. Tambien se envia `since` a Meta cuando se lee el edge `/comments`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y verificar que `Sincronizar comentarios Ads` deje de importar comentarios viejos.
+- Pendiente: implementar ingest automatico de Ads, Instagram comments, Messenger y DM con sus permisos reales.

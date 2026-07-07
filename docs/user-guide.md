@@ -116,6 +116,7 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - boton `Sincronizar comentarios FB` para importar comentarios organicos cuando `pages_read_engagement` y `pages_read_user_content` esten concedidos.
 - boton `Diagnosticar Ads` para confirmar que Marketing API ve cuentas publicitarias con `ads_read`.
 - boton `Sincronizar comentarios Ads` para importar comentarios de anuncios detectables por Marketing API y guardarlos como `Comentario ad`.
+- Las sincronizaciones de comentarios solo traen las ultimas 72 horas; la app no importa historicos por defecto.
 - actualizacion de bandeja por Supabase Realtime cuando entra o cambia una conversacion;
 - auto-sincronizacion de comentarios Facebook cada 5 segundos mientras la app esta abierta y los permisos esten listos.
 

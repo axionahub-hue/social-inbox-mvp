@@ -4,8 +4,15 @@ import type { InboxAction, ReplyMode } from "@/lib/types";
 const graphVersion = process.env.META_GRAPH_VERSION ?? "v25.0";
 const graphBaseUrl = `https://graph.facebook.com/${graphVersion}`;
 const facebookDialogBaseUrl = `https://www.facebook.com/${graphVersion}/dialog/oauth`;
+const recentCommentWindowMs = 72 * 60 * 60 * 1000;
 
 const defaultMetaOAuthScopes = ["pages_show_list"];
+
+export const metaRecentCommentWindowHours = 72;
+
+export function createRecentMetaCommentSince(now = new Date()) {
+  return new Date(now.getTime() - recentCommentWindowMs).toISOString();
+}
 
 export const metaTargetScopes = [
   "pages_show_list",
@@ -471,12 +478,14 @@ export async function fetchMetaOrganicComments({
   commentsLimit = 25,
   postLimit = 50,
   postsWithCommentsLimit = 30,
+  since,
 }: {
   accessToken: string;
   pageId: string;
   commentsLimit?: number;
   postLimit?: number;
   postsWithCommentsLimit?: number;
+  since?: string;
 }) {
   const posts = await requestGraph<MetaPostsResponse>(`${pageId}/published_posts`, {
     fields: "id,message,permalink_url,created_time,comments.summary(true).limit(0)",
@@ -502,6 +511,7 @@ export async function fetchMetaOrganicComments({
         fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
         order: "reverse_chronological",
         limit: `${commentsLimit}`,
+        ...(since ? { since: toMetaSinceParam(since) } : {}),
         access_token: accessToken,
       });
 
@@ -513,18 +523,20 @@ export async function fetchMetaOrganicComments({
         return [];
       }
 
-      return (comments.data ?? []).map((comment): MetaOrganicComment => ({
-      postId: post.id,
-      postMessage: fullPost.message ?? null,
-      postPermalink: fullPost.permalink_url ?? null,
-      commentId: comment.id,
-      message: comment.message ?? "",
-      fromId: comment.from?.id ?? null,
-      fromName: comment.from?.name ?? null,
-      createdTime: comment.created_time ?? fullPost.created_time ?? post.created_time ?? null,
-      isHidden: Boolean(comment.is_hidden),
-      permalink: comment.permalink_url ?? null,
-      }));
+      return (comments.data ?? [])
+        .map((comment): MetaOrganicComment => ({
+          postId: post.id,
+          postMessage: fullPost.message ?? null,
+          postPermalink: fullPost.permalink_url ?? null,
+          commentId: comment.id,
+          message: comment.message ?? "",
+          fromId: comment.from?.id ?? null,
+          fromName: comment.from?.name ?? null,
+          createdTime: comment.created_time ?? fullPost.created_time ?? post.created_time ?? null,
+          isHidden: Boolean(comment.is_hidden),
+          permalink: comment.permalink_url ?? null,
+        }))
+        .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
     }),
   );
 
@@ -697,10 +709,12 @@ export async function fetchMetaPostComments({
   accessToken,
   postId,
   commentsLimit = 25,
+  since,
 }: {
   accessToken: string;
   postId: string;
   commentsLimit?: number;
+  since?: string;
 }) {
   const fullPost = await fetchMetaPostDetail({
     accessToken,
@@ -712,6 +726,7 @@ export async function fetchMetaPostComments({
     fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
     order: "reverse_chronological",
     limit: `${commentsLimit}`,
+    ...(since ? { since: toMetaSinceParam(since) } : {}),
     access_token: accessToken,
   });
 
@@ -719,18 +734,20 @@ export async function fetchMetaPostComments({
     throw new Error(comments.error.message ?? `No se pudieron leer comentarios de ${postId}.`);
   }
 
-  return (comments.data ?? []).map((comment): MetaOrganicComment => ({
-    postId,
-    postMessage: fullPost.message ?? null,
-    postPermalink: fullPost.permalink_url ?? null,
-    commentId: comment.id,
-    message: comment.message ?? "",
-    fromId: comment.from?.id ?? null,
-    fromName: comment.from?.name ?? null,
-    createdTime: comment.created_time ?? fullPost.created_time ?? null,
-    isHidden: Boolean(comment.is_hidden),
-    permalink: comment.permalink_url ?? null,
-  }));
+  return (comments.data ?? [])
+    .map((comment): MetaOrganicComment => ({
+      postId,
+      postMessage: fullPost.message ?? null,
+      postPermalink: fullPost.permalink_url ?? null,
+      commentId: comment.id,
+      message: comment.message ?? "",
+      fromId: comment.from?.id ?? null,
+      fromName: comment.from?.name ?? null,
+      createdTime: comment.created_time ?? fullPost.created_time ?? null,
+      isHidden: Boolean(comment.is_hidden),
+      permalink: comment.permalink_url ?? null,
+    }))
+    .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
 }
 
 async function fetchMetaPostDetail({
@@ -979,6 +996,35 @@ async function requestGraph<T>(path: string, params: Record<string, string>) {
   }
 
   return payload;
+}
+
+function toMetaSinceParam(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return `${Math.floor(date.getTime() / 1000)}`;
+}
+
+function isMetaCommentOnOrAfter(value: string | null, since?: string) {
+  if (!since) {
+    return true;
+  }
+
+  if (!value) {
+    return false;
+  }
+
+  const commentDate = new Date(value);
+  const sinceDate = new Date(since);
+
+  if (Number.isNaN(commentDate.getTime()) || Number.isNaN(sinceDate.getTime())) {
+    return false;
+  }
+
+  return commentDate.getTime() >= sinceDate.getTime();
 }
 
 async function requestPagedGraph<T extends { data?: TItem[]; paging?: { next?: string } }, TItem>(

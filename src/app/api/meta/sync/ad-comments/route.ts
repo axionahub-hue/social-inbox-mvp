@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  createRecentMetaCommentSince,
   decryptMetaToken,
   fetchMetaAdCommentTargets,
   fetchMetaPostComments,
+  metaRecentCommentWindowHours,
 } from "@/lib/meta";
 import { persistFacebookComment } from "@/lib/inbox-persistence";
 import { createServiceSupabaseClient } from "@/lib/supabase";
@@ -125,6 +127,7 @@ export async function POST(request: Request) {
     adAccountLimit: 25,
     adsPerAccountLimit: 25,
   });
+  const recentSince = createRecentMetaCommentSince();
   const matchedTargets = targets.filter((target) => pageByProviderId.has(target.pageId));
   let commentsFound = 0;
   let inserted = 0;
@@ -144,6 +147,7 @@ export async function POST(request: Request) {
         accessToken: pageToken,
         postId: target.postId,
         commentsLimit: 25,
+        since: recentSince,
       });
 
       commentsFound += comments.length;
@@ -180,7 +184,7 @@ export async function POST(request: Request) {
     message:
       errors.length > 0
         ? `Meta bloqueo ${errors.length} anuncio(s) al leer comentarios.`
-        : `Sincronizacion Ads: ${commentsFound} comentario(s), ${inserted} nuevo(s), ${updated} actualizado(s).`,
+        : `Sincronizacion Ads: ${commentsFound} comentario(s) de las ultimas ${metaRecentCommentWindowHours}h, ${inserted} nuevo(s), ${updated} actualizado(s).`,
     targets: {
       found: targets.length,
       matchedPages: matchedTargets.length,
@@ -189,6 +193,7 @@ export async function POST(request: Request) {
       found: commentsFound,
       inserted,
       updated,
+      since: recentSince,
     },
     errors,
   });
