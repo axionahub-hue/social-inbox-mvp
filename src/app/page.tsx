@@ -215,6 +215,8 @@ type RunActionOptions = {
 type MetaWebhookDiagnostics = {
   app?: {
     pageFeedActive: boolean;
+    pageMessagesActive: boolean;
+    pageReady: boolean;
     callbackUrl: string | null;
     fields: Array<{ name?: string; version?: string }>;
     error: string | null;
@@ -233,6 +235,7 @@ type MetaWebhookDiagnostics = {
     processedAt: string | null;
     entryIds: string[];
     changes: Array<{ field?: string; item?: string }>;
+    messaging?: Array<{ senderId?: string; messageId?: string }>;
   }>;
   latestEventsError?: string | null;
 };
@@ -1962,7 +1965,19 @@ export default function Home() {
                 <div className="mt-3 rounded-md border border-slate-200 bg-white p-2 text-xs leading-5 text-slate-600">
                   <p className="font-semibold text-slate-700">Webhooks Meta</p>
                   <p>
-                    App Page/feed:{" "}
+                    App Page fields:{" "}
+                    <span
+                      className={
+                        metaWebhookDiagnostics.app?.pageReady
+                          ? "font-semibold text-emerald-700"
+                          : "font-semibold text-amber-700"
+                      }
+                    >
+                      {metaWebhookDiagnostics.app?.pageReady ? "feed + messages" : "Incompleto"}
+                    </span>
+                  </p>
+                  <p>
+                    Feed:{" "}
                     <span
                       className={
                         metaWebhookDiagnostics.app?.pageFeedActive
@@ -1972,12 +1987,23 @@ export default function Home() {
                     >
                       {metaWebhookDiagnostics.app?.pageFeedActive ? "Activo" : "No activo"}
                     </span>
+                    {" · "}
+                    Messages:{" "}
+                    <span
+                      className={
+                        metaWebhookDiagnostics.app?.pageMessagesActive
+                          ? "font-semibold text-emerald-700"
+                          : "font-semibold text-amber-700"
+                      }
+                    >
+                      {metaWebhookDiagnostics.app?.pageMessagesActive ? "Activo" : "No activo"}
+                    </span>
                   </p>
                   <p className="break-all">
                     Callback: {metaWebhookDiagnostics.app?.callbackUrl ?? "No reportado"}
                   </p>
                   <p>
-                    Paginas feed:{" "}
+                    Paginas feed+messages:{" "}
                     {(metaWebhookDiagnostics.pages ?? []).filter((page) => page.subscribed).length}
                     /{metaWebhookDiagnostics.pages?.length ?? 0}
                   </p>
@@ -1992,7 +2018,7 @@ export default function Home() {
                               : "bg-amber-100 text-amber-800"
                           }`}
                         >
-                          {page.subscribed ? "feed" : "sin feed"}
+                          {page.subscribed ? "feed+messages" : "incompleta"}
                         </span>
                       </div>
                     ))}
@@ -3145,7 +3171,7 @@ function resolveMetaOAuthMessage(result: string | null, params?: URLSearchParams
           : "";
       const webhookStatus =
         webhookSubscribedPages > 0
-          ? ` Webhooks feed suscritos: ${webhookSubscribedPages}.`
+          ? ` Webhooks feed+messages suscritos: ${webhookSubscribedPages}.`
           : "";
       const webhookWarning =
         webhookSubscriptionFailures > 0

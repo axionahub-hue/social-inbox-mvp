@@ -6,7 +6,11 @@ import {
   verifyMetaWebhookSignature,
   type MetaOrganicComment,
 } from "@/lib/meta";
-import { persistFacebookComment, type SupabaseServiceClient } from "@/lib/inbox-persistence";
+import {
+  persistFacebookComment,
+  persistFacebookMessengerMessage,
+  type SupabaseServiceClient,
+} from "@/lib/inbox-persistence";
 import { createServiceSupabaseClient } from "@/lib/supabase";
 
 type MetaWebhookPayload = {
@@ -21,6 +25,7 @@ type MetaWebhookEntry = {
     field?: string;
     value?: MetaPageFeedValue;
   }>;
+  messaging?: MetaMessagingEvent[];
 };
 
 type MetaPageFeedValue = {
@@ -36,6 +41,22 @@ type MetaPageFeedValue = {
   from?: {
     id?: string;
     name?: string;
+  };
+};
+
+type MetaMessagingEvent = {
+  sender?: {
+    id?: string;
+  };
+  recipient?: {
+    id?: string;
+  };
+  timestamp?: number;
+  message?: {
+    mid?: string;
+    text?: string;
+    is_echo?: boolean;
+    attachments?: unknown[];
   };
 };
 
@@ -155,6 +176,26 @@ async function processMetaWebhookPayload({
       });
       processed += 1;
     }
+
+    for (const messagingEvent of entry.messaging ?? []) {
+      const messengerMessage = mapMessagingEventToMessage({
+        pageId,
+        event: messagingEvent,
+      });
+
+      if (!messengerMessage) {
+        continue;
+      }
+
+      await persistFacebookMessengerMessage({
+        supabase,
+        workspaceId: account.workspace_id,
+        accountId: account.id,
+        accountName: account.name,
+        message: messengerMessage,
+      });
+      processed += 1;
+    }
   }
 
   return processed;
@@ -241,4 +282,31 @@ function normalizeWebhookTimestamp(value: number | string | undefined) {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function mapMessagingEventToMessage({
+  pageId,
+  event,
+}: {
+  pageId: string;
+  event: MetaMessagingEvent;
+}) {
+  const senderId = event.sender?.id;
+  const messageId = event.message?.mid;
+
+  if (!senderId || !messageId || !event.message) {
+    return null;
+  }
+
+  if (event.message.is_echo || senderId === pageId) {
+    return null;
+  }
+
+  return {
+    senderId,
+    recipientId: event.recipient?.id ?? null,
+    messageId,
+    text: event.message.text ?? "",
+    timestamp: event.timestamp ? new Date(event.timestamp).toISOString() : null,
+  };
 }

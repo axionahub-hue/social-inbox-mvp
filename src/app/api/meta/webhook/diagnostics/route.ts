@@ -4,6 +4,7 @@ import {
   decryptMetaToken,
   fetchMetaAppSubscriptions,
   fetchMetaPageSubscribedApps,
+  metaPageSubscribedFields,
 } from "@/lib/meta";
 import { createServiceSupabaseClient } from "@/lib/supabase";
 
@@ -91,6 +92,10 @@ export async function POST(request: Request) {
     appPageSubscription?.active &&
       appPageSubscription.fields?.some((field) => field.name === "feed"),
   );
+  const appPageMessagesActive = Boolean(
+    appPageSubscription?.active &&
+      appPageSubscription.fields?.some((field) => field.name === "messages"),
+  );
   const accounts = (accountsResult.data ?? []) as FacebookAccountRow[];
   const pageDiagnostics = await Promise.all(
     accounts.map(async (account) => {
@@ -129,7 +134,7 @@ export async function POST(request: Request) {
         return {
           pageId: account.provider_account_id,
           pageName: account.name,
-          subscribed: fields.includes("feed"),
+          subscribed: metaPageSubscribedFields.every((field) => fields.includes(field)),
           fields,
           error: null,
         };
@@ -155,6 +160,8 @@ export async function POST(request: Request) {
     ok: true,
     app: {
       pageFeedActive: appPageFeedActive,
+      pageMessagesActive: appPageMessagesActive,
+      pageReady: appPageFeedActive && appPageMessagesActive,
       callbackUrl: appPageSubscription?.callback_url ?? null,
       fields: appPageSubscription?.fields ?? [],
       error: appSubscriptions.error?.message ?? null,
@@ -171,6 +178,13 @@ export async function POST(request: Request) {
           (entry.changes ?? []).map((change) => ({
             field: change.field,
             item: change.value?.item,
+          })),
+      ),
+      messaging: (event.payload?.entry ?? []).flatMap(
+        (entry: { messaging?: Array<{ sender?: { id?: string }; message?: { mid?: string } }> }) =>
+          (entry.messaging ?? []).map((message) => ({
+            senderId: message.sender?.id,
+            messageId: message.message?.mid,
           })),
       ),
     })),

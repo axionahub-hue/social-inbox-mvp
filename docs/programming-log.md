@@ -403,3 +403,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`.
 - Pendiente: evaluar si vale la pena marcar estos comentarios como no elegibles para private reply en DB.
+
+### Messenger entrante por webhook `messages`
+
+- Resumen: se agrego procesamiento de `entry.messaging[]` en `POST /api/meta/webhook`, persistencia de mensajes entrantes de Messenger como `inbox_items.source = messenger` y respuesta real a hilos Messenger usando Send API `me/messages` con `recipient.id`. La suscripcion automatica de paginas ahora pide `feed,messages` y el diagnostico muestra si ambos campos estan activos en app y paginas.
+- Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/api/meta/webhook/diagnostics/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/meta-setup.md`, `docs/user-guide.md`, `docs/vercel-deploy.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar en Vercel y probar una respuesta real por Messenger.
+- Pendiente: si el diagnostico marca `messages` como no activo, activar el campo Page `messages` en Meta Developers o reautorizar para que el callback suscriba de nuevo cada pagina.

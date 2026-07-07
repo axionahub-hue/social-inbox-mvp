@@ -128,9 +128,11 @@ Si Supabase esta configurado:
 
 - guarda el evento crudo en `webhook_events`;
 - procesa cambios `Page/feed` con `item = comment` y `verb = add|edited`;
+- procesa eventos `entry.messaging[]` de Messenger como hilos privados `source = messenger`;
 - busca la pagina en `connected_accounts` por `provider_account_id`;
 - usa el page token cifrado para enriquecer comentario/publicacion;
 - persiste el comentario en `contacts`, `inbox_items` e `inbox_messages`;
+- persiste mensajes entrantes de Messenger en `contacts`, `inbox_items` e `inbox_messages`, deduplicando por `message.mid`;
 - marca `webhook_events.processed_at` cuando el procesamiento termina sin errores.
 
 ### `POST /api/meta/oauth/start`
@@ -186,7 +188,7 @@ Comportamiento:
 - si existe `business_management`, consulta tambien paginas de negocios via `owned_pages` y `client_pages`;
 - guarda paginas Facebook y cuentas Instagram profesionales vinculadas en `connected_accounts`;
 - cifra page tokens antes de guardarlos;
-- intenta suscribir cada pagina Facebook con page token al webhook Page `feed`.
+- intenta suscribir cada pagina Facebook con page token a los webhooks Page `feed,messages`.
 
 Redirecciones relevantes:
 

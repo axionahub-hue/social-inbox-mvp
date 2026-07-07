@@ -139,6 +139,7 @@ async function resolveAuthenticatedActionInput({
       id,
       workspace_id,
       source,
+      provider_thread_id,
       provider_comment_id,
       provider_post_id,
       connected_accounts (
@@ -190,6 +191,7 @@ async function resolveAuthenticatedActionInput({
 
   const account = firstOrNull(itemResult.data.connected_accounts);
   const providerCommentId = itemResult.data.provider_comment_id as string | null;
+  const providerThreadId = itemResult.data.provider_thread_id as string | null;
 
   if (input.action === "delete_message") {
     const messageResult = await supabase
@@ -248,6 +250,29 @@ async function resolveAuthenticatedActionInput({
       input: {
         ...input,
         externalId: messageResult.data.provider_message_id as string,
+        accessToken: decryptMetaToken(account.access_token_encrypted),
+      },
+      canPersist: true,
+    };
+  }
+
+  if (
+    input.action === "reply" &&
+    itemResult.data.source === "messenger" &&
+    account?.network === "facebook" &&
+    account.access_token_encrypted &&
+    providerThreadId
+  ) {
+    const recipientExternalId = providerThreadId.replace(/^messenger:/, "");
+
+    return {
+      input: {
+        ...input,
+        externalId: providerThreadId.startsWith("messenger:")
+          ? providerThreadId
+          : `messenger:${providerThreadId}`,
+        recipientExternalId,
+        replyMode: "private_message",
         accessToken: decryptMetaToken(account.access_token_encrypted),
       },
       canPersist: true,

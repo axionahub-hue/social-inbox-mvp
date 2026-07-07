@@ -152,9 +152,11 @@ Debe responder:
 - `POST /api/meta/webhook` valida firma `x-hub-signature-256`.
 - Guarda el evento crudo en `webhook_events`.
 - Procesa cambios `Page/feed` con `item = comment` y `verb = add|edited`.
+- Procesa eventos `entry.messaging[]` de Page `messages` como conversaciones Messenger.
 - Busca la pagina en `connected_accounts` por `provider_account_id`.
 - Usa el page token cifrado para enriquecer comentario y publicacion.
 - Persiste el comentario en la misma estructura de inbox usada por la sincronizacion manual.
+- Persiste mensajes entrantes de Messenger en la misma estructura de inbox y permite responderlos por Send API con `recipient.id`.
 
 ## Pendientes despues de Vercel
 

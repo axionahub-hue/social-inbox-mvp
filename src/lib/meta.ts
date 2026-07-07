@@ -9,6 +9,7 @@ const recentCommentWindowMs = 72 * 60 * 60 * 1000;
 const defaultMetaOAuthScopes = ["pages_show_list"];
 
 export const metaRecentCommentWindowHours = 72;
+export const metaPageSubscribedFields = ["feed", "messages"] as const;
 
 export function createRecentMetaCommentSince(now = new Date()) {
   return new Date(now.getTime() - recentCommentWindowMs).toISOString();
@@ -598,7 +599,7 @@ export async function subscribeMetaPageToFeed({
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      subscribed_fields: "feed",
+      subscribed_fields: metaPageSubscribedFields.join(","),
       access_token: accessToken,
     }),
   });
@@ -607,13 +608,17 @@ export async function subscribeMetaPageToFeed({
   if (!response.ok || payload.error) {
     return {
       ok: false,
-      message: payload.error?.message ?? "Meta no pudo suscribir la pagina al webhook feed.",
+      message:
+        payload.error?.message ??
+        "Meta no pudo suscribir la pagina a los webhooks feed,messages.",
     };
   }
 
   return {
     ok: Boolean(payload.success),
-    message: payload.success ? "Pagina suscrita al webhook feed." : "Meta no confirmo la suscripcion.",
+    message: payload.success
+      ? "Pagina suscrita a los webhooks feed,messages."
+      : "Meta no confirmo la suscripcion.",
   };
 }
 
@@ -1217,7 +1222,7 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
     case "reply":
       if (input.replyMode === "private_message") {
         return {
-          recipient: JSON.stringify({ comment_id: input.externalId }),
+          recipient: JSON.stringify(resolvePrivateMessageRecipient(input)),
           message: JSON.stringify({ text: input.message ?? "" }),
         };
       }
@@ -1230,6 +1235,14 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
     default:
       return {};
   }
+}
+
+function resolvePrivateMessageRecipient(input: MetaActionInput) {
+  if (input.externalId.startsWith("messenger:") && input.recipientExternalId) {
+    return { id: input.recipientExternalId };
+  }
+
+  return { comment_id: input.externalId };
 }
 
 function stringifyMetaActionBody(body: Record<string, string | boolean>) {

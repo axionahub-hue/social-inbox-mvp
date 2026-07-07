@@ -44,7 +44,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La consulta de paginas usa `/me/accounts`; si el token tiene `business_management`, tambien consulta negocios del usuario y sus `owned_pages`/`client_pages`.
 - Las paginas Facebook y cuentas Instagram profesionales vinculadas se guardan en `connected_accounts`.
 - Los page tokens se cifran server-side con AES-256-GCM antes de persistirlos.
-- Cuando una pagina Facebook devuelve page token, el callback intenta suscribir la app al webhook Page `feed` mediante `/{page-id}/subscribed_apps`.
+- Cuando una pagina Facebook devuelve page token, el callback intenta suscribir la app a los webhooks Page `feed,messages` mediante `/{page-id}/subscribed_apps`.
 - `META_TOKEN_ENCRYPTION_KEY` permite usar una clave dedicada; si falta, desarrollo local cae a `META_APP_SECRET`.
 
 ## Carga de inbox
@@ -82,8 +82,15 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
-- Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page al campo `feed` y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
+- Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page a los campos `feed` y `messages`, y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint guarda eventos crudos, normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual y normaliza `entry.messaging[]` como conversaciones Messenger.
 - `/api/meta/webhook/diagnostics` compara configuracion real de Meta (`/{app-id}/subscriptions`, `/{page-id}/subscribed_apps`) contra ultimos eventos recibidos para distinguir endpoint sano de falta de entrega real por Meta.
+
+## Messenger
+
+- Los mensajes entrantes de Messenger llegan por webhook Page `messages`.
+- Cada evento `entry.messaging[]` se deduplica por `message.mid` y se guarda como `inbox_items.source = messenger`.
+- El contacto queda identificado por el Page-scoped sender id (`facebook:PSID`) cuando Meta no entrega nombre en el webhook.
+- Las respuestas desde un item Messenger usan Send API `me/messages` con `recipient.id = PSID`. Esto es distinto a una private reply de comentario, que usa `recipient.comment_id`.
 
 ## Comentarios de Ads
 

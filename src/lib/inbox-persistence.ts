@@ -4,6 +4,14 @@ import type { InboxSource } from "@/lib/types";
 
 export type SupabaseServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
 
+export type MetaMessengerMessage = {
+  senderId: string;
+  recipientId: string | null;
+  messageId: string;
+  text: string;
+  timestamp: string | null;
+};
+
 export async function persistFacebookComment({
   supabase,
   workspaceId,
@@ -157,6 +165,119 @@ export async function persistFacebookComment({
   return "inserted";
 }
 
+export async function persistFacebookMessengerMessage({
+  supabase,
+  workspaceId,
+  accountId,
+  accountName,
+  message,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  accountId: string;
+  accountName: string;
+  message: MetaMessengerMessage;
+}) {
+  const contactId = await ensureFacebookMessengerContact({
+    supabase,
+    workspaceId,
+    senderId: message.senderId,
+  });
+  const providerThreadId = `messenger:${message.senderId}`;
+  const existingItem = await supabase
+    .from("inbox_items")
+    .select("id,unread_count")
+    .eq("workspace_id", workspaceId)
+    .eq("account_id", accountId)
+    .eq("source", "messenger")
+    .eq("provider_thread_id", providerThreadId)
+    .maybeSingle();
+  const now = new Date().toISOString();
+  const receivedAt = normalizeDate(message.timestamp) ?? now;
+  const preview = message.text || "(mensaje sin texto)";
+
+  if (existingItem.error) {
+    throw new Error(existingItem.error.message);
+  }
+
+  if (existingItem.data?.id) {
+    const existingMessage = await supabase
+      .from("inbox_messages")
+      .select("id")
+      .eq("inbox_item_id", existingItem.data.id)
+      .eq("provider_message_id", message.messageId)
+      .maybeSingle();
+
+    if (existingMessage.error) {
+      throw new Error(existingMessage.error.message);
+    }
+
+    if (existingMessage.data?.id) {
+      return "duplicate";
+    }
+
+    const updateResult = await supabase
+      .from("inbox_items")
+      .update({
+        status: "new",
+        preview,
+        unread_count: Number(existingItem.data.unread_count ?? 0) + 1,
+        received_at: receivedAt,
+        updated_at: now,
+      })
+      .eq("id", existingItem.data.id);
+
+    if (updateResult.error) {
+      throw new Error(updateResult.error.message);
+    }
+
+    await ensureMessengerMessage({
+      supabase,
+      inboxItemId: existingItem.data.id as string,
+      message,
+      receivedAt,
+    });
+
+    return "updated";
+  }
+
+  const insertResult = await supabase
+    .from("inbox_items")
+    .insert({
+      workspace_id: workspaceId,
+      account_id: accountId,
+      contact_id: contactId,
+      source: "messenger",
+      status: "new",
+      provider_thread_id: providerThreadId,
+      provider_comment_id: null,
+      provider_post_id: null,
+      provider_ad_id: null,
+      title: `Messenger en ${accountName}`,
+      preview,
+      is_hidden: false,
+      ingest_source: "webhook",
+      unread_count: 1,
+      received_at: receivedAt,
+      updated_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (insertResult.error) {
+    throw new Error(insertResult.error.message);
+  }
+
+  await ensureMessengerMessage({
+    supabase,
+    inboxItemId: insertResult.data.id as string,
+    message,
+    receivedAt,
+  });
+
+  return "inserted";
+}
+
 async function ensureFacebookContact({
   supabase,
   workspaceId,
@@ -211,6 +332,51 @@ async function ensureFacebookContact({
   return inserted.data.id as string;
 }
 
+async function ensureFacebookMessengerContact({
+  supabase,
+  workspaceId,
+  senderId,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  senderId: string;
+}) {
+  const displayName = `Messenger ${senderId.slice(-6)}`;
+  const existing = await supabase
+    .from("contacts")
+    .select("id,display_name")
+    .eq("workspace_id", workspaceId)
+    .eq("network", "facebook")
+    .eq("provider_user_id", senderId)
+    .maybeSingle();
+
+  if (existing.error) {
+    throw new Error(existing.error.message);
+  }
+
+  if (existing.data?.id) {
+    return existing.data.id as string;
+  }
+
+  const inserted = await supabase
+    .from("contacts")
+    .insert({
+      workspace_id: workspaceId,
+      network: "facebook",
+      provider_user_id: senderId,
+      display_name: displayName,
+      handle: `facebook:${senderId}`,
+    })
+    .select("id")
+    .single();
+
+  if (inserted.error) {
+    throw new Error(inserted.error.message);
+  }
+
+  return inserted.data.id as string;
+}
+
 async function ensureFacebookMessage({
   supabase,
   inboxItemId,
@@ -242,6 +408,30 @@ async function ensureFacebookMessage({
     provider_message_id: comment.commentId,
     author_type: "contact",
     body: comment.message || "(comentario sin texto)",
+    sent_at: receivedAt,
+  });
+
+  if (inserted.error) {
+    throw new Error(inserted.error.message);
+  }
+}
+
+async function ensureMessengerMessage({
+  supabase,
+  inboxItemId,
+  message,
+  receivedAt,
+}: {
+  supabase: SupabaseServiceClient;
+  inboxItemId: string;
+  message: MetaMessengerMessage;
+  receivedAt: string;
+}) {
+  const inserted = await supabase.from("inbox_messages").insert({
+    inbox_item_id: inboxItemId,
+    provider_message_id: message.messageId,
+    author_type: "contact",
+    body: message.text || "(mensaje sin texto)",
     sent_at: receivedAt,
   });
 

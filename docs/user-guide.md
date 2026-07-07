@@ -126,6 +126,8 @@ Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo 
 
 La auto-sincronizacion local evita depender del boton manual durante desarrollo, pero no reemplaza los webhooks. Para recibir eventos aunque la app no este abierta, se debe publicar la app en una URL HTTPS, configurar Webhooks Meta y tener `inbox_items` habilitado en Supabase Realtime para pintar los cambios en pantalla.
 
+Para conversaciones por mensaje interno de Facebook, Meta debe tener activo el campo webhook Page `messages`. Los comentarios organicos/ad entran por `feed`; las respuestas del usuario dentro de Messenger entran por `messages`. En el panel `Diagnosticar webhooks`, `App Page fields` debe mostrar `feed + messages`.
+
 ## Limitaciones actuales
 
 - Con `pages_show_list`, Meta puede detectar paginas, pero no garantiza comentarios, ads ni DMs hasta ampliar permisos.

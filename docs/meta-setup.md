@@ -149,7 +149,7 @@ La auto-sincronizacion local sirve para desarrollo mientras la app esta abierta.
 https://TU-DOMINIO/api/meta/webhook
 ```
 
-En Meta Developers se debe configurar Webhooks para el objeto Page y suscribirse al campo `feed`, que es donde Meta entrega actividad de la pagina como comentarios. Despues tambien hay que suscribir cada Page/app con permisos suficientes; `localhost` no sirve como destino de webhook de Meta.
+En Meta Developers se debe configurar Webhooks para el objeto Page y suscribirse a los campos `feed` y `messages`. `feed` entrega actividad de pagina como comentarios; `messages` entrega conversaciones de Messenger. Despues tambien hay que suscribir cada Page/app con permisos suficientes; `localhost` no sirve como destino de webhook de Meta.
 
 ## Referencias oficiales
 
