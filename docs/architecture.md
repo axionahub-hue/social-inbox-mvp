@@ -54,6 +54,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Las cuentas con `access_token_encrypted` se muestran como reales; las cuentas sin token cifrado quedan marcadas como demo.
 - Las cuentas descubiertas por Meta sin token cifrado quedan como `needs_review`; los fixtures locales quedan como `demo`.
 - El usuario puede desconectar cuentas no deseadas del workspace; la eliminacion borra la fila de `connected_accounts` y sus inbox relacionados por cascada.
+- Cada item del inbox muestra metadatos operativos de plataforma, cuenta conectada y tipo de origen para evitar ambiguedad cuando haya Facebook, Instagram y futuras redes.
+- La seleccion por checkbox opera sobre los items visibles y reutiliza `/api/inbox/action` para marcar leido/no leido, archivar y desarchivar.
 
 ## Sincronizacion de comentarios Facebook
 
@@ -62,6 +64,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Solo procesa cuentas con `pages_read_engagement` y `pages_read_user_content` concedidos.
 - Lee publicaciones recientes y hasta 50 comentarios por publicacion en este bloque inicial.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
+- Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La sincronizacion manual es una etapa previa a webhooks reales; evita bloquear la experiencia mientras se configuran suscripciones Meta.
 
 ## Auth y workspace

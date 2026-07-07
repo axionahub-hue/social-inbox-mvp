@@ -474,11 +474,16 @@ export function verifyMetaWebhookChallenge(searchParams: URLSearchParams) {
 }
 
 export async function executeMetaAction(input: MetaActionInput) {
-  if (input.action === "archive" || input.action === "unarchive") {
+  if (
+    input.action === "archive" ||
+    input.action === "unarchive" ||
+    input.action === "mark_read" ||
+    input.action === "mark_unread"
+  ) {
     return {
       mode: "internal",
       ok: true,
-      message: input.action === "archive" ? "Conversacion archivada." : "Conversacion desarchivada.",
+      message: resolveInternalActionMessage(input.action),
     };
   }
 
@@ -669,6 +674,8 @@ function resolveActionEndpoint(input: MetaActionInput) {
       return `${input.externalId}/blocked`;
     case "archive":
     case "unarchive":
+    case "mark_read":
+    case "mark_unread":
       return input.externalId;
   }
 }
@@ -683,5 +690,20 @@ function resolveActionBody(input: MetaActionInput) {
       return { is_hidden: false };
     default:
       return {};
+  }
+}
+
+function resolveInternalActionMessage(action: InboxAction) {
+  switch (action) {
+    case "archive":
+      return "Conversacion archivada.";
+    case "unarchive":
+      return "Conversacion desarchivada.";
+    case "mark_read":
+      return "Conversacion marcada como leida.";
+    case "mark_unread":
+      return "Conversacion marcada como no leida.";
+    default:
+      return "Accion interna registrada.";
   }
 }

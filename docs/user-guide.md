@@ -38,6 +38,8 @@ Si Supabase esta configurado, se puede ingresar un email y pedir un enlace de ac
 - Busqueda: filtra por contacto, usuario, titulo o texto visible.
 - `Cuentas visibles`: permite mostrar u ocultar cuentas conectadas individuales.
 - `Mostrar todas`: vuelve a activar todas las cuentas ocultas.
+- Cada fila del inbox muestra plataforma, cuenta conectada y tipo de origen: comentario organico, comentario de anuncio, Messenger o Instagram DM.
+- Los checkboxes permiten seleccionar conversaciones individuales o todas las visibles.
 
 Los filtros se combinan. Por ejemplo, se puede ver solo Instagram y ademas ocultar una cuenta de Instagram especifica cuando haya varias conectadas.
 
@@ -53,8 +55,9 @@ En una conversacion seleccionada se puede:
 - bloquear usuario;
 - archivar;
 - desarchivar desde la vista `Archivados`.
+- marcar leido/no leido desde la barra de seleccion.
 
-En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear, archivar y desarchivar tambien actualizan las tablas del workspace.
+En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan la interfaz local. En modo Supabase, responder, like/unlike, ocultar/mostrar, bloquear, archivar, desarchivar y marcar leido/no leido tambien actualizan las tablas del workspace.
 
 Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.
 

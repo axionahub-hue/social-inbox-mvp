@@ -262,7 +262,7 @@ async function ensureFacebookContact({
   comment: MetaOrganicComment;
 }) {
   const providerUserId = comment.fromId ?? `comment-author:${comment.commentId}`;
-  const displayName = comment.fromName ?? "Usuario Facebook";
+  const displayName = comment.fromName ?? "Autor no disponible";
   const existing = await supabase
     .from("contacts")
     .select("id")

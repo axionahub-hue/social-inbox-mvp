@@ -67,4 +67,6 @@ export type InboxAction =
   | "unhide"
   | "block"
   | "archive"
-  | "unarchive";
+  | "unarchive"
+  | "mark_read"
+  | "mark_unread";

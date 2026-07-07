@@ -49,6 +49,8 @@ Acciones soportadas:
 - `block`
 - `archive`
 - `unarchive`
+- `mark_read`
+- `mark_unread`
 
 Respuesta demo:
 
@@ -68,6 +70,8 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 - `block`: actualiza `contacts.is_blocked`.
 - `archive`: marca `inbox_items.status = archived` y limpia `unread_count`.
 - `unarchive`: marca `inbox_items.status = open` y limpia `unread_count`.
+- `mark_read`: marca `inbox_items.status = open` y limpia `unread_count`.
+- `mark_unread`: marca `inbox_items.status = new` y deja `unread_count = 1`.
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 

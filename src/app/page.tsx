@@ -37,7 +37,7 @@ import type { User } from "@supabase/supabase-js";
 const sourceLabels: Record<InboxSource, string> = {
   messenger: "Messenger",
   instagram_dm: "Instagram DM",
-  post_comment: "Comentario",
+  post_comment: "Comentario organico",
   ad_comment: "Comentario ad",
 };
 
@@ -173,6 +173,7 @@ type SupabaseInboxData = {
 };
 
 type InboxView = "active" | "archived";
+type BulkInboxAction = "mark_read" | "mark_unread" | "archive" | "unarchive";
 
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
@@ -194,6 +195,7 @@ export default function Home() {
   );
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState(items[0]?.id);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState<Network | "all">("all");
   const [inboxView, setInboxView] = useState<InboxView>("active");
@@ -256,6 +258,10 @@ export default function Home() {
   }, [inboxView, items, network, query, visibleAccountSet]);
 
   const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
+  const selectedItemSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
+  const filteredItemIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
+  const selectedVisibleCount = filteredItemIds.filter((id) => selectedItemSet.has(id)).length;
+  const allVisibleSelected = filteredItemIds.length > 0 && selectedVisibleCount === filteredItemIds.length;
   const metaCallbackUrl = `${appOrigin}/api/meta/oauth/callback`;
 
   useEffect(() => {
@@ -1083,38 +1089,59 @@ export default function Home() {
     setNotice(result.message ?? "Accion registrada.");
 
     setItems((current) =>
-      current.map((item) => {
-        if (item.id !== selectedItem.id) return item;
+      current.map((item) =>
+        item.id === selectedItem.id ? applyInboxActionToItem(item, action, message) : item,
+      ),
+    );
+  }
 
-        if (action === "reply" && message) {
-          return {
-            ...item,
-            status: "responded",
-            unreadCount: 0,
-            preview: message,
-            messages: [
-              ...item.messages,
-              {
-                id: `local-${Date.now()}`,
-                author: "agent",
-                body: message,
-                sentAt: "Ahora",
-              },
-            ],
-          };
-        }
+  function toggleSelectedItem(itemId: string, checked: boolean) {
+    setSelectedItemIds((current) =>
+      checked
+        ? [...new Set([...current, itemId])]
+        : current.filter((selectedItemId) => selectedItemId !== itemId),
+    );
+  }
 
-        return {
-          ...item,
-          liked: action === "like" ? true : action === "unlike" ? false : item.liked,
-          hidden: action === "hide" ? true : action === "unhide" ? false : item.hidden,
-          blocked: action === "block" ? true : item.blocked,
-          status:
-            action === "archive" ? "archived" : action === "unarchive" ? "open" : item.status,
-          unreadCount:
-            action === "archive" || action === "unarchive" ? 0 : item.unreadCount,
-        };
-      }),
+  function toggleAllVisibleItems(checked: boolean) {
+    setSelectedItemIds((current) => {
+      const hiddenSelections = current.filter((id) => !filteredItemIds.includes(id));
+      return checked ? [...new Set([...hiddenSelections, ...filteredItemIds])] : hiddenSelections;
+    });
+  }
+
+  async function runBulkAction(action: BulkInboxAction) {
+    const targetIds = filteredItemIds.filter((id) => selectedItemSet.has(id));
+
+    if (targetIds.length === 0) {
+      return;
+    }
+
+    const results = await Promise.all(
+      targetIds.map((itemId) =>
+        fetch("/api/inbox/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId,
+            externalId: itemId,
+            action,
+          }),
+        }).then((response) => response.ok),
+      ),
+    );
+    const succeededIds = targetIds.filter((_, index) => results[index]);
+
+    setItems((current) =>
+      current.map((item) =>
+        succeededIds.includes(item.id) ? applyInboxActionToItem(item, action) : item,
+      ),
+    );
+    setSelectedItemIds((current) => current.filter((id) => !succeededIds.includes(id)));
+    setNotice(
+      `${succeededIds.length} conversacion(es) actualizada(s)${
+        succeededIds.length !== targetIds.length ? "; algunas no se pudieron guardar" : ""
+      }.`,
     );
   }
 
@@ -1493,14 +1520,64 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="max-h-[44vh] overflow-auto lg:max-h-[calc(100vh-141px)]">
+          <div className="overflow-visible lg:max-h-[calc(100vh-141px)] lg:overflow-auto">
+            {filteredItems.length > 0 ? (
+              <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <label className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      aria-label="Seleccionar conversaciones visibles"
+                      checked={allVisibleSelected}
+                      className="size-4 rounded border-slate-300"
+                      onChange={(event) => toggleAllVisibleItems(event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span className="truncate sm:hidden">
+                      {selectedVisibleCount > 0 ? `${selectedVisibleCount} sel.` : `${filteredItems.length}`}
+                    </span>
+                    <span className="hidden truncate sm:inline">
+                      {selectedVisibleCount > 0
+                        ? `${selectedVisibleCount} seleccionada(s)`
+                        : `${filteredItems.length} conversacion(es)`}
+                    </span>
+                  </label>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      className="h-8 rounded-md border border-slate-200 px-2 text-xs font-medium text-slate-700 disabled:opacity-40"
+                      disabled={selectedVisibleCount === 0}
+                      onClick={() => void runBulkAction("mark_read")}
+                    >
+                      Leido
+                    </button>
+                    <button
+                      className="h-8 rounded-md border border-slate-200 px-2 text-xs font-medium text-slate-700 disabled:opacity-40"
+                      disabled={selectedVisibleCount === 0}
+                      onClick={() => void runBulkAction("mark_unread")}
+                    >
+                      No leido
+                    </button>
+                    <button
+                      className="h-8 rounded-md border border-slate-950 bg-slate-950 px-2 text-xs font-semibold text-white disabled:opacity-40"
+                      disabled={selectedVisibleCount === 0}
+                      onClick={() =>
+                        void runBulkAction(inboxView === "archived" ? "unarchive" : "archive")
+                      }
+                    >
+                      {inboxView === "archived" ? "Desarchivar" : "Archivar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             {filteredItems.length > 0 ? (
               filteredItems.map((item) => (
                 <InboxRow
                   item={item}
                   key={item.id}
                   selected={item.id === selectedItem?.id}
+                  checked={selectedItemSet.has(item.id)}
                   onClick={() => setSelectedId(item.id)}
+                  onCheckedChange={(checked) => toggleSelectedItem(item.id, checked)}
                 />
               ))
             ) : (
@@ -1534,7 +1611,11 @@ export default function Home() {
                 <div className="mx-auto max-w-3xl space-y-4">
                   <div className="rounded-md border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center gap-2">
+                      <NetworkBadge network={selectedItem.network} />
                       <Badge source={selectedItem.source} />
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                        {selectedItem.accountName}
+                      </span>
                       {selectedItem.campaign ? (
                         <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
                           {selectedItem.campaign}
@@ -1810,22 +1891,33 @@ function Metric({ label, value }: { label: string; value: number }) {
 function InboxRow({
   item,
   selected,
+  checked,
   onClick,
+  onCheckedChange,
 }: {
   item: InboxItem;
   selected: boolean;
+  checked: boolean;
   onClick: () => void;
+  onCheckedChange: (checked: boolean) => void;
 }) {
   const Icon = networkIcon[item.network];
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full border-b border-slate-200 p-4 text-left transition ${
+    <div
+      className={`flex w-full gap-3 border-b border-slate-200 p-4 text-left transition ${
         selected ? "bg-slate-100" : "bg-white hover:bg-slate-50"
       }`}
     >
-      <div className="flex gap-3">
+      <input
+        aria-label={`Seleccionar ${item.contactName}`}
+        checked={checked}
+        className="mt-3 size-4 shrink-0 rounded border-slate-300"
+        onChange={(event) => onCheckedChange(event.target.checked)}
+        type="checkbox"
+      />
+      <button className="min-w-0 flex-1 text-left" onClick={onClick}>
+        <div className="flex gap-3">
         <div className="grid size-11 shrink-0 place-items-center rounded-md bg-slate-900 text-sm font-semibold text-white">
           {item.avatarInitials}
         </div>
@@ -1837,9 +1929,13 @@ function InboxRow({
             </div>
             <span className="shrink-0 text-xs text-slate-500">{item.receivedAt}</span>
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <Icon size={15} className="text-slate-500" />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <NetworkBadge network={item.network} />
             <Badge source={item.source} />
+            <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+              <Icon size={13} className="shrink-0 text-slate-500" />
+              <span className="truncate">{item.accountName}</span>
+            </span>
             {item.unreadCount ? (
               <span className="grid min-w-5 place-items-center rounded-full bg-rose-600 px-1.5 text-xs font-semibold text-white">
                 {item.unreadCount}
@@ -1849,7 +1945,8 @@ function InboxRow({
           <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-600">{item.preview}</p>
         </div>
       </div>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -1876,7 +1973,11 @@ function ConversationHeader({ item }: { item: InboxItem }) {
               <h2 className="truncate text-lg font-semibold">{item.contactName}</h2>
               <Icon size={17} className="shrink-0 text-slate-500" />
             </div>
-            <p className="truncate text-sm text-slate-500">{item.accountName}</p>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+              <NetworkBadge network={item.network} />
+              <Badge source={item.source} />
+              <span className="min-w-0 truncate text-sm text-slate-500">{item.accountName}</span>
+            </div>
           </div>
         </div>
         <div className="hidden items-center gap-2 sm:flex">
@@ -1918,6 +2019,16 @@ function ActionButton({
     >
       {children}
     </button>
+  );
+}
+
+function NetworkBadge({ network }: { network: Network }) {
+  const meta = networkMeta[network];
+
+  return (
+    <span className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${meta.badgeClass}`}>
+      {meta.shortLabel}
+    </span>
   );
 }
 
@@ -1988,7 +2099,10 @@ function mapConnectedAccountRow(row: ConnectedAccountRow): ChannelConnection {
 function mapInboxItemRow(row: InboxItemRow): InboxItem {
   const account = firstOrNull(row.connected_accounts);
   const contact = firstOrNull(row.contacts);
-  const contactName = contact?.display_name ?? "Contacto";
+  const contactName =
+    !contact?.display_name || contact.display_name === "Usuario Facebook"
+      ? "Autor no disponible"
+      : contact.display_name;
   const messages = [...(row.inbox_messages ?? [])].sort(
     (left, right) => new Date(left.sent_at).getTime() - new Date(right.sent_at).getTime(),
   );
@@ -2002,7 +2116,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     sentiment: "neutral",
     accountName: account?.name ?? "Cuenta conectada",
     contactName,
-    contactHandle: contact?.handle ?? "",
+    contactHandle: contact?.handle ?? "Meta no envio identidad del autor",
     avatarInitials: getInitials(contactName),
     title: row.title,
     preview: row.preview,
@@ -2018,6 +2132,53 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
       body: message.body,
       sentAt: formatTimestamp(message.sent_at),
     })),
+  };
+}
+
+function applyInboxActionToItem(
+  item: InboxItem,
+  action: InboxAction,
+  message?: string,
+): InboxItem {
+  if (action === "reply" && message) {
+    return {
+      ...item,
+      status: "responded",
+      unreadCount: 0,
+      preview: message,
+      messages: [
+        ...item.messages,
+        {
+          id: `local-${Date.now()}`,
+          author: "agent",
+          body: message,
+          sentAt: "Ahora",
+        },
+      ],
+    };
+  }
+
+  return {
+    ...item,
+    liked: action === "like" ? true : action === "unlike" ? false : item.liked,
+    hidden: action === "hide" ? true : action === "unhide" ? false : item.hidden,
+    blocked: action === "block" ? true : item.blocked,
+    status:
+      action === "archive"
+        ? "archived"
+        : action === "unarchive"
+          ? "open"
+          : action === "mark_unread"
+            ? "new"
+            : action === "mark_read"
+              ? "open"
+              : item.status,
+    unreadCount:
+      action === "archive" || action === "unarchive" || action === "mark_read"
+        ? 0
+        : action === "mark_unread"
+          ? Math.max(item.unreadCount, 1)
+          : item.unreadCount,
   };
 }
 
@@ -2053,6 +2214,7 @@ function formatTimestamp(value: string | null) {
   return new Intl.DateTimeFormat("es", {
     day: "2-digit",
     month: "2-digit",
+    year: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);

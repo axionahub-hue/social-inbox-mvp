@@ -15,6 +15,8 @@ const actionSchema = z.object({
     "block",
     "archive",
     "unarchive",
+    "mark_read",
+    "mark_unread",
   ]),
   message: z.string().optional(),
 });
@@ -135,6 +137,19 @@ async function persistInboxAction({
       .update({
         status: action === "archive" ? "archived" : "open",
         unread_count: 0,
+        updated_at: updatedAt,
+      })
+      .eq("id", itemId);
+
+    return !error;
+  }
+
+  if (action === "mark_read" || action === "mark_unread") {
+    const { error } = await supabase
+      .from("inbox_items")
+      .update({
+        status: action === "mark_unread" ? "new" : "open",
+        unread_count: action === "mark_unread" ? 1 : 0,
         updated_at: updatedAt,
       })
       .eq("id", itemId);
