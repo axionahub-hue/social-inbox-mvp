@@ -84,9 +84,18 @@ META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata,business_management,page
 
 Despues de reautorizar OAuth, el panel debe mostrar `Leer posts/comentarios Facebook` como `Listo` y se puede usar `Sincronizar comentarios FB`.
 
+Para diagnosticar cuentas publicitarias y preparar comentarios de Ads, agregar tambien:
+
+```env
+META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata,business_management,pages_read_engagement,pages_read_user_content,ads_read
+```
+
+Despues de cambiar scopes hay que reautorizar OAuth para que `meta_connections` guarde el user token largo con `ads_read`.
+
 ## Permisos objetivo
 
 - `pages_show_list`
+- `ads_read`
 - `pages_read_engagement`
 - `pages_read_user_content`
 - `pages_manage_engagement`

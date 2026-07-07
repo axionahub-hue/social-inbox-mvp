@@ -11,6 +11,7 @@ Pasar de modo demo a modo autenticado sin cambiar la arquitectura de la app. Sup
 - El modelo inicial esta en `supabase/schema.sql`.
 - `inbox_items` debe estar agregado a `supabase_realtime` para que la UI refresque la bandeja en segundos cuando entra un item nuevo.
 - `inbox_items.ingest_source` registra si una conversacion entro por webhook, polling rapido, sync manual u origen pendiente.
+- `meta_connections` guarda el user token largo de Meta cifrado para diagnostico e integraciones Marketing API/Ads.
 - El repo incluye `npm run check:supabase` para validar que `.env.local` tiene variables y que el proyecto responde por REST/Auth.
 - No hay `.env.local` en el repo y no se deben comitear secretos.
 

@@ -98,6 +98,7 @@ const metaRequiredScopes = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_read_user_content",
+  "ads_read",
   "pages_manage_engagement",
   "pages_messaging",
   "pages_manage_metadata",
@@ -120,7 +121,7 @@ const metaCapabilityChecks = [
   },
   {
     label: "Comentarios Ads",
-    scopes: ["pages_read_engagement", "pages_manage_engagement"],
+    scopes: ["ads_read", "pages_read_engagement"],
   },
   {
     label: "Paginas Business Manager",
@@ -232,6 +233,22 @@ type MetaWebhookDiagnostics = {
   latestEventsError?: string | null;
 };
 
+type MetaAdsDiagnostics = {
+  ready: boolean;
+  reason: string | null;
+  message: string;
+  scopes: string[];
+  updatedAt?: string | null;
+  adAccounts: Array<{
+    id: string;
+    accountId: string | null;
+    name: string;
+    status: number | null;
+    currency: string | null;
+    business: string | null;
+  }>;
+};
+
 const emptyQuickReplyDraft: QuickReplyDraft = {
   title: "",
   category: "General",
@@ -279,7 +296,10 @@ export default function Home() {
   const [notice, setNotice] = useState("Listo para conectar Meta cuando tengas permisos.");
   const [metaWebhookDiagnostics, setMetaWebhookDiagnostics] =
     useState<MetaWebhookDiagnostics | null>(null);
+  const [metaAdsDiagnostics, setMetaAdsDiagnostics] =
+    useState<MetaAdsDiagnostics | null>(null);
   const [isMetaWebhookDiagnosticsLoading, setIsMetaWebhookDiagnosticsLoading] = useState(false);
+  const [isMetaAdsDiagnosticsLoading, setIsMetaAdsDiagnosticsLoading] = useState(false);
   const [appOrigin] = useState(() =>
     typeof window === "undefined" ? "http://localhost:3100" : window.location.origin,
   );
@@ -1323,6 +1343,49 @@ export default function Home() {
     }
   }
 
+  async function runMetaAdsDiagnostics() {
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      setMetaConnectionMessage("Inicia sesion Supabase antes de diagnosticar Ads.");
+      return;
+    }
+
+    setIsMetaAdsDiagnosticsLoading(true);
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+
+      if (!accessToken) {
+        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+        return;
+      }
+
+      const response = await fetch("/api/meta/ads/diagnostics", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setMetaConnectionMessage(payload.message ?? "No se pudo diagnosticar Ads Meta.");
+        return;
+      }
+
+      setMetaAdsDiagnostics(payload);
+      setMetaConnectionMessage(payload.message ?? "Diagnostico Ads actualizado.");
+    } catch {
+      setMetaConnectionMessage("No se pudo diagnosticar Ads Meta.");
+    } finally {
+      setIsMetaAdsDiagnosticsLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
       return;
@@ -1837,6 +1900,48 @@ export default function Home() {
                   <p className="mt-2">
                     Ultimos eventos guardados: {metaWebhookDiagnostics.latestEvents?.length ?? 0}
                   </p>
+                </div>
+              ) : null}
+              <button
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 text-sm font-semibold text-amber-900"
+                disabled={isMetaAdsDiagnosticsLoading}
+                onClick={() => void runMetaAdsDiagnostics()}
+              >
+                <Settings size={16} />
+                {isMetaAdsDiagnosticsLoading ? "Diagnosticando Ads..." : "Diagnosticar Ads"}
+              </button>
+              {metaAdsDiagnostics ? (
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs leading-5 text-amber-900">
+                  <p className="font-semibold">Marketing API / Ads</p>
+                  <p>
+                    Estado:{" "}
+                    <span
+                      className={
+                        metaAdsDiagnostics.ready
+                          ? "font-semibold text-emerald-700"
+                          : "font-semibold text-amber-800"
+                      }
+                    >
+                      {metaAdsDiagnostics.ready ? "Listo" : "Pendiente"}
+                    </span>
+                  </p>
+                  <p>{metaAdsDiagnostics.message}</p>
+                  <p>
+                    Cuentas publicitarias: {metaAdsDiagnostics.adAccounts.length}
+                  </p>
+                  {metaAdsDiagnostics.adAccounts.length > 0 ? (
+                    <div className="mt-2 grid gap-1">
+                      {metaAdsDiagnostics.adAccounts.slice(0, 5).map((account) => (
+                        <div className="rounded bg-white/70 px-2 py-1" key={account.id}>
+                          <p className="font-medium">{account.name}</p>
+                          <p className="text-amber-800/80">
+                            {account.accountId ?? account.id}
+                            {account.business ? ` · ${account.business}` : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <p className="mt-2 text-xs leading-5 text-slate-500">

@@ -11,6 +11,7 @@ export const metaTargetScopes = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_read_user_content",
+  "ads_read",
   "pages_manage_engagement",
   "pages_messaging",
   "pages_manage_metadata",
@@ -90,6 +91,28 @@ type MetaBusiness = {
 
 type MetaBusinessesResponse = {
   data?: MetaBusiness[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
+type MetaAdAccount = {
+  id: string;
+  account_id?: string;
+  name?: string;
+  account_status?: number;
+  currency?: string;
+  business?: {
+    id?: string;
+    name?: string;
+  };
+};
+
+type MetaAdAccountsResponse = {
+  data?: MetaAdAccount[];
   paging?: {
     next?: string;
   };
@@ -565,6 +588,23 @@ export async function fetchMetaPageSubscribedApps({
   return requestGraph<MetaPageSubscribedAppsResponse>(`${pageId}/subscribed_apps`, {
     access_token: accessToken,
   });
+}
+
+export async function fetchMetaAdAccounts(accessToken: string) {
+  const accounts = await requestPagedGraph<MetaAdAccountsResponse, MetaAdAccount>(
+    "me/adaccounts",
+    {
+      fields: "id,account_id,name,account_status,currency,business{id,name}",
+      limit: "100",
+      access_token: accessToken,
+    },
+  );
+
+  if (!accounts.ok) {
+    throw new Error(accounts.errorMessage ?? "No se pudieron leer cuentas publicitarias Meta.");
+  }
+
+  return accounts.data;
 }
 
 async function fetchMetaPostDetail({

@@ -39,6 +39,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los scopes OAuth son configurables con `META_OAUTH_SCOPES`; por defecto solo se pide `pages_show_list` para validar el flujo local.
 - Si `META_LOGIN_CONFIG_ID` existe, OAuth incluye `config_id` y `override_default_response_type=true` para usar Facebook Login for Business.
 - El callback valida `state` y `code`, intercambia el codigo por token, pide token largo, lee permisos concedidos y consulta paginas disponibles.
+- El token largo de usuario Meta se guarda cifrado en `meta_connections` para integraciones server-side como Marketing API/Ads.
 - La consulta de paginas usa `/me/accounts`; si el token tiene `business_management`, tambien consulta negocios del usuario y sus `owned_pages`/`client_pages`.
 - Las paginas Facebook y cuentas Instagram profesionales vinculadas se guardan en `connected_accounts`.
 - Los page tokens se cifran server-side con AES-256-GCM antes de persistirlos.
@@ -80,6 +81,13 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
 - Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page al campo `feed` y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
 - `/api/meta/webhook/diagnostics` compara configuracion real de Meta (`/{app-id}/subscriptions`, `/{page-id}/subscribed_apps`) contra ultimos eventos recibidos para distinguir endpoint sano de falta de entrega real por Meta.
+
+## Comentarios de Ads
+
+- Los comentarios de Ads no se tratan como comentarios organicos de Page.
+- La base Ads usa Marketing API y requiere `ads_read` mas token largo de usuario Meta guardado en `meta_connections`.
+- `/api/meta/ads/diagnostics` valida si existe schema/token/scope y lista `/me/adaccounts`.
+- El siguiente paso funcional sera mapear ads/creatives hacia `effective_object_story_id` u `object_story_id` para leer comentarios desde el post/story asociado y normalizarlos como `source = ad_comment`.
 
 ## Auth y workspace
 

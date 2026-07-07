@@ -46,6 +46,16 @@ create table if not exists connected_accounts (
   unique (network, provider_account_id)
 );
 
+create table if not exists meta_connections (
+  workspace_id uuid primary key references workspaces(id) on delete cascade,
+  provider text not null default 'meta',
+  user_access_token_encrypted text not null,
+  token_expires_at timestamptz,
+  scopes text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists contacts (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references workspaces(id) on delete cascade,
@@ -155,6 +165,7 @@ alter table workspaces enable row level security;
 alter table workspace_members enable row level security;
 alter table user_preferences enable row level security;
 alter table connected_accounts enable row level security;
+alter table meta_connections enable row level security;
 alter table contacts enable row level security;
 alter table inbox_items enable row level security;
 alter table inbox_messages enable row level security;
@@ -184,6 +195,21 @@ create policy "user preference self access"
 drop policy if exists "connected account workspace owner access" on connected_accounts;
 create policy "connected account workspace owner access"
   on connected_accounts
+  for all
+  using (
+    workspace_id in (
+      select id from workspaces where owner_user_id = auth.uid()
+    )
+  )
+  with check (
+    workspace_id in (
+      select id from workspaces where owner_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "meta connection workspace owner access" on meta_connections;
+create policy "meta connection workspace owner access"
+  on meta_connections
   for all
   using (
     workspace_id in (

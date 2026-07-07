@@ -56,6 +56,24 @@ export async function GET(request: Request) {
     const grantedScopes = await fetchMetaGrantedScopes(longLived.accessToken);
     const pages = await fetchMetaPageAccountsForScopes(longLived.accessToken, grantedScopes);
     const tokenExpiresAt = resolveMetaTokenExpiresAt(longLived.expiresIn);
+    const metaConnectionResult = await supabase
+      .from("meta_connections")
+      .upsert(
+        {
+          workspace_id: state.workspaceId,
+          provider: "meta",
+          user_access_token_encrypted: encryptMetaToken(longLived.accessToken),
+          token_expires_at: tokenExpiresAt,
+          scopes: grantedScopes,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "workspace_id" },
+      );
+
+    if (metaConnectionResult.error) {
+      throw new Error(metaConnectionResult.error.message);
+    }
+
     const accountRows = pages.flatMap((page) => {
       const encryptedPageToken = page.access_token
         ? encryptMetaToken(page.access_token)
