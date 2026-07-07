@@ -2296,6 +2296,7 @@ export default function Home() {
                           <MessageModerationActions
                             hidden={selectedItem.hidden}
                             reaction={selectedReaction}
+                            supportsOnlyLikeReaction={selectedItem.network === "facebook"}
                             onHideToggle={() =>
                               void runAction(selectedItem.hidden ? "unhide" : "hide")
                             }
@@ -2638,11 +2639,13 @@ function ConversationHeader({
 function MessageModerationActions({
   hidden,
   reaction,
+  supportsOnlyLikeReaction,
   onHideToggle,
   onReact,
 }: {
   hidden: boolean;
   reaction: ReactionKind | null;
+  supportsOnlyLikeReaction: boolean;
   onHideToggle: () => void;
   onReact: (reaction: ReactionKind) => void;
 }) {
@@ -2655,20 +2658,24 @@ function MessageModerationActions({
       >
         <ThumbsUp size={14} />
       </SmallActionButton>
-      <SmallActionButton
-        active={reaction === "love"}
-        title={reaction === "love" ? "Quitar me encanta" : "Me encanta"}
-        onClick={() => onReact("love")}
-      >
-        <Heart size={14} />
-      </SmallActionButton>
-      <SmallActionButton
-        active={reaction === "smile"}
-        title={reaction === "smile" ? "Quitar reaccion" : "Me divierte"}
-        onClick={() => onReact("smile")}
-      >
-        <Smile size={14} />
-      </SmallActionButton>
+      {!supportsOnlyLikeReaction ? (
+        <>
+          <SmallActionButton
+            active={reaction === "love"}
+            title={reaction === "love" ? "Quitar me encanta" : "Me encanta"}
+            onClick={() => onReact("love")}
+          >
+            <Heart size={14} />
+          </SmallActionButton>
+          <SmallActionButton
+            active={reaction === "smile"}
+            title={reaction === "smile" ? "Quitar reaccion" : "Me divierte"}
+            onClick={() => onReact("smile")}
+          >
+            <Smile size={14} />
+          </SmallActionButton>
+        </>
+      ) : null}
       <SmallActionButton
         active={hidden}
         title={hidden ? "Mostrar comentario" : "Ocultar comentario"}

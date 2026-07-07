@@ -1118,7 +1118,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
 function resolveActionBody(input: MetaActionInput): Record<string, string | boolean> {
   switch (input.action) {
     case "reply":
-      return { message: input.message ?? "" };
+      return { message: resolveReplyMessage(input) };
     case "hide":
       return { is_hidden: true };
     case "unhide":
@@ -1126,6 +1126,20 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
     default:
       return {};
   }
+}
+
+function resolveReplyMessage(input: MetaActionInput) {
+  const message = input.message ?? "";
+
+  if (
+    input.replyMode !== "public_comment" ||
+    !input.recipientExternalId ||
+    message.includes(`@[${input.recipientExternalId}]`)
+  ) {
+    return message;
+  }
+
+  return `@[${input.recipientExternalId}] ${message}`.trim();
 }
 
 function stringifyMetaActionBody(body: Record<string, string | boolean>) {

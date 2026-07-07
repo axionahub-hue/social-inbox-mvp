@@ -340,3 +340,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con comentario real.
 - Pendiente: bloqueo/desbloqueo real de usuarios de Page, reacciones diferenciadas, Messenger/DM e Instagram comments.
+
+### Mencion del autor y restriccion de reacciones Facebook
+
+- Resumen: se prefija la respuesta publica Facebook con `@[provider-user-id]` cuando existe `recipientExternalId`, para intentar mencionar/notificar al autor del comentario. Tambien se ocultaron `Me encanta` y `Me divierte` para Facebook porque el endpoint real cableado y validado solo aplica `like/unlike`; mostrar reacciones que no cambian en Meta era una falla de UX.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar respuesta publica sobre comentario real.
+- Pendiente: investigar si Meta ofrece escritura soportada de reacciones diferenciadas para comentarios de Page en la version actual de Graph API.

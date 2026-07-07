@@ -76,7 +76,7 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 
 Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `provider_comment_id` y page token cifrado, ejecuta contra Meta:
 
-- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`.
+- `reply` con `replyMode = public_comment`: `/{comment-id}/comments`; si existe `recipientExternalId`, el mensaje se envia prefijado como `@[provider-user-id]` para intentar mencionar/notificar al autor.
 - `reply` con `replyMode = private_message`: `/{comment-id}/private_replies`.
 - `like`: `/{comment-id}/likes`.
 - `unlike`: `DELETE /{comment-id}/likes`.
@@ -96,7 +96,7 @@ Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 
-Nota: `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. La UI puede mostrar varias reacciones visuales sobre un comentario, pero la API actual solo ejecuta/persiste `like`/`unlike`; para reacciones diferenciadas se debe ampliar este endpoint y `executeMetaAction`.
+Nota: `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
 
 ### `GET /api/meta/webhook`
 
