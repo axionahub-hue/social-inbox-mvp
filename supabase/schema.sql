@@ -80,6 +80,9 @@ create table if not exists inbox_items (
   updated_at timestamptz not null default now()
 );
 
+alter table inbox_items
+  add column if not exists ingest_source text not null default 'unknown';
+
 create table if not exists inbox_messages (
   id uuid primary key default gen_random_uuid(),
   inbox_item_id uuid not null references inbox_items(id) on delete cascade,

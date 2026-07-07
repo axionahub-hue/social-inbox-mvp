@@ -9,12 +9,14 @@ export async function persistFacebookComment({
   accountId,
   accountName,
   comment,
+  ingestSource = "unknown",
 }: {
   supabase: SupabaseServiceClient;
   workspaceId: string;
   accountId: string;
   accountName: string;
   comment: MetaOrganicComment;
+  ingestSource?: "webhook" | "polling_fast" | "polling_full" | "unknown";
 }) {
   const contactId = await ensureFacebookContact({
     supabase,
@@ -40,19 +42,38 @@ export async function persistFacebookComment({
   }
 
   if (existingItem.data?.id) {
+    const updatePayload = {
+      title,
+      preview,
+      is_hidden: comment.isHidden,
+      ingest_source: ingestSource,
+      provider_post_id: comment.postId,
+      updated_at: now,
+    };
     const updateResult = await supabase
       .from("inbox_items")
-      .update({
-        title,
-        preview,
-        is_hidden: comment.isHidden,
-        provider_post_id: comment.postId,
-        updated_at: now,
-      })
+      .update(updatePayload)
       .eq("id", existingItem.data.id);
 
     if (updateResult.error) {
-      throw new Error(updateResult.error.message);
+      if (!updateResult.error.message.includes("ingest_source")) {
+        throw new Error(updateResult.error.message);
+      }
+
+      const retryResult = await supabase
+        .from("inbox_items")
+        .update({
+          title,
+          preview,
+          is_hidden: comment.isHidden,
+          provider_post_id: comment.postId,
+          updated_at: now,
+        })
+        .eq("id", existingItem.data.id);
+
+      if (retryResult.error) {
+        throw new Error(retryResult.error.message);
+      }
     }
 
     await ensureFacebookMessage({
@@ -65,26 +86,51 @@ export async function persistFacebookComment({
     return "updated";
   }
 
-  const insertResult = await supabase
+  const insertPayload = {
+    workspace_id: workspaceId,
+    account_id: accountId,
+    contact_id: contactId,
+    source: "post_comment",
+    status: "new",
+    provider_thread_id: comment.postId,
+    provider_comment_id: comment.commentId,
+    provider_post_id: comment.postId,
+    title,
+    preview,
+    is_hidden: comment.isHidden,
+    ingest_source: ingestSource,
+    unread_count: 1,
+    received_at: receivedAt,
+    updated_at: now,
+  };
+  let insertResult = await supabase
     .from("inbox_items")
-    .insert({
-      workspace_id: workspaceId,
-      account_id: accountId,
-      contact_id: contactId,
-      source: "post_comment",
-      status: "new",
-      provider_thread_id: comment.postId,
-      provider_comment_id: comment.commentId,
-      provider_post_id: comment.postId,
-      title,
-      preview,
-      is_hidden: comment.isHidden,
-      unread_count: 1,
-      received_at: receivedAt,
-      updated_at: now,
-    })
+    .insert(insertPayload)
     .select("id")
     .single();
+
+  if (insertResult.error?.message.includes("ingest_source")) {
+    insertResult = await supabase
+      .from("inbox_items")
+      .insert({
+        workspace_id: workspaceId,
+        account_id: accountId,
+        contact_id: contactId,
+        source: "post_comment",
+        status: "new",
+        provider_thread_id: comment.postId,
+        provider_comment_id: comment.commentId,
+        provider_post_id: comment.postId,
+        title,
+        preview,
+        is_hidden: comment.isHidden,
+        unread_count: 1,
+        received_at: receivedAt,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+  }
 
   if (insertResult.error) {
     throw new Error(insertResult.error.message);

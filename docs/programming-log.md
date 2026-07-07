@@ -294,3 +294,9 @@
 - Resumen: un comentario organico `son geniales!` entro por polling en unos 32 segundos porque la sincronizacion automatica hacia una pasada profunda. Se agrego `mode = fast` para la auto-sincronizacion: cuentas en paralelo y limites reducidos de posts/comentarios; el boton manual conserva `mode = full`.
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion pendiente: desplegar y medir nuevo comentario organico con app abierta. Webhooks Meta siguen sin entregar eventos reales, por lo que el polling rapido es respaldo, no reemplazo definitivo.
+
+### Trazabilidad de origen de ingestion
+
+- Resumen: se agrego `inbox_items.ingest_source` y badges de UI para distinguir `webhook`, `polling_fast`, `polling_full` y `unknown`. El persistidor compartido marca el origen al guardar comentarios y mantiene fallback si la columna todavia no existe en Supabase.
+- Areas tocadas: `supabase/schema.sql`, `src/lib/types.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion pendiente: ejecutar SQL de schema en Supabase para activar la columna y verificar que nuevos comentarios muestren `Polling rapido` o `Webhook` en la UI.

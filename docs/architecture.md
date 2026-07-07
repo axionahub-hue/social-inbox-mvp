@@ -73,6 +73,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Lee las ultimas publicaciones publicadas, consulta cada post individual para obtener `message` completo y luego consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
+- Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full` o quedo como `unknown`.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.

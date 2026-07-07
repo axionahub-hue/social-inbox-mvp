@@ -151,6 +151,7 @@ async function processMetaWebhookPayload({
         accountId: account.id,
         accountName: account.name,
         comment,
+        ingestSource: "webhook",
       });
       processed += 1;
     }

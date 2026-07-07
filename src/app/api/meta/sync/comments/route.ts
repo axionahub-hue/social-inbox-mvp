@@ -118,6 +118,7 @@ export async function POST(request: Request) {
           postLimit: 50,
           postsWithCommentsLimit: 30,
         };
+  const ingestSource = parsed.data.mode === "fast" ? "polling_fast" : "polling_full";
 
   const accountResults = await Promise.all(
     eligibleAccounts.map(async (account) => {
@@ -138,6 +139,7 @@ export async function POST(request: Request) {
             accountId: account.id,
             accountName: account.name,
             comment,
+            ingestSource,
           });
 
           if (result === "inserted") {

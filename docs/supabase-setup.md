@@ -10,6 +10,7 @@ Pasar de modo demo a modo autenticado sin cambiar la arquitectura de la app. Sup
 - Los endpoints server-side usan `SUPABASE_SERVICE_ROLE_KEY` para registrar webhooks y acciones.
 - El modelo inicial esta en `supabase/schema.sql`.
 - `inbox_items` debe estar agregado a `supabase_realtime` para que la UI refresque la bandeja en segundos cuando entra un item nuevo.
+- `inbox_items.ingest_source` registra si una conversacion entro por webhook, polling rapido, sync manual u origen pendiente.
 - El repo incluye `npm run check:supabase` para validar que `.env.local` tiene variables y que el proyecto responde por REST/Auth.
 - No hay `.env.local` en el repo y no se deben comitear secretos.
 

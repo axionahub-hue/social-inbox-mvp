@@ -31,6 +31,7 @@ import { channels, inboxItems, quickReplies } from "@/lib/demo-data";
 import { createBrowserSupabaseClient, hasSupabaseConfig } from "@/lib/supabase";
 import type {
   ChannelConnection,
+  IngestSource,
   InboxAction,
   InboxItem,
   InboxSource,
@@ -52,6 +53,20 @@ const sourceColors: Record<InboxSource, string> = {
   instagram_dm: "bg-pink-50 text-pink-700 ring-pink-200",
   post_comment: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   ad_comment: "bg-amber-50 text-amber-800 ring-amber-200",
+};
+
+const ingestSourceLabels: Record<IngestSource, string> = {
+  webhook: "Webhook",
+  polling_fast: "Polling rapido",
+  polling_full: "Sync manual",
+  unknown: "Origen pendiente",
+};
+
+const ingestSourceColors: Record<IngestSource, string> = {
+  webhook: "bg-violet-50 text-violet-700 ring-violet-200",
+  polling_fast: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+  polling_full: "bg-slate-100 text-slate-700 ring-slate-200",
+  unknown: "bg-slate-50 text-slate-500 ring-slate-200",
 };
 
 const networkIcon = {
@@ -164,6 +179,7 @@ type InboxItemRow = {
   account_id: string;
   source: InboxSource;
   status: InboxItem["status"];
+  ingest_source: IngestSource | null;
   provider_comment_id: string | null;
   provider_post_id: string | null;
   title: string;
@@ -560,45 +576,62 @@ export default function Home() {
       };
     }
 
-    const inbox = await supabase
-      .from("inbox_items")
-      .select(`
+    const inboxSelect = `
+      id,
+      account_id,
+      source,
+      status,
+      ingest_source,
+      provider_comment_id,
+      provider_post_id,
+      title,
+      preview,
+      is_liked,
+      is_hidden,
+      unread_count,
+      received_at,
+      connected_accounts (
         id,
-        account_id,
-        source,
-        status,
-        provider_comment_id,
-        provider_post_id,
-        title,
-        preview,
-        is_liked,
-        is_hidden,
-        unread_count,
-        received_at,
-        connected_accounts (
-          id,
-          network,
-          provider_account_id,
-          name,
-          handle,
-          access_token_encrypted,
-          scopes,
-          updated_at
-        ),
-        contacts (
-          display_name,
-          handle,
-          is_blocked
-        ),
-        inbox_messages (
-          id,
-          author_type,
-          body,
-          sent_at
-        )
-      `)
+        network,
+        provider_account_id,
+        name,
+        handle,
+        access_token_encrypted,
+        scopes,
+        updated_at
+      ),
+      contacts (
+        display_name,
+        handle,
+        is_blocked
+      ),
+      inbox_messages (
+        id,
+        author_type,
+        body,
+        sent_at
+      )
+    `;
+    const inboxSelectWithoutIngestSource = inboxSelect.replace("      ingest_source,\n", "");
+    let inbox = (await supabase
+      .from("inbox_items")
+      .select(inboxSelect)
       .eq("workspace_id", workspaceId)
-      .order("received_at", { ascending: false });
+      .order("received_at", { ascending: false })) as {
+      data: unknown[] | null;
+      error: { message: string } | null;
+    };
+
+    if (inbox.error?.message.includes("ingest_source")) {
+      inbox = (await supabase
+        .from("inbox_items")
+        .select(inboxSelectWithoutIngestSource)
+        .eq("workspace_id", workspaceId)
+        .order("received_at", { ascending: false })) as {
+        data: unknown[] | null;
+        error: { message: string } | null;
+      };
+    }
 
     if (inbox.error) {
       setNotice(`No se pudo cargar inbox Supabase: ${inbox.error.message}`);
@@ -1861,6 +1894,9 @@ export default function Home() {
                     <div className="flex flex-wrap items-center gap-2">
                       <NetworkBadge network={selectedItem.network} />
                       <Badge source={selectedItem.source} />
+                      {selectedItem.ingestSource ? (
+                        <IngestSourceBadge ingestSource={selectedItem.ingestSource} />
+                      ) : null}
                       <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
                         {selectedItem.accountName}
                       </span>
@@ -2209,6 +2245,7 @@ function InboxRow({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <NetworkBadge network={item.network} />
             <Badge source={item.source} />
+            {item.ingestSource ? <IngestSourceBadge ingestSource={item.ingestSource} /> : null}
             <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
               <Icon size={13} className="shrink-0 text-slate-500" />
               <span className="truncate">{item.accountName}</span>
@@ -2231,6 +2268,16 @@ function Badge({ source }: { source: InboxSource }) {
   return (
     <span className={`rounded-md px-2 py-1 text-xs font-medium ring-1 ${sourceColors[source]}`}>
       {sourceLabels[source]}
+    </span>
+  );
+}
+
+function IngestSourceBadge({ ingestSource }: { ingestSource: IngestSource }) {
+  return (
+    <span
+      className={`rounded-md px-2 py-1 text-xs font-medium ring-1 ${ingestSourceColors[ingestSource]}`}
+    >
+      {ingestSourceLabels[ingestSource]}
     </span>
   );
 }
@@ -2612,6 +2659,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     assignee: "Sin asignar",
     providerPostId: row.provider_post_id ?? undefined,
     providerCommentId: row.provider_comment_id ?? undefined,
+    ingestSource: row.ingest_source ?? "unknown",
     unreadCount: row.unread_count,
     liked: row.is_liked,
     hidden: row.is_hidden,
