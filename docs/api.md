@@ -125,6 +125,8 @@ Respuesta:
 
 `scopes` sale de `META_OAUTH_SCOPES` si esta configurado. Si no existe, usa `pages_show_list` para evitar que la prueba local falle por permisos avanzados todavia no habilitados.
 
+Si `META_LOGIN_CONFIG_ID` esta configurado, la URL OAuth incluye `config_id`, `override_default_response_type=true` y `auth_type=rerequest` para pedir permisos mediante Facebook Login for Business.
+
 Si faltan `META_APP_ID` o `META_APP_SECRET`, responde `400` con las variables requeridas.
 
 ### `GET /api/meta/oauth/callback`

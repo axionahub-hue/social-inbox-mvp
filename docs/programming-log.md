@@ -134,3 +134,10 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `git diff --check`.
 - Pendiente: usar el diagnostico para decidir el siguiente scope incremental a solicitar a Meta.
+
+### Soporte de Facebook Login for Business config
+
+- Resumen: se agrego soporte opcional para `META_LOGIN_CONFIG_ID`; cuando existe, la URL OAuth envia `config_id`, `override_default_response_type=true` y `auth_type=rerequest` para probar permisos avanzados desde una configuracion de Facebook Login for Business.
+- Areas tocadas: `src/lib/meta.ts`, `.env.example`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `POST /api/meta/oauth/start` sin sesion devuelve `401`, `git diff --check`.
+- Pendiente: crear configuracion en Meta, cargar `META_LOGIN_CONFIG_ID` y reintentar OAuth con `pages_manage_metadata`.

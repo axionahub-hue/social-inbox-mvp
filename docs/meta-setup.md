@@ -18,12 +18,15 @@ Preparar la conexion OAuth de Facebook/Instagram sin guardar tokens sin cifrar. 
 META_APP_ID=
 META_APP_SECRET=
 META_GRAPH_VERSION=v25.0
+META_LOGIN_CONFIG_ID=
 META_OAUTH_SCOPES=pages_show_list
 META_TOKEN_ENCRYPTION_KEY=
 META_WEBHOOK_VERIFY_TOKEN=
 ```
 
 `META_TOKEN_ENCRYPTION_KEY` debe usarse como clave dedicada en Vercel/produccion. En desarrollo local, si falta, la app usa `META_APP_SECRET` como fallback server-side para no guardar tokens en texto plano.
+
+`META_LOGIN_CONFIG_ID` es opcional. Cuando exista, la app lo envia como `config_id` en OAuth para usar Facebook Login for Business.
 
 ## Callback local
 
@@ -46,6 +49,24 @@ Por defecto, la app pide solo:
 Esto evita que Meta bloquee el inicio OAuth local por permisos avanzados que todavia no esten habilitados en la app.
 
 Para ampliar permisos sin tocar codigo, configurar `META_OAUTH_SCOPES` con valores separados por coma o espacio.
+
+## Facebook Login for Business
+
+Para probar permisos avanzados sin que Meta los rechace como scopes invalidos:
+
+1. Ir a Meta Developers.
+2. Abrir la app.
+3. Entrar a `Inicio de sesion con Facebook para empresas`.
+4. Crear o editar una configuracion.
+5. Seleccionar los permisos que se van a probar, empezando por `pages_manage_metadata`.
+6. Copiar el `Configuration ID`.
+7. Guardarlo en `.env.local` como `META_LOGIN_CONFIG_ID`.
+
+Luego se puede ampliar `META_OAUTH_SCOPES`, por ejemplo:
+
+```env
+META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata
+```
 
 ## Permisos objetivo
 

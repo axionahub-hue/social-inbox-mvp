@@ -99,9 +99,15 @@ export function buildMetaOAuthUrl({
     client_id: process.env.META_APP_ID,
     redirect_uri: getMetaOAuthRedirectUri(origin),
     response_type: "code",
+    auth_type: "rerequest",
     scope: metaOAuthScopes.join(","),
     state,
   });
+
+  if (process.env.META_LOGIN_CONFIG_ID) {
+    params.set("config_id", process.env.META_LOGIN_CONFIG_ID);
+    params.set("override_default_response_type", "true");
+  }
 
   return `${facebookDialogBaseUrl}?${params.toString()}`;
 }

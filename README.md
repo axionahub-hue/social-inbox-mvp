@@ -74,7 +74,7 @@ La app esta preparada para conectar:
 - Comentarios organicos.
 - Comentarios de ads.
 
-El OAuth local pide `pages_show_list` por defecto para validar el flujo sin bloquearse por permisos avanzados. La lista se puede ampliar con `META_OAUTH_SCOPES` cuando Meta habilite los permisos necesarios para la app.
+El OAuth local pide `pages_show_list` por defecto para validar el flujo sin bloquearse por permisos avanzados. La lista se puede ampliar con `META_OAUTH_SCOPES` cuando Meta habilite los permisos necesarios para la app. Si se configura `META_LOGIN_CONFIG_ID`, el login usa una configuracion de Facebook Login for Business.
 
 El callback intercambia el `code` por token, intenta extenderlo, lee paginas disponibles e Instagram profesional conectado, y guarda cuentas en `connected_accounts`. Los page tokens se guardan cifrados con `META_TOKEN_ENCRYPTION_KEY` o, en desarrollo, con `META_APP_SECRET` como fallback server-side.
 
