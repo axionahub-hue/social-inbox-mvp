@@ -6,6 +6,7 @@ import {
   fetchMetaGrantedScopes,
   fetchMetaPageAccountsForScopes,
   resolveMetaTokenExpiresAt,
+  subscribeMetaPageToFeed,
   verifyMetaOAuthState,
 } from "@/lib/meta";
 import { createServiceSupabaseClient } from "@/lib/supabase";
@@ -103,6 +104,18 @@ export async function GET(request: Request) {
       }
     }
 
+    const pageWebhookSubscriptions = await Promise.all(
+      pages
+        .filter((page) => Boolean(page.access_token))
+        .map((page) =>
+          subscribeMetaPageToFeed({
+            accessToken: page.access_token as string,
+            pageId: page.id,
+          }),
+        ),
+    );
+    const subscribedPages = pageWebhookSubscriptions.filter((result) => result.ok).length;
+    const subscriptionFailures = pageWebhookSubscriptions.length - subscribedPages;
     const instagramCount = accountRows.filter((account) => account.network === "instagram").length;
     const missingPageTokens = pages.filter((page) => !page.access_token).length;
     const params = new URLSearchParams({
@@ -111,6 +124,8 @@ export async function GET(request: Request) {
       pages: `${pages.length}`,
       instagram: `${instagramCount}`,
       missing_page_tokens: `${missingPageTokens}`,
+      webhook_subscribed_pages: `${subscribedPages}`,
+      webhook_subscription_failures: `${subscriptionFailures}`,
       page_names: pages
         .slice(0, 10)
         .map((page) => page.name)

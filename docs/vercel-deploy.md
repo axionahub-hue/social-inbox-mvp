@@ -115,7 +115,8 @@ META_WEBHOOK_VERIFY_TOKEN
 ```
 
 5. Suscribirse al campo `feed` para comentarios de pagina.
-6. Suscribir las paginas que se van a operar.
+6. Reautorizar OAuth desde la app desplegada. El callback intenta suscribir automaticamente cada pagina con page token a `/{page-id}/subscribed_apps`.
+7. Si no entran eventos, comprobar en Graph que cada pagina tenga la app suscrita al campo `feed`.
 
 ## Validaciones despues del deploy
 
@@ -140,7 +141,7 @@ Debe responder:
 2. Iniciar sesion por email OTP.
 3. Abrir Configuracion Meta.
 4. Ejecutar OAuth desde la URL de Vercel.
-5. Confirmar que las cuentas reales aparecen como `Real`.
+5. Confirmar que las cuentas reales aparecen como `Real` y que el mensaje OAuth reporte `Webhooks feed suscritos`.
 6. En Meta, enviar un evento de prueba o comentar una publicacion real.
 7. Verificar que el evento aparezca en `webhook_events`.
 8. Verificar que un comentario nuevo se normalice a `inbox_items` e `inbox_messages`.

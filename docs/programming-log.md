@@ -267,3 +267,10 @@
 - Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `README.md`, `docs/api.md`, `docs/architecture.md`, `docs/vercel-deploy.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, challenge webhook devuelve `hub.challenge`, firma invalida devuelve `403`, firma valida devuelve `200` con `processed: 0` cuando la pagina de prueba no esta conectada.
 - Pendiente: desplegar en Vercel, configurar variables, OAuth callback, Webhooks Page `feed` y probar evento real entrante.
+
+### Suscripcion automatica de paginas a Webhooks Meta
+
+- Resumen: se diagnostico que el endpoint publico de Vercel recibia challenge y POST firmado correctamente, pero Meta no enviaba eventos reales porque las paginas no tenian la app en `/{page-id}/subscribed_apps`. Se suscribieron las 4 paginas reales al campo `feed` y se agrego suscripcion automatica durante el callback OAuth cuando Meta devuelve page token.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/vercel-deploy.md`, `docs/programming-log.md`.
+- Validacion: consulta Graph `/{page-id}/subscribed_apps` antes/despues; Meta devolvio `success: true` y luego cada pagina mostro `Social Inbox MVP` con `feed`.
+- Pendiente: probar un comentario real nuevo despues de la suscripcion y verificar entrada en `webhook_events`, `inbox_items` e `inbox_messages`.

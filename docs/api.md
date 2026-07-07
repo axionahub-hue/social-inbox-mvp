@@ -167,11 +167,12 @@ Comportamiento:
 - lee permisos concedidos y paginas disponibles;
 - si existe `business_management`, consulta tambien paginas de negocios via `owned_pages` y `client_pages`;
 - guarda paginas Facebook y cuentas Instagram profesionales vinculadas en `connected_accounts`;
-- cifra page tokens antes de guardarlos.
+- cifra page tokens antes de guardarlos;
+- intenta suscribir cada pagina Facebook con page token al webhook Page `feed`.
 
 Redirecciones relevantes:
 
-- `meta_oauth=accounts_saved`: guardado completado; incluye `pages`, `instagram`, `missing_page_tokens` y `scopes`.
+- `meta_oauth=accounts_saved`: guardado completado; incluye `pages`, `instagram`, `missing_page_tokens`, `webhook_subscribed_pages`, `webhook_subscription_failures` y `scopes`.
 - `page_names`: cuando `accounts_saved`, lista hasta 10 nombres de paginas devueltas por Meta para diagnostico visual.
 - `meta_oauth=token_exchange_error`: fallo el intercambio, lectura de cuentas o guardado.
 - `meta_oauth=supabase_missing`: falta service role.

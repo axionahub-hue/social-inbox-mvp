@@ -42,6 +42,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La consulta de paginas usa `/me/accounts`; si el token tiene `business_management`, tambien consulta negocios del usuario y sus `owned_pages`/`client_pages`.
 - Las paginas Facebook y cuentas Instagram profesionales vinculadas se guardan en `connected_accounts`.
 - Los page tokens se cifran server-side con AES-256-GCM antes de persistirlos.
+- Cuando una pagina Facebook devuelve page token, el callback intenta suscribir la app al webhook Page `feed` mediante `/{page-id}/subscribed_apps`.
 - `META_TOKEN_ENCRYPTION_KEY` permite usar una clave dedicada; si falta, desarrollo local cae a `META_APP_SECRET`.
 
 ## Carga de inbox
@@ -74,7 +75,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
 - La UI ejecuta auto-sincronizacion cada 15 segundos mientras la app esta abierta para no depender del boton manual durante pruebas locales.
-- Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica y suscripcion de app/Page. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
+- Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page al campo `feed` y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint ya guarda eventos crudos y normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual.
 
 ## Auth y workspace
 

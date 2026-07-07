@@ -162,6 +162,13 @@ export type MetaOrganicComment = {
   permalink: string | null;
 };
 
+type MetaPageSubscriptionResponse = {
+  success?: boolean;
+  error?: {
+    message?: string;
+  };
+};
+
 export function isMetaConfigured() {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
@@ -467,6 +474,38 @@ export async function fetchMetaCommentContext({
       : fallback.createdTime,
     isHidden: hasComment ? Boolean(comment.is_hidden) : fallback.isHidden,
     permalink: hasComment ? comment.permalink_url ?? fallback.permalink : fallback.permalink,
+  };
+}
+
+export async function subscribeMetaPageToFeed({
+  accessToken,
+  pageId,
+}: {
+  accessToken: string;
+  pageId: string;
+}) {
+  const response = await fetch(`${graphBaseUrl}/${pageId}/subscribed_apps`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      subscribed_fields: "feed",
+      access_token: accessToken,
+    }),
+  });
+  const payload = (await response.json()) as MetaPageSubscriptionResponse;
+
+  if (!response.ok || payload.error) {
+    return {
+      ok: false,
+      message: payload.error?.message ?? "Meta no pudo suscribir la pagina al webhook feed.",
+    };
+  }
+
+  return {
+    ok: Boolean(payload.success),
+    message: payload.success ? "Pagina suscrita al webhook feed." : "Meta no confirmo la suscripcion.",
   };
 }
 

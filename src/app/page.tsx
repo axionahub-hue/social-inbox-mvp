@@ -2664,15 +2664,27 @@ function resolveMetaOAuthMessage(result: string | null, params?: URLSearchParams
       const pages = params?.get("pages") ?? "0";
       const instagram = params?.get("instagram") ?? "0";
       const missingPageTokens = Number(params?.get("missing_page_tokens") ?? "0");
+      const webhookSubscribedPages = Number(params?.get("webhook_subscribed_pages") ?? "0");
+      const webhookSubscriptionFailures = Number(
+        params?.get("webhook_subscription_failures") ?? "0",
+      );
       const scopeText = params?.get("scopes") || "sin scopes reportados";
       const pageNames = params?.get("page_names");
       const tokenWarning =
         missingPageTokens > 0
           ? ` ${missingPageTokens} pagina(s) no devolvieron token; falta ampliar permisos.`
           : "";
+      const webhookStatus =
+        webhookSubscribedPages > 0
+          ? ` Webhooks feed suscritos: ${webhookSubscribedPages}.`
+          : "";
+      const webhookWarning =
+        webhookSubscriptionFailures > 0
+          ? ` Fallo suscripcion webhook en ${webhookSubscriptionFailures} pagina(s).`
+          : "";
       const pagesDetail = pageNames ? ` Paginas devueltas: ${pageNames}.` : "";
 
-      return `Meta conectado: ${pages} pagina(s), ${instagram} Instagram. Scopes: ${scopeText}.${pagesDetail}${tokenWarning}`;
+      return `Meta conectado: ${pages} pagina(s), ${instagram} Instagram. Scopes: ${scopeText}.${pagesDetail}${webhookStatus}${webhookWarning}${tokenWarning}`;
     }
     case "code_received":
       return "Meta devolvio un codigo OAuth valido. Siguiente paso: intercambio de token con cifrado antes de guardar cuentas reales.";
