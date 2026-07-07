@@ -113,3 +113,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/start/route.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `README.md`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, `POST /api/meta/oauth/start` sin credenciales Meta devuelve 400 controlado, callback con `state` invalido redirige a `meta_oauth=invalid_state`, revision UI del panel Meta sin overflow.
 - Pendiente: agregar cifrado server-side de tokens, intercambiar `code` por token y guardar cuentas reales en `connected_accounts`.
+
+### Scopes OAuth Meta configurables
+
+- Resumen: se ajusto el inicio OAuth para pedir `pages_show_list` por defecto y permitir ampliar scopes con `META_OAUTH_SCOPES`, evitando que Meta bloquee la prueba local por permisos avanzados todavia no habilitados.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/page.tsx`, `.env.example`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `git diff --check`.
+- Pendiente: reintentar `Iniciar OAuth Meta` y, si vuelve con `code_received`, implementar cifrado e intercambio de token.

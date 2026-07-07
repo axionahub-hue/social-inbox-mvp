@@ -73,7 +73,9 @@ La app esta preparada para conectar:
 - Comentarios organicos.
 - Comentarios de ads.
 
-Permisos esperados para la primera integracion real:
+El OAuth local pide `pages_show_list` por defecto para validar el flujo sin bloquearse por permisos avanzados. La lista se puede ampliar con `META_OAUTH_SCOPES` cuando Meta habilite los permisos necesarios para la app.
+
+Permisos objetivo para la primera integracion real:
 
 - `pages_show_list`
 - `pages_read_engagement`

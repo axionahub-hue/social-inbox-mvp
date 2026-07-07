@@ -5,7 +5,9 @@ const graphVersion = process.env.META_GRAPH_VERSION ?? "v25.0";
 const graphBaseUrl = `https://graph.facebook.com/${graphVersion}`;
 const facebookDialogBaseUrl = `https://www.facebook.com/${graphVersion}/dialog/oauth`;
 
-export const metaOAuthScopes = [
+const defaultMetaOAuthScopes = ["pages_show_list"];
+
+export const metaTargetScopes = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_engagement",
@@ -15,6 +17,8 @@ export const metaOAuthScopes = [
   "instagram_manage_comments",
   "instagram_manage_messages",
 ] as const;
+
+export const metaOAuthScopes = resolveMetaOAuthScopes();
 
 type MetaOAuthStatePayload = {
   exp: number;
@@ -209,6 +213,18 @@ function safeEqual(left: string, right: string) {
   }
 
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function resolveMetaOAuthScopes() {
+  const configuredScopes = process.env.META_OAUTH_SCOPES?.split(/[\s,]+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+
+  if (!configuredScopes?.length) {
+    return defaultMetaOAuthScopes;
+  }
+
+  return [...new Set(configuredScopes)];
 }
 
 function resolveActionEndpoint(input: MetaActionInput) {

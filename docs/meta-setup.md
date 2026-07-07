@@ -18,6 +18,7 @@ Preparar la conexion OAuth de Facebook/Instagram sin guardar tokens sin cifrar. 
 META_APP_ID=
 META_APP_SECRET=
 META_GRAPH_VERSION=v25.0
+META_OAUTH_SCOPES=pages_show_list
 META_WEBHOOK_VERIFY_TOKEN=
 ```
 
@@ -33,7 +34,17 @@ En Vercel se debe reemplazar por:
 https://TU-DOMINIO/api/meta/oauth/callback
 ```
 
-## Permisos esperados
+## Permisos OAuth de prueba
+
+Por defecto, la app pide solo:
+
+- `pages_show_list`
+
+Esto evita que Meta bloquee el inicio OAuth local por permisos avanzados que todavia no esten habilitados en la app.
+
+Para ampliar permisos sin tocar codigo, configurar `META_OAUTH_SCOPES` con valores separados por coma o espacio.
+
+## Permisos objetivo
 
 - `pages_show_list`
 - `pages_read_engagement`
@@ -50,10 +61,11 @@ https://TU-DOMINIO/api/meta/oauth/callback
 2. Configurar Facebook Login para web.
 3. Agregar la callback URL local o de Vercel.
 4. Completar `META_APP_ID` y `META_APP_SECRET` en `.env.local` o Vercel.
-5. Validar `GET /api/health`: `meta` debe pasar de `demo` a `configured`.
-6. Iniciar sesion Supabase en la app.
-7. Abrir `Configuracion Meta`.
-8. Tocar `Iniciar OAuth Meta`.
+5. Mantener `META_OAUTH_SCOPES=pages_show_list` para la primera prueba OAuth local.
+6. Validar `GET /api/health`: `meta` debe pasar de `demo` a `configured`.
+7. Iniciar sesion Supabase en la app.
+8. Abrir `Configuracion Meta`.
+9. Tocar `Iniciar OAuth Meta`.
 
 ## Siguiente bloque tecnico
 

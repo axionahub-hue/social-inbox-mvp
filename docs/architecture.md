@@ -34,6 +34,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El inicio OAuth se ejecuta en `/api/meta/oauth/start` y requiere sesion Supabase por bearer token.
 - El endpoint valida que el usuario sea propietario del workspace antes de construir la URL de Meta.
 - El parametro `state` se firma server-side y expira a los 10 minutos.
+- Los scopes OAuth son configurables con `META_OAUTH_SCOPES`; por defecto solo se pide `pages_show_list` para validar el flujo local.
 - El callback valida `state` y `code`, pero todavia no intercambia tokens.
 - No se guardan tokens Meta hasta implementar cifrado server-side.
 

@@ -1161,7 +1161,7 @@ export default function Home() {
                 <div>
                   <p className="text-sm font-semibold">Configuracion Meta</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    OAuth queda preparado; los tokens no se guardan hasta sumar cifrado.
+                    OAuth prueba permisos minimos; los tokens no se guardan hasta sumar cifrado.
                   </p>
                 </div>
                 <button
@@ -1181,7 +1181,7 @@ export default function Home() {
               </div>
 
               <div className="mt-3">
-                <p className="text-xs font-semibold text-slate-700">Permisos esperados</p>
+                <p className="text-xs font-semibold text-slate-700">Permisos objetivo</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {metaRequiredScopes.map((scope) => (
                     <span
@@ -1192,6 +1192,9 @@ export default function Home() {
                     </span>
                   ))}
                 </div>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  OAuth local: pages_show_list.
+                </p>
               </div>
 
               <p className="mt-3 text-xs leading-5 text-slate-500">

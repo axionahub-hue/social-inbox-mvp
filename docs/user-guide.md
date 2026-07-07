@@ -80,10 +80,10 @@ La preferencia queda guardada en el navegador sin sesion y en `user_preferences`
 El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 
 - callback URL para configurar en Meta Developers;
-- permisos esperados;
+- permisos objetivo de la integracion;
 - boton `Iniciar OAuth Meta`.
 
-El OAuth queda preparado, pero la app todavia no guarda tokens reales hasta implementar cifrado server-side.
+El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. La app todavia no guarda tokens reales hasta implementar cifrado server-side.
 
 ## Limitaciones actuales
 
