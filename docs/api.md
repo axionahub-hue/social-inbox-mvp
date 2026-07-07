@@ -49,6 +49,7 @@ Acciones soportadas:
 - `hide`
 - `unhide`
 - `block`
+- `unblock`
 - `archive`
 - `unarchive`
 - `mark_read`
@@ -69,7 +70,8 @@ Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_it
 - `reply`: inserta un mensaje agente en `inbox_messages`, marca `status = responded`, limpia `unread_count` y actualiza `preview`.
 - `like`/`unlike`: actualiza `inbox_items.is_liked`.
 - `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
-- `block`: actualiza `contacts.is_blocked`.
+- `block`: actualiza `contacts.is_blocked = true`.
+- `unblock`: actualiza `contacts.is_blocked = false`.
 - `archive`: marca `inbox_items.status = archived` y limpia `unread_count`.
 - `unarchive`: marca `inbox_items.status = open` y limpia `unread_count`.
 - `mark_read`: marca `inbox_items.status = open` y limpia `unread_count`.

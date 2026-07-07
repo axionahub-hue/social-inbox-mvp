@@ -13,6 +13,7 @@ const actionSchema = z.object({
     "hide",
     "unhide",
     "block",
+    "unblock",
     "archive",
     "unarchive",
     "mark_read",
@@ -157,11 +158,11 @@ async function persistInboxAction({
     return !error;
   }
 
-  if (action === "block" && existing.data.contact_id) {
+  if ((action === "block" || action === "unblock") && existing.data.contact_id) {
     const { error } = await supabase
       .from("contacts")
       .update({
-        is_blocked: true,
+        is_blocked: action === "block",
         updated_at: updatedAt,
       })
       .eq("id", existing.data.contact_id);
@@ -169,5 +170,5 @@ async function persistInboxAction({
     return !error;
   }
 
-  return action === "block";
+  return action === "block" || action === "unblock";
 }

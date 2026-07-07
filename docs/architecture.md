@@ -66,7 +66,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `POST /api/meta/sync/comments` usa page tokens cifrados guardados en `connected_accounts`.
 - El endpoint descifra tokens solo server-side.
 - Solo procesa cuentas con `pages_read_engagement` y `pages_read_user_content` concedidos.
-- Lee las ultimas publicaciones publicadas y consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
+- Lee las ultimas publicaciones publicadas, consulta cada post individual para obtener `message` completo y luego consulta el edge `/comments` de cada post con `order=reverse_chronological` para priorizar comentarios nuevos.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.

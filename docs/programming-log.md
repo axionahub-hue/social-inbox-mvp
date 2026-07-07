@@ -239,3 +239,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/demo-data.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop con menu `Abrir publicacion original`, sin `Sin asignar` ni iconos muertos, sin overflow horizontal; smoke movil sin overflow.
 - Pendiente: persistir permalink exacto de Meta en Supabase y ampliar `/api/inbox/action` si se quieren reacciones diferenciadas reales mas alla de `like/unlike`.
+
+### Correccion de desbloqueo y texto completo de publicacion
+
+- Resumen: se agrego accion `unblock` para que el icono de bloqueo funcione como toggle real; tambien se cambio la sincronizacion Facebook para consultar cada post individual y obtener `message` completo antes de guardar el contexto, porque `published_posts` podia devolver textos truncados de 105 caracteres en algunos reels/videos.
+- Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`; enriquecimiento puntual en Supabase dejo posts recientes de Academia Expertos de la Musica en 461 y 1113 caracteres.
+- Pendiente: persistir `permalink_url` exacto en una columna dedicada para no derivar URL desde `provider_post_id`.

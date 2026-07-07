@@ -278,6 +278,7 @@ export default function Home() {
     ? itemReactions[selectedItem.id] ?? (selectedItem.liked ? "like" : null)
     : null;
   const selectedOriginalPostUrl = selectedItem ? resolveOriginalPostUrl(selectedItem) : null;
+  const selectedPostContext = selectedItem ? resolvePostContextText(selectedItem) : "";
   const selectedItemSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const filteredItemIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
   const selectedVisibleCount = filteredItemIds.filter((id) => selectedItemSet.has(id)).length;
@@ -1722,7 +1723,10 @@ export default function Home() {
         <section className="flex min-h-[620px] min-w-0 flex-col bg-[#fbfcfd] lg:h-screen lg:overflow-hidden">
           {selectedItem ? (
             <>
-              <ConversationHeader item={selectedItem} onBlock={() => void runAction("block")} />
+              <ConversationHeader
+                item={selectedItem}
+                onBlockToggle={() => void runAction(selectedItem.blocked ? "unblock" : "block")}
+              />
               <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
                 <div className="mx-auto max-w-3xl space-y-4">
                   <div className="rounded-md border border-slate-200 bg-white p-4">
@@ -1790,7 +1794,7 @@ export default function Home() {
                         </div>
                       </div>
                       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
-                        {selectedItem.title}
+                        {selectedPostContext}
                       </p>
                     </div>
                   </div>
@@ -2095,7 +2099,13 @@ function Badge({ source }: { source: InboxSource }) {
   );
 }
 
-function ConversationHeader({ item, onBlock }: { item: InboxItem; onBlock: () => void }) {
+function ConversationHeader({
+  item,
+  onBlockToggle,
+}: {
+  item: InboxItem;
+  onBlockToggle: () => void;
+}) {
   const Icon = networkIcon[item.network];
 
   return (
@@ -2115,8 +2125,8 @@ function ConversationHeader({ item, onBlock }: { item: InboxItem; onBlock: () =>
                     ? "border-slate-950 bg-slate-950 text-white"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
-                onClick={onBlock}
-                title={item.blocked ? "Usuario bloqueado" : "Bloquear usuario"}
+                onClick={onBlockToggle}
+                title={item.blocked ? "Desbloquear usuario" : "Bloquear usuario"}
               >
                 <Ban size={15} />
               </button>
@@ -2253,6 +2263,22 @@ function resolveOriginalPostUrl(item: InboxItem) {
   return null;
 }
 
+function resolvePostContextText(item: InboxItem) {
+  const title = item.title.trim();
+  const commentPrefixWithBreak = "Comentario en:\n";
+  const commentPrefixInline = "Comentario en: ";
+
+  if (title.startsWith(commentPrefixWithBreak)) {
+    return title.slice(commentPrefixWithBreak.length).trim();
+  }
+
+  if (title.startsWith(commentPrefixInline)) {
+    return title.slice(commentPrefixInline.length).trim();
+  }
+
+  return title;
+}
+
 function createLocalId() {
   if (crypto.randomUUID) {
     return crypto.randomUUID();
@@ -2385,7 +2411,7 @@ function applyInboxActionToItem(
     ...item,
     liked: action === "like" ? true : action === "unlike" ? false : item.liked,
     hidden: action === "hide" ? true : action === "unhide" ? false : item.hidden,
-    blocked: action === "block" ? true : item.blocked,
+    blocked: action === "block" ? true : action === "unblock" ? false : item.blocked,
     status:
       action === "archive"
         ? "archived"

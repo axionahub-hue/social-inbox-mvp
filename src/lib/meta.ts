@@ -131,6 +131,12 @@ type MetaPostsResponse = {
   };
 };
 
+type MetaPostResponse = MetaPost & {
+  error?: {
+    message?: string;
+  };
+};
+
 type MetaCommentsResponse = {
   data?: MetaComment[];
   paging?: {
@@ -387,6 +393,10 @@ export async function fetchMetaOrganicComments({
 
   const commentsByPost = await Promise.all(
     postsWithComments.map(async (post) => {
+      const fullPost = await fetchMetaPostDetail({
+        accessToken,
+        fallbackPost: post,
+      });
       const comments = await requestGraph<MetaCommentsResponse>(`${post.id}/comments`, {
         fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
         order: "reverse_chronological",
@@ -400,13 +410,13 @@ export async function fetchMetaOrganicComments({
 
       return (comments.data ?? []).map((comment): MetaOrganicComment => ({
       postId: post.id,
-      postMessage: post.message ?? null,
-      postPermalink: post.permalink_url ?? null,
+      postMessage: fullPost.message ?? null,
+      postPermalink: fullPost.permalink_url ?? null,
       commentId: comment.id,
       message: comment.message ?? "",
       fromId: comment.from?.id ?? null,
       fromName: comment.from?.name ?? null,
-      createdTime: comment.created_time ?? post.created_time ?? null,
+      createdTime: comment.created_time ?? fullPost.created_time ?? post.created_time ?? null,
       isHidden: Boolean(comment.is_hidden),
       permalink: comment.permalink_url ?? null,
       }));
@@ -414,6 +424,31 @@ export async function fetchMetaOrganicComments({
   );
 
   return commentsByPost.flat();
+}
+
+async function fetchMetaPostDetail({
+  accessToken,
+  fallbackPost,
+}: {
+  accessToken: string;
+  fallbackPost: MetaPost;
+}) {
+  const post = await requestGraph<MetaPostResponse>(fallbackPost.id, {
+    fields: "id,message,permalink_url,created_time",
+    access_token: accessToken,
+  });
+
+  if (post.error) {
+    return fallbackPost;
+  }
+
+  return {
+    ...fallbackPost,
+    ...post,
+    message: post.message ?? fallbackPost.message,
+    permalink_url: post.permalink_url ?? fallbackPost.permalink_url,
+    created_time: post.created_time ?? fallbackPost.created_time,
+  };
 }
 
 export function resolveMetaTokenExpiresAt(expiresInSeconds?: number) {
@@ -530,7 +565,7 @@ export async function executeMetaAction(input: MetaActionInput) {
   const body = resolveActionBody(input);
 
   const response = await fetch(`${graphBaseUrl}/${endpoint}`, {
-    method: input.action === "unlike" ? "DELETE" : "POST",
+    method: input.action === "unlike" || input.action === "unblock" ? "DELETE" : "POST",
     headers: {
       "Content-Type": "application/json",
     },
@@ -702,6 +737,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
     case "unhide":
       return input.externalId;
     case "block":
+    case "unblock":
       return `${input.externalId}/blocked`;
     case "archive":
     case "unarchive":
