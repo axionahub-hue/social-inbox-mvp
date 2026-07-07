@@ -113,6 +113,10 @@ export async function GET(request: Request) {
       pages: `${pages.length}`,
       instagram: `${instagramCount}`,
       missing_page_tokens: `${missingPageTokens}`,
+      page_names: pages
+        .slice(0, 10)
+        .map((page) => page.name)
+        .join("|"),
       scopes: grantedScopes.join(","),
     });
 

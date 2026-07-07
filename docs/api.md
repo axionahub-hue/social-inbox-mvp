@@ -147,6 +147,7 @@ Comportamiento:
 Redirecciones relevantes:
 
 - `meta_oauth=accounts_saved`: guardado completado; incluye `pages`, `instagram`, `missing_page_tokens` y `scopes`.
+- `page_names`: cuando `accounts_saved`, lista hasta 10 nombres de paginas devueltas por Meta para diagnostico visual.
 - `meta_oauth=token_exchange_error`: fallo el intercambio, lectura de cuentas o guardado.
 - `meta_oauth=supabase_missing`: falta service role.
 - `meta_oauth=workspace_not_found`: el workspace no corresponde al usuario del `state`.

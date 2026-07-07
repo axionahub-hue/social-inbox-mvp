@@ -71,6 +71,9 @@ export type MetaPageAccount = {
 
 type MetaPagesResponse = {
   data?: MetaPageAccount[];
+  paging?: {
+    next?: string;
+  };
   error?: {
     message?: string;
   };
@@ -147,25 +150,27 @@ export async function fetchMetaGrantedScopes(accessToken: string) {
 }
 
 export async function fetchMetaPageAccounts(accessToken: string) {
-  const withInstagram = await requestGraph<MetaPagesResponse>("me/accounts", {
+  const withInstagram = await requestPagedGraph<MetaPagesResponse, MetaPageAccount>("me/accounts", {
     fields: "id,name,username,access_token,instagram_business_account{id,name,username}",
+    limit: "100",
     access_token: accessToken,
   });
 
-  if (!withInstagram.error) {
-    return withInstagram.data ?? [];
+  if (withInstagram.ok) {
+    return withInstagram.data;
   }
 
-  const pagesOnly = await requestGraph<MetaPagesResponse>("me/accounts", {
+  const pagesOnly = await requestPagedGraph<MetaPagesResponse, MetaPageAccount>("me/accounts", {
     fields: "id,name,username,access_token",
+    limit: "100",
     access_token: accessToken,
   });
 
-  if (pagesOnly.error) {
-    throw new Error(pagesOnly.error.message ?? "No se pudieron leer paginas de Meta.");
+  if (!pagesOnly.ok) {
+    throw new Error(pagesOnly.errorMessage ?? "No se pudieron leer paginas de Meta.");
   }
 
-  return pagesOnly.data ?? [];
+  return pagesOnly.data;
 }
 
 export function encryptMetaToken(token: string) {
@@ -394,6 +399,43 @@ async function requestGraph<T>(path: string, params: Record<string, string>) {
   }
 
   return payload;
+}
+
+async function requestPagedGraph<T extends { data?: TItem[]; paging?: { next?: string } }, TItem>(
+  path: string,
+  params: Record<string, string>,
+) {
+  let nextUrl: string | null = `${graphBaseUrl}/${path}`;
+  const firstUrl = new URL(nextUrl);
+  const data: TItem[] = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    firstUrl.searchParams.set(key, value);
+  }
+
+  nextUrl = firstUrl.toString();
+
+  while (nextUrl) {
+    const response = await fetch(nextUrl);
+    const payload = (await response.json()) as T;
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        data,
+        errorMessage: readMetaErrorMessage(payload) ?? "Meta rechazo la consulta.",
+      };
+    }
+
+    data.push(...(payload.data ?? []));
+    nextUrl = payload.paging?.next ?? null;
+  }
+
+  return {
+    ok: true,
+    data,
+    errorMessage: null,
+  };
 }
 
 function readMetaErrorMessage(payload: unknown) {

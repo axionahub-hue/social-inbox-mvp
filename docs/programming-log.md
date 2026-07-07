@@ -141,3 +141,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `.env.example`, `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `POST /api/meta/oauth/start` sin sesion devuelve `401`, `git diff --check`.
 - Pendiente: crear configuracion en Meta, cargar `META_LOGIN_CONFIG_ID` y reintentar OAuth con `pages_manage_metadata`.
+
+### Paginacion y nombres devueltos por Meta
+
+- Resumen: se ajusto la lectura de `/me/accounts` para usar `limit=100`, seguir paginacion de Graph y mostrar hasta 10 nombres de paginas devueltas en el mensaje OAuth.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `.gitignore`, `docs/api.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, callback con `state` invalido redirige a `meta_oauth=invalid_state`, `git diff --check`.
+- Pendiente: reintentar OAuth para confirmar si Graph devuelve mas paginas o solo `Ecuakaraoke Original`.

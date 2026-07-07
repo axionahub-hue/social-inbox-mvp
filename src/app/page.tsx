@@ -1912,12 +1912,14 @@ function resolveMetaOAuthMessage(result: string | null, params?: URLSearchParams
       const instagram = params?.get("instagram") ?? "0";
       const missingPageTokens = Number(params?.get("missing_page_tokens") ?? "0");
       const scopeText = params?.get("scopes") || "sin scopes reportados";
+      const pageNames = params?.get("page_names");
       const tokenWarning =
         missingPageTokens > 0
           ? ` ${missingPageTokens} pagina(s) no devolvieron token; falta ampliar permisos.`
           : "";
+      const pagesDetail = pageNames ? ` Paginas devueltas: ${pageNames}.` : "";
 
-      return `Meta conectado: ${pages} pagina(s), ${instagram} Instagram. Scopes: ${scopeText}.${tokenWarning}`;
+      return `Meta conectado: ${pages} pagina(s), ${instagram} Instagram. Scopes: ${scopeText}.${pagesDetail}${tokenWarning}`;
     }
     case "code_received":
       return "Meta devolvio un codigo OAuth valido. Siguiente paso: intercambio de token con cifrado antes de guardar cuentas reales.";
