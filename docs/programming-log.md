@@ -225,3 +225,10 @@
 - Areas tocadas: `src/app/page.tsx`, `src/app/api/meta/sync/comments/route.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop y movil con navegador integrado sin errores de consola ni overflow horizontal.
 - Pendiente: seguir refinando densidad y comportamiento movil antes de pasar a Vercel/Webhooks.
+
+### Compactacion visual del panel de cuentas
+
+- Resumen: se redujo la escala visual del panel izquierdo para que las cuentas funcionen como lista operativa y no como cards grandes: menos padding, avatares mas pequenos, botones compactos, textos `text-sm/text-xs` y boton `Anadir cuenta` mas bajo.
+- Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop/movil con navegador integrado. Cards de cuenta a 78px de alto, titulos a 14px, boton `Anadir cuenta` a 40px, sin overflow horizontal ni errores de consola.
+- Pendiente: seguir con refinamiento global de UI/UX antes de publicar en Vercel y configurar Webhooks Meta.

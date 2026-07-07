@@ -1257,54 +1257,54 @@ export default function Home() {
     <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
       <div className="flex min-h-screen flex-col lg:h-screen lg:grid lg:grid-cols-[340px_minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
         <aside className="flex min-h-[560px] flex-col border-b border-slate-200 bg-[#202020] text-white lg:h-screen lg:border-b-0 lg:border-r lg:border-slate-800">
-          <div className="shrink-0 px-4 py-4">
+          <div className="shrink-0 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
             <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                 Social Inbox
               </p>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight">Cuentas</h1>
+                <h1 className="mt-1 text-lg font-semibold tracking-tight">Cuentas</h1>
             </div>
             <button
-                className="grid size-10 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+                className="grid size-8 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
                 onClick={toggleAllAccountsVisibility}
                 title={visibleAccountIds.length === channelList.length ? "Ocultar todas" : "Mostrar todas"}
             >
-                {visibleAccountIds.length === channelList.length ? <Eye size={20} /> : <EyeOff size={20} />}
+                {visibleAccountIds.length === channelList.length ? <Eye size={17} /> : <EyeOff size={17} />}
             </button>
           </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <p className="text-sm text-slate-300">
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-xs text-slate-300">
                 <span className="font-semibold text-white">{visibleAccountIds.length}</span>
                 {" / "}
                 {channelList.length} visibles
               </p>
-              <p className="rounded-md bg-white/5 px-2 py-1 text-xs text-slate-400">
+              <p className="rounded-md bg-white/5 px-2 py-1 text-[11px] text-slate-400">
                 Inbox: {inboxSource === "supabase" ? "Supabase" : "demo"}
               </p>
               <button
-                className="grid size-9 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+                className="grid size-8 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
                 onClick={() => setIsMetaSettingsOpen((current) => !current)}
                 title="Configuracion Meta"
               >
-                <Settings size={18} />
+                <Settings size={16} />
               </button>
             </div>
 
-            <div className="mt-4 rounded-md border border-white/10 bg-white/[0.04] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Sesion</p>
+            <div className="mt-3 rounded-md border border-white/10 bg-white/[0.04] p-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Sesion</p>
             {supabase ? (
               currentUser ? (
                 <>
-                    <p className="mt-2 break-all text-sm text-slate-200">
+                    <p className="mt-1.5 break-all text-xs text-slate-200">
                     {currentUser.email}
                   </p>
-                    <p className="mt-1 text-xs text-emerald-300">
+                    <p className="mt-1 text-[11px] text-emerald-300">
                     Supabase activo
                   </p>
                   <button
-                      className="mt-3 h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm font-medium text-slate-100 hover:bg-white/10"
+                      className="mt-2 h-8 w-full rounded-md border border-white/10 bg-white/5 px-3 text-xs font-medium text-slate-100 hover:bg-white/10"
                     onClick={() => void signOut()}
                   >
                     Cerrar sesion
@@ -1338,8 +1338,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-            <div className="space-y-2">
+          <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-2">
+            <div className="space-y-1.5">
               {channelList.map((channel) => {
                 const Icon = networkIcon[channel.network];
                 const platform = networkMeta[channel.network];
@@ -1350,41 +1350,41 @@ export default function Home() {
 
                 return (
                   <div
-                    className={`relative rounded-md border p-3 ${
+                    className={`relative rounded-md border p-2.5 ${
                       isVisible
                         ? "border-white/10 bg-white/[0.05]"
                         : "border-white/5 bg-transparent opacity-60"
                     }`}
                     key={channel.id}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="relative grid size-12 shrink-0 place-items-center rounded-full border-2 border-amber-300 bg-slate-100 text-slate-700">
-                        <Icon size={20} />
-                        <span className={`absolute -bottom-1 -right-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-2 ring-[#202020] ${platform.badgeClass}`}>
+                    <div className="flex items-start gap-2.5">
+                      <span className="relative grid size-9 shrink-0 place-items-center rounded-full border-2 border-amber-300 bg-slate-100 text-slate-700">
+                        <Icon size={16} />
+                        <span className={`absolute -bottom-1 -right-1 rounded-full px-1 py-0.5 text-[9px] font-bold leading-none ring-2 ring-[#202020] ${platform.badgeClass}`}>
                           {platform.shortLabel}
                         </span>
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="break-words text-base font-semibold leading-5 text-white">
+                        <p className="break-words text-sm font-semibold leading-4 text-white">
                           {channel.name}
                         </p>
-                        <p className="mt-1 break-words text-sm leading-5 text-slate-300">
+                        <p className="mt-1 break-words text-xs leading-4 text-slate-300">
                           {accountType}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-[11px] text-slate-500">
                           {accountItems} item(s) · {channel.status === "connected" ? "Real" : channel.status === "needs_review" ? "Pendiente" : "Demo"}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
                         <button
-                          className="grid size-9 place-items-center rounded-md text-slate-200 hover:bg-white/10"
+                          className="grid size-7 place-items-center rounded-md text-slate-200 hover:bg-white/10"
                           onClick={() => toggleAccountVisibility(channel.id)}
                           title={isVisible ? "Ocultar cuenta" : "Mostrar cuenta"}
                         >
-                          {isVisible ? <Eye size={20} /> : <EyeOff size={20} />}
+                          {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
                         </button>
                         <button
-                          className="grid size-9 place-items-center rounded-md text-slate-200 hover:bg-white/10"
+                          className="grid size-7 place-items-center rounded-md text-slate-200 hover:bg-white/10"
                           onClick={() =>
                             setOpenAccountMenuId((current) =>
                               current === channel.id ? null : channel.id,
@@ -1392,7 +1392,7 @@ export default function Home() {
                           }
                           title="Opciones de cuenta"
                         >
-                          <MoreVertical size={20} />
+                          <MoreVertical size={16} />
                         </button>
                       </div>
                     </div>
@@ -1424,10 +1424,10 @@ export default function Home() {
           </div>
 
           <button
-            className="mx-4 mb-4 mt-3 flex h-12 shrink-0 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/5 px-3 text-base font-semibold text-white hover:bg-white/10"
+            className="mx-3 mb-3 mt-2 flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/5 px-3 text-sm font-semibold text-white hover:bg-white/10"
             onClick={() => setIsMetaSettingsOpen(true)}
           >
-            <Plus size={20} />
+            <Plus size={17} />
             Añadir cuenta
           </button>
 
