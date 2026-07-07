@@ -172,6 +172,7 @@ type ContactRow = {
 
 type InboxMessageRow = {
   id: string;
+  provider_message_id: string | null;
   author_type: "contact" | "agent";
   body: string;
   sent_at: string;
@@ -208,6 +209,7 @@ type MobileInboxPanel = "list" | "detail";
 type RunActionOptions = {
   replyMode?: ReplyMode;
   recipientExternalId?: string;
+  messageId?: string;
 };
 
 type MetaWebhookDiagnostics = {
@@ -658,6 +660,7 @@ export default function Home() {
       ),
       inbox_messages (
         id,
+        provider_message_id,
         author_type,
         body,
         sent_at
@@ -1484,6 +1487,7 @@ export default function Home() {
           selectedItem.providerCommentId ?? selectedItem.providerPostId ?? selectedItem.id,
         action,
         message,
+        messageId: options?.messageId,
         replyMode: options?.replyMode,
         recipientExternalId: options?.recipientExternalId,
       }),
@@ -1622,6 +1626,22 @@ export default function Home() {
       recipientExternalId: selectedRecipientExternalId,
     });
     setComposer("");
+  }
+
+  function deleteAgentMessage(messageId: string) {
+    if (!selectedItem) return;
+
+    void runAction("delete_message", undefined, { messageId });
+    setItems((current) =>
+      current.map((item) =>
+        item.id === selectedItem.id
+          ? {
+              ...item,
+              messages: item.messages.filter((message) => message.id !== messageId),
+            }
+          : item,
+      ),
+    );
   }
 
   return (
@@ -2302,7 +2322,16 @@ export default function Home() {
                             }
                             onReact={reactToSelectedItem}
                           />
-                        ) : null}
+                        ) : (
+                          <div className="mt-3 flex justify-end border-t border-white/10 pt-2">
+                            <SmallActionButton
+                              title="Eliminar respuesta"
+                              onClick={() => deleteAgentMessage(message.id)}
+                            >
+                              <Trash2 size={14} />
+                            </SmallActionButton>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -2982,6 +3011,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     blocked: Boolean(contact?.is_blocked),
     messages: messages.map((message) => ({
       id: message.id,
+      providerMessageId: message.provider_message_id ?? undefined,
       author: message.author_type,
       body: message.body,
       sentAt: formatTimestamp(message.sent_at),
@@ -3010,6 +3040,10 @@ function applyInboxActionToItem(
         },
       ],
     };
+  }
+
+  if (action === "delete_message") {
+    return item;
   }
 
   return {

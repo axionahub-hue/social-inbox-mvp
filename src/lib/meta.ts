@@ -890,9 +890,49 @@ export async function executeMetaAction(input: MetaActionInput) {
     };
   }
 
+  const primaryResult = await sendMetaActionRequest(input);
+
+  if (!primaryResult.ok) {
+    return primaryResult;
+  }
+
+  if (shouldSendPrivateCopy(input)) {
+    const privateCopyResult = await sendMetaActionRequest({
+      ...input,
+      replyMode: "private_message",
+    });
+
+    return {
+      ...primaryResult,
+      message: privateCopyResult.ok
+        ? "Respuesta publicada y copia enviada por mensaje interno."
+        : "Respuesta publicada, pero Meta no acepto la copia por mensaje interno.",
+      payload: {
+        ...(typeof primaryResult.payload === "object" && primaryResult.payload ? primaryResult.payload : {}),
+        private_copy: privateCopyResult,
+      },
+    };
+  }
+
+  return primaryResult;
+}
+
+async function sendMetaActionRequest(input: MetaActionInput) {
+  if (!input.accessToken) {
+    return {
+      mode: "meta",
+      ok: false,
+      message: "Falta access token Meta para ejecutar la accion.",
+      payload: null,
+    };
+  }
+
   const endpoint = resolveActionEndpoint(input);
   const body = resolveActionBody(input);
-  const method = input.action === "unlike" || input.action === "unblock" ? "DELETE" : "POST";
+  const method =
+    input.action === "unlike" || input.action === "unblock" || input.action === "delete_message"
+      ? "DELETE"
+      : "POST";
   const url = new URL(`${graphBaseUrl}/${endpoint}`);
   const requestInit: RequestInit = {
     method,
@@ -929,6 +969,10 @@ export async function executeMetaAction(input: MetaActionInput) {
     message: `Accion ${input.action} ejecutada en Meta.`,
     payload,
   };
+}
+
+function shouldSendPrivateCopy(input: MetaActionInput) {
+  return input.action === "reply" && input.replyMode === "public_comment";
 }
 
 function signMetaOAuthState(encodedPayload: string) {
@@ -1107,6 +1151,8 @@ function resolveActionEndpoint(input: MetaActionInput) {
     case "block":
     case "unblock":
       return `${input.externalId}/blocked`;
+    case "delete_message":
+      return input.externalId;
     case "archive":
     case "unarchive":
     case "mark_read":

@@ -51,6 +51,7 @@ Para `reply` sobre comentarios, `replyMode` define el canal:
 Acciones soportadas:
 
 - `reply`
+- `delete_message`
 - `like`
 - `unlike`
 - `hide`
@@ -78,13 +79,15 @@ Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `p
 
 - `reply` con `replyMode = public_comment`: `/{comment-id}/comments`.
 - `reply` con `replyMode = private_message`: `/{comment-id}/private_replies`.
+- Cuando `replyMode = public_comment`, despues de publicar en el comentario la app tambien intenta enviar copia del mismo texto por `private_replies`.
 - `like`: `/{comment-id}/likes`.
 - `unlike`: `DELETE /{comment-id}/likes`.
 - `hide`/`unhide`: actualiza `is_hidden` sobre `/{comment-id}`.
 
 Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 
-- `reply`: inserta un mensaje agente en `inbox_messages`, marca `status = responded`, limpia `unread_count` y actualiza `preview`.
+- `reply`: inserta un mensaje agente en `inbox_messages`, guarda `provider_message_id` cuando Meta devuelve ID, marca `status = responded`, limpia `unread_count` y actualiza `preview`.
+- `delete_message`: elimina una respuesta agente local; si existe `provider_message_id`, intenta borrarla tambien en Meta.
 - `like`/`unlike`: actualiza `inbox_items.is_liked`.
 - `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
 - `block`: actualiza `contacts.is_blocked = true`.

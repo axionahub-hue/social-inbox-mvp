@@ -361,3 +361,10 @@
 - Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`.
 - Pendiente: usar private reply/Messenger para notificacion directa cuando el usuario elija respuesta privada, y mantener respuesta publica sin falsa mencion.
+
+### Copia privada y eliminacion de respuestas agente
+
+- Resumen: cuando una respuesta Facebook se envia como `public_comment`, el backend publica el comentario y luego intenta enviar copia por `private_replies`. Tambien se guarda el ID del reply publico en `inbox_messages.provider_message_id` y la UI muestra boton para eliminar respuestas agente; si existe ID externo, `/api/inbox/action` intenta borrarlo en Meta antes de borrar el mensaje local.
+- Areas tocadas: `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar respuesta publica real y luego eliminarla.
+- Pendiente: confirmar si Meta permite borrar private replies/Messenger messages; por ahora el ID persistido principal es el reply publico.

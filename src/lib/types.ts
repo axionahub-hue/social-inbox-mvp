@@ -49,6 +49,7 @@ export type InboxMessage = {
   author: "contact" | "agent";
   body: string;
   sentAt: string;
+  providerMessageId?: string;
 };
 
 export type QuickReply = {
@@ -82,4 +83,5 @@ export type InboxAction =
   | "archive"
   | "unarchive"
   | "mark_read"
-  | "mark_unread";
+  | "mark_unread"
+  | "delete_message";

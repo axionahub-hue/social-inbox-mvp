@@ -58,6 +58,7 @@ En una conversacion seleccionada se puede:
 - reaccionar sobre el comentario/mensaje recibido desde iconos pequenos junto al mensaje;
 - ocultar o mostrar el comentario desde el mensaje recibido;
 - bloquear o desbloquear usuario desde la cabecera del autor;
+- eliminar respuestas enviadas desde la app;
 - archivar;
 - desarchivar desde la vista `Archivados`.
 - marcar leido/no leido desde la barra de seleccion.
@@ -66,7 +67,7 @@ En modo demo, las acciones se registran contra `/api/inbox/action` y actualizan 
 
 Cuando el item es comentario, el selector del composer muestra:
 
-- `Responder sobre comentario`: prepara respuesta publica en el hilo del comentario. Facebook notifica normalmente por el hilo de respuesta, pero Graph no esta generando una mencion real del autor en esta operacion.
+- `Responder sobre comentario`: prepara respuesta publica en el hilo del comentario. En Facebook, la app tambien intenta enviar una copia del mismo texto por mensaje interno para notificacion directa.
 - `Responder por mensaje interno`: prepara respuesta privada por Messenger en Facebook o DM en Instagram.
 
 Al responder una conversacion, sale de `Bandeja` y pasa a `Respondidos`. Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.

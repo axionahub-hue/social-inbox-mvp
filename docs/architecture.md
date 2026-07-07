@@ -65,6 +65,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Las vistas operativas son `Bandeja`, `Respondidos` y `Archivados`. `Bandeja` excluye `responded` y `archived`; al responder, el item pasa automaticamente a `Respondidos`.
 - El panel de conversacion separa contexto, mensaje y composer: el contexto muestra el texto completo de la publicacion; las acciones de reaccion/ocultar viven junto al mensaje recibido; bloquear vive en la cabecera del autor; archivar queda en el footer del composer.
 - En comentarios, el composer exige elegir modo de respuesta: `public_comment` para responder sobre el comentario y notificar/etiquetar al autor cuando Meta lo permita, o `private_message` para responder por Messenger/DM. La decision viaja a `/api/inbox/action` como `replyMode`.
+- En Facebook, una respuesta publica sobre comentario intenta ademas enviar una copia por `private_replies`; el ID del reply publico devuelto por Meta se guarda en `inbox_messages.provider_message_id` para permitir borrado posterior.
 - Para abrir la publicacion original, la UI usa `originalUrl` si existe y, en Facebook, deriva una URL desde `provider_post_id`. El permalink exacto de Meta queda como mejora de datos persistidos cuando se agregue una columna dedicada.
 
 ## Sincronizacion de comentarios Facebook

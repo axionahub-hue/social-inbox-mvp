@@ -8,6 +8,7 @@ const actionSchema = z.object({
   externalId: z.string().default("demo-external-id"),
   replyMode: z.enum(["public_comment", "private_message"]).optional(),
   recipientExternalId: z.string().optional(),
+  messageId: z.string().optional(),
   action: z.enum([
     "reply",
     "like",
@@ -20,6 +21,7 @@ const actionSchema = z.object({
     "unarchive",
     "mark_read",
     "mark_unread",
+    "delete_message",
   ]),
   message: z.string().optional(),
 });
@@ -63,6 +65,8 @@ export async function POST(request: Request) {
         itemId: parsed.data.itemId,
         action: parsed.data.action,
         message: parsed.data.message,
+        messageId: parsed.data.messageId,
+        providerMessageId: readPrimaryProviderMessageId("payload" in result ? result.payload : null),
       });
     }
 
@@ -77,6 +81,7 @@ export async function POST(request: Request) {
         persisted,
         replyMode: parsed.data.replyMode ?? null,
         recipientExternalId: parsed.data.recipientExternalId ?? null,
+        messageId: parsed.data.messageId ?? null,
         metaMode: actionInput.accessToken ? "real" : "none",
       },
     });
@@ -179,6 +184,46 @@ async function resolveAuthenticatedActionInput({
   const account = firstOrNull(itemResult.data.connected_accounts);
   const providerCommentId = itemResult.data.provider_comment_id as string | null;
 
+  if (input.action === "delete_message") {
+    const messageResult = await supabase
+      .from("inbox_messages")
+      .select("id,provider_message_id,author_type")
+      .eq("id", input.messageId ?? "")
+      .eq("inbox_item_id", input.itemId)
+      .maybeSingle();
+
+    if (messageResult.error) {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json({ ok: false, message: messageResult.error.message }, { status: 500 }),
+      };
+    }
+
+    if (!messageResult.data?.id || messageResult.data.author_type !== "agent") {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json(
+          { ok: false, message: "Solo se pueden eliminar respuestas enviadas desde la app." },
+          { status: 403 },
+        ),
+      };
+    }
+
+    return {
+      input: {
+        ...input,
+        externalId: (messageResult.data.provider_message_id as string | null) ?? input.messageId ?? input.externalId,
+        accessToken:
+          account?.network === "facebook" && account.access_token_encrypted && messageResult.data.provider_message_id
+            ? decryptMetaToken(account.access_token_encrypted)
+            : undefined,
+      },
+      canPersist: true,
+    };
+  }
+
   if (
     account?.network !== "facebook" ||
     !account.access_token_encrypted ||
@@ -207,11 +252,15 @@ async function persistInboxAction({
   itemId,
   action,
   message,
+  messageId,
+  providerMessageId,
 }: {
   supabase: NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
   itemId: string;
   action: z.infer<typeof actionSchema>["action"];
   message?: string;
+  messageId?: string;
+  providerMessageId?: string | null;
 }) {
   const existing = await supabase
     .from("inbox_items")
@@ -229,6 +278,7 @@ async function persistInboxAction({
     if (message?.trim()) {
       await supabase.from("inbox_messages").insert({
         inbox_item_id: itemId,
+        provider_message_id: providerMessageId ?? null,
         author_type: "agent",
         body: message.trim(),
         sent_at: updatedAt,
@@ -244,6 +294,17 @@ async function persistInboxAction({
         updated_at: updatedAt,
       })
       .eq("id", itemId);
+
+    return !error;
+  }
+
+  if (action === "delete_message" && messageId) {
+    const { error } = await supabase
+      .from("inbox_messages")
+      .delete()
+      .eq("id", messageId)
+      .eq("inbox_item_id", itemId)
+      .eq("author_type", "agent");
 
     return !error;
   }
@@ -316,4 +377,13 @@ async function persistInboxAction({
   }
 
   return action === "block" || action === "unblock";
+}
+
+function readPrimaryProviderMessageId(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("id" in payload)) {
+    return null;
+  }
+
+  const id = (payload as { id?: unknown }).id;
+  return typeof id === "string" ? id : null;
 }
