@@ -76,6 +76,14 @@ META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata,business_management
 
 Con `business_management` concedido, la app tambien consulta `me/businesses` y las paginas `owned_pages`/`client_pages` de cada negocio.
 
+Para empezar a leer comentarios organicos de Facebook, agregar despues:
+
+```env
+META_OAUTH_SCOPES=pages_show_list,pages_manage_metadata,business_management,pages_read_engagement
+```
+
+Despues de reautorizar OAuth, el panel debe mostrar `Leer comentarios Facebook` como `Listo` y se puede usar `Sincronizar comentarios FB`.
+
 ## Permisos objetivo
 
 - `pages_show_list`

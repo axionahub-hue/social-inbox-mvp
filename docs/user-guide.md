@@ -93,6 +93,7 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - diagnostico de cuentas reales vs demo;
 - diagnostico de capacidades por scopes concedidos;
 - boton `Iniciar OAuth Meta`.
+- boton `Sincronizar comentarios FB` para importar comentarios organicos cuando `pages_read_engagement` este concedido.
 
 El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
 Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo puede guardar las paginas recibidas por `/me/accounts`. Con permisos minimos puede aparecer solo un subconjunto.
@@ -100,6 +101,7 @@ Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo 
 ## Limitaciones actuales
 
 - Con `pages_show_list`, Meta puede detectar paginas, pero no garantiza comentarios, ads ni DMs hasta ampliar permisos.
+- Para leer comentarios organicos de Facebook hace falta `pages_read_engagement` y luego reautorizar OAuth.
 - Los datos del inbox autenticado todavia son seed demo en Supabase hasta conectar Meta real.
 - Las acciones se guardan en Supabase, pero todavia no se envian a Meta real sin OAuth/tokens.
 - Las respuestas rapidas y preferencias se guardan en el navegador si no hay sesion Supabase.

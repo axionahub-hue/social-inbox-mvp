@@ -87,8 +87,12 @@ const metaRequiredScopes = [
 
 const metaCapabilityChecks = [
   {
-    label: "Comentarios Facebook",
-    scopes: ["pages_read_engagement", "pages_manage_engagement"],
+    label: "Leer comentarios Facebook",
+    scopes: ["pages_read_engagement"],
+  },
+  {
+    label: "Responder/moderar Facebook",
+    scopes: ["pages_manage_engagement"],
   },
   {
     label: "Comentarios Ads",
@@ -1014,6 +1018,44 @@ export default function Home() {
     window.location.href = payload.redirectUrl;
   }
 
+  async function syncFacebookComments() {
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar comentarios.");
+      return;
+    }
+
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+
+    if (!accessToken) {
+      setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    const response = await fetch("/api/meta/sync/comments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        workspaceId: activeWorkspaceId,
+      }),
+    });
+    const payload = await response.json();
+
+    setMetaConnectionMessage(payload.message ?? "Sincronizacion finalizada.");
+
+    if (!response.ok || !payload.ok) {
+      return;
+    }
+
+    const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+    setChannelList(inboxData.channels);
+    setItems(inboxData.items);
+    setInboxSource("supabase");
+  }
+
   async function runAction(action: InboxAction, message?: string) {
     if (!selectedItem) return;
 
@@ -1383,6 +1425,14 @@ export default function Home() {
               >
                 <ExternalLink size={16} />
                 Iniciar OAuth Meta
+              </button>
+
+              <button
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+                onClick={() => void syncFacebookComments()}
+              >
+                <MessageCircle size={16} />
+                Sincronizar comentarios FB
               </button>
             </div>
           ) : null}

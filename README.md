@@ -16,6 +16,7 @@ App web responsive para administrar en una bandeja unica mensajes, DMs y comenta
 - Endpoint para desconectar cuentas Meta no deseadas del workspace.
 - Endpoint de webhook Meta con verificacion de challenge y firma `x-hub-signature-256`.
 - Callback OAuth Meta intercambia `code`, cifra tokens server-side y guarda cuentas detectadas.
+- Sincronizacion manual de comentarios organicos de Facebook cuando `pages_read_engagement` esta concedido.
 - Esquema inicial de Supabase en `supabase/schema.sql`.
 
 ## Documentacion operativa
@@ -109,7 +110,7 @@ Este proyecto puede desplegarse en Vercel Hobby para uso personal y validacion. 
 
 ## Proximos pasos tecnicos
 
-1. Ampliar permisos Meta de forma incremental y diagnosticar scopes concedidos.
-2. Suscribir webhooks reales de Page/Instagram.
-3. Mapear eventos webhook a `inbox_items` e `inbox_messages`.
+1. Agregar `pages_read_engagement`, reautorizar OAuth y probar sincronizacion real de comentarios.
+2. Ampliar permisos para responder/moderar con `pages_manage_engagement`.
+3. Suscribir webhooks reales de Page/Instagram.
 4. Agregar tests de acciones Meta y parsing de webhooks.

@@ -17,6 +17,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `src/app/api/meta/oauth/start/route.ts`: inicio OAuth Meta con sesion Supabase validada.
 - `src/app/api/meta/oauth/callback/route.ts`: callback OAuth Meta con `state` firmado.
 - `src/app/api/meta/accounts/[accountId]/route.ts`: desconexion de cuentas conectadas del workspace.
+- `src/app/api/meta/sync/comments/route.ts`: sincronizacion manual de comentarios organicos de Facebook.
 - `supabase/schema.sql`: modelo relacional inicial.
 
 ## Flujo de datos previsto
@@ -53,6 +54,15 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Las cuentas con `access_token_encrypted` se muestran como reales; las cuentas sin token cifrado quedan marcadas como demo.
 - Las cuentas descubiertas por Meta sin token cifrado quedan como `needs_review`; los fixtures locales quedan como `demo`.
 - El usuario puede desconectar cuentas no deseadas del workspace; la eliminacion borra la fila de `connected_accounts` y sus inbox relacionados por cascada.
+
+## Sincronizacion de comentarios Facebook
+
+- `POST /api/meta/sync/comments` usa page tokens cifrados guardados en `connected_accounts`.
+- El endpoint descifra tokens solo server-side.
+- Solo procesa cuentas con `pages_read_engagement` concedido.
+- Lee publicaciones recientes y hasta 50 comentarios por publicacion en este bloque inicial.
+- Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
+- La sincronizacion manual es una etapa previa a webhooks reales; evita bloquear la experiencia mientras se configuran suscripciones Meta.
 
 ## Auth y workspace
 

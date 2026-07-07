@@ -169,3 +169,10 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/account-filter-plan.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, viewport 390px sin overflow horizontal y con badges `FB`/`IG`, `git diff --check`.
 - Pendiente: ampliar `Network`, schema y metadata visual cuando se integren TikTok o Google Business Profile.
+
+### Sincronizacion manual de comentarios Facebook
+
+- Resumen: se agrego descifrado server-side de page tokens, lectura de comentarios organicos de Facebook con `pages_read_engagement`, endpoint autenticado de sincronizacion y boton en Configuracion Meta.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/meta-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `GET /api/health` con `supabase: configured` y `meta: configured`, `POST /api/meta/sync/comments` sin sesion devuelve `401`, `git diff --check`.
+- Pendiente: agregar `pages_read_engagement` en Meta, actualizar `.env.local`, reautorizar OAuth y ejecutar sincronizacion real.

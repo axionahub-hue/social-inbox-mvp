@@ -182,3 +182,53 @@ Respuesta:
 ```
 
 Valida que la cuenta pertenezca a un workspace del usuario actual antes de eliminarla.
+
+### `POST /api/meta/sync/comments`
+
+Sincroniza comentarios organicos recientes de paginas Facebook conectadas.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Payload:
+
+```json
+{
+  "workspaceId": "uuid-del-workspace"
+}
+```
+
+Comportamiento:
+
+- valida sesion Supabase;
+- valida que el workspace pertenezca al usuario;
+- selecciona cuentas Facebook reales del workspace;
+- omite cuentas sin `pages_read_engagement`;
+- descifra page tokens solo en servidor;
+- consulta publicaciones y comentarios recientes de Facebook;
+- guarda contactos, conversaciones y mensajes en `contacts`, `inbox_items` e `inbox_messages`.
+
+Respuesta:
+
+```json
+{
+  "ok": true,
+  "message": "Sincronizacion Facebook: 3 comentario(s), 2 nuevo(s), 1 actualizado(s).",
+  "accounts": {
+    "total": 4,
+    "eligible": 4,
+    "skippedForPermission": 0
+  },
+  "comments": {
+    "found": 3,
+    "inserted": 2,
+    "updated": 1
+  },
+  "errors": []
+}
+```
+
+Si no existe `pages_read_engagement`, responde controlado con `eligible = 0`.

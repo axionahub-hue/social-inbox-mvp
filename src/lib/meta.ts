@@ -95,6 +95,51 @@ type MetaBusinessesResponse = {
   };
 };
 
+type MetaComment = {
+  id: string;
+  message?: string;
+  created_time?: string;
+  is_hidden?: boolean;
+  permalink_url?: string;
+  from?: {
+    id?: string;
+    name?: string;
+  };
+};
+
+type MetaPost = {
+  id: string;
+  message?: string;
+  permalink_url?: string;
+  created_time?: string;
+  comments?: {
+    data?: MetaComment[];
+  };
+};
+
+type MetaPostsResponse = {
+  data?: MetaPost[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
+export type MetaOrganicComment = {
+  postId: string;
+  postMessage: string | null;
+  postPermalink: string | null;
+  commentId: string;
+  message: string;
+  fromId: string | null;
+  fromName: string | null;
+  createdTime: string | null;
+  isHidden: boolean;
+  permalink: string | null;
+};
+
 export function isMetaConfigured() {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
@@ -281,6 +326,62 @@ export function encryptMetaToken(token: string) {
     tag.toString("base64url"),
     encrypted.toString("base64url"),
   ].join(":");
+}
+
+export function decryptMetaToken(encryptedToken: string) {
+  const [version, ivValue, tagValue, encryptedValue] = encryptedToken.split(":");
+
+  if (version !== "v1" || !ivValue || !tagValue || !encryptedValue) {
+    throw new Error("Formato de token Meta cifrado invalido.");
+  }
+
+  const key = createMetaTokenEncryptionKey();
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    key,
+    Buffer.from(ivValue, "base64url"),
+  );
+
+  decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
+
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedValue, "base64url")),
+    decipher.final(),
+  ]).toString("utf8");
+}
+
+export async function fetchMetaOrganicComments({
+  accessToken,
+  pageId,
+}: {
+  accessToken: string;
+  pageId: string;
+}) {
+  const posts = await requestPagedGraph<MetaPostsResponse, MetaPost>(`${pageId}/feed`, {
+    fields:
+      "id,message,permalink_url,created_time,comments.limit(50){id,message,from{id,name},created_time,is_hidden,permalink_url}",
+    limit: "25",
+    access_token: accessToken,
+  });
+
+  if (!posts.ok) {
+    throw new Error(posts.errorMessage ?? "No se pudieron leer comentarios de Facebook.");
+  }
+
+  return posts.data.flatMap((post) =>
+    (post.comments?.data ?? []).map((comment): MetaOrganicComment => ({
+      postId: post.id,
+      postMessage: post.message ?? null,
+      postPermalink: post.permalink_url ?? null,
+      commentId: comment.id,
+      message: comment.message ?? "",
+      fromId: comment.from?.id ?? null,
+      fromName: comment.from?.name ?? null,
+      createdTime: comment.created_time ?? post.created_time ?? null,
+      isHidden: Boolean(comment.is_hidden),
+      permalink: comment.permalink_url ?? null,
+    })),
+  );
 }
 
 export function resolveMetaTokenExpiresAt(expiresInSeconds?: number) {
