@@ -274,3 +274,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/oauth/callback/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/vercel-deploy.md`, `docs/programming-log.md`.
 - Validacion: consulta Graph `/{page-id}/subscribed_apps` antes/despues; Meta devolvio `success: true` y luego cada pagina mostro `Social Inbox MVP` con `feed`.
 - Pendiente: probar un comentario real nuevo despues de la suscripcion y verificar entrada en `webhook_events`, `inbox_items` e `inbox_messages`.
+
+### Sincronizacion tolerante a posts inaccesibles
+
+- Resumen: se verifico que Graph podia leer el comentario real `son increibles` en `Academia Expertos de la Musica`, pero Meta no lo entrego por webhook. Durante la sincronizacion algunos posts de otras paginas devolvian error `#100` al leer `/comments` y eso podia abortar la cuenta completa. Se cambio la lectura para saltar posts inaccesibles y continuar con comentarios legibles.
+- Areas tocadas: `src/lib/meta.ts`, `docs/programming-log.md`.
+- Validacion: consulta Graph directa encontro el comentario real de `Mauro Hernan Moras`; se persistio en `inbox_items` como `post_comment`, estado `new`, cuenta visible y `unread_count = 1`.
+- Pendiente: redesplegar y confirmar que el polling de la app publica importa comentarios nuevos aunque algun post aislado devuelva error de permisos.

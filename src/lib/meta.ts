@@ -414,7 +414,11 @@ export async function fetchMetaOrganicComments({
       });
 
       if (comments.error) {
-        throw new Error(comments.error.message ?? `No se pudieron leer comentarios de ${post.id}.`);
+        console.warn("meta_post_comments_skipped", {
+          postId: post.id,
+          message: comments.error.message,
+        });
+        return [];
       }
 
       return (comments.data ?? []).map((comment): MetaOrganicComment => ({
