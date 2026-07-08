@@ -93,6 +93,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los mensajes entrantes de Messenger llegan por webhook Page `messages`.
 - Cada evento `entry.messaging[]` se deduplica por `message.mid` y se guarda como `inbox_items.source = messenger`.
 - El webhook intenta resolver el nombre real de Messenger consultando `/{page-id}/conversations?user_id={PSID}&fields=id,participants` con el Page token. Si Meta no devuelve participante, el contacto queda identificado por el Page-scoped sender id (`facebook:PSID`) como fallback.
+- Si un mensaje privado llega sin `text` pero con `attachments`, el persistidor guarda una etiqueta operativa legible: `Audio recibido`, `Imagen recibida`, `GIF recibido`, `Video recibido`, `Archivo recibido` o `Sticker recibido`.
 - Si un flujo posterior trae menos datos de identidad que un contacto ya enriquecido, no puede degradar el nombre/handle existente.
 - Las respuestas desde un item Messenger usan Send API `me/messages` con `recipient.id = PSID`. Esto es distinto a una private reply de comentario, que usa `recipient.comment_id`.
 
@@ -114,6 +115,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los DM Instagram entrantes se guardan como `inbox_items.source = instagram_dm`; las respuestas intentan usar el Send API de Instagram con `recipient.id`.
 - Las respuestas de Instagram DM usan Send API `me/messages` con Page token y `recipient.id = IGSID` recibido en el webhook.
 - Al recibir un DM Instagram, el webhook intenta enriquecer el contacto con User Profile API usando el IGSID para guardar nombre y username cuando Meta lo permite.
+- Los DM Instagram con texto y emojis se guardan como texto normal. Los attachments sin texto se etiquetan igual que Messenger; en prueba real, audio llego como `audio`, foto como `image`, sticker de corazon como texto `❤` y GIF como `image` con URL `.gif`.
 - Los contactos Instagram de comentarios y DMs siguen la regla de no degradacion: una carga posterior con fallback (`Autor Instagram` o `Instagram ######`) no reemplaza un nombre/handle real ya guardado.
 - Para que DM Instagram funcione en tiempo real hay que activar Webhooks `Instagram` con el campo `messages` en Meta Developers y reautorizar con `instagram_manage_messages`.
 - Si Meta devuelve `(#3) Application does not have the capability`, la app tiene el scope pero falta habilitar acceso avanzado/capacidad de Instagram Messaging en Meta.

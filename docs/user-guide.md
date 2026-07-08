@@ -72,6 +72,12 @@ Cuando el item es comentario, el selector del composer muestra:
 
 Al responder una conversacion, sale de `Bandeja` y pasa a `Respondidos`. Las conversaciones archivadas salen de la bandeja principal y quedan reunidas en `Archivados`. Desde esa vista se pueden desarchivar.
 
+## Mensajes con emojis y adjuntos
+
+- Los emojis escritos dentro de comentarios, Messenger o Instagram DM se muestran como texto normal.
+- Si Messenger o Instagram DM envian un adjunto sin texto, la app muestra una etiqueta legible: `Audio recibido`, `Imagen recibida`, `GIF recibido`, `Video recibido`, `Archivo recibido` o `Sticker recibido`.
+- Si Meta envia un contenido no soportado sin tipo de adjunto, se muestra `Mensaje no compatible recibido` para que no parezca que no llego nada.
+
 ## Uso en celular
 
 En mobile, el bloque de cuentas/configuracion aparece comprimido arriba. Se puede expandir con el icono de flecha cuando hace falta cambiar cuentas, conectar Meta o revisar configuracion.

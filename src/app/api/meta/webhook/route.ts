@@ -97,7 +97,14 @@ type MetaMessagingEvent = {
     mid?: string;
     text?: string;
     is_echo?: boolean;
-    attachments?: unknown[];
+    attachments?: Array<{
+      type?: string;
+      payload?: {
+        url?: string;
+        sticker_id?: string | number;
+      };
+    }>;
+    is_unsupported?: boolean;
   };
 };
 
@@ -531,6 +538,8 @@ function mapMessagingEventToMessage({
     recipientId: event.recipient?.id ?? null,
     messageId,
     text: event.message.text ?? "",
+    attachmentType: event.message.attachments?.[0]?.type ?? null,
+    attachmentUrl: event.message.attachments?.[0]?.payload?.url ?? null,
     timestamp: event.timestamp ? new Date(event.timestamp).toISOString() : null,
   };
 }

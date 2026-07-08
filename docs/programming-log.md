@@ -553,3 +553,11 @@
 - Proteccion: los updates no pisan contexto de hilo existente cuando un evento posterior llega sin padre/autor/texto.
 - Areas tocadas: `supabase/schema.sql`, `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/page.tsx`, `src/lib/types.ts`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con una respuesta anidada nueva en Facebook e Instagram.
+
+### Adjuntos en Messenger e Instagram DM
+
+- Resumen: se agrego normalizacion de mensajes privados sin `text` pero con `attachments`. Audio, imagen, GIF, video, archivo y sticker ahora se guardan con etiquetas legibles en `inbox_messages.body` y en el preview del hilo.
+- Dato validado: en una prueba real de Instagram DM, Meta envio audio como `attachment.type = audio`, foto como `image`, sticker de corazon como texto `❤` y GIF como `image` con URL `.gif`.
+- Backfill: se actualizaron los mensajes recientes de prueba que estaban como `(mensaje sin texto)` a `Audio recibido`, `Imagen recibida` y `GIF recibido`, y se actualizo el preview del hilo.
+- Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar nuevamente audio/foto/sticker/GIF en IG DM y pulgar arriba/sticker en Messenger.

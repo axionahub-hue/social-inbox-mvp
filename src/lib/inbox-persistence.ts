@@ -10,6 +10,8 @@ export type MetaMessengerMessage = {
   recipientId: string | null;
   messageId: string;
   text: string;
+  attachmentType?: string | null;
+  attachmentUrl?: string | null;
   timestamp: string | null;
   senderName?: string | null;
   senderUsername?: string | null;
@@ -417,7 +419,7 @@ export async function persistFacebookMessengerMessage({
     .maybeSingle();
   const now = new Date().toISOString();
   const receivedAt = normalizeDate(message.timestamp) ?? now;
-  const preview = message.text || "(mensaje sin texto)";
+  const preview = resolveMessengerMessageBody(message);
 
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
@@ -531,7 +533,7 @@ export async function persistInstagramDirectMessage({
     .maybeSingle();
   const now = new Date().toISOString();
   const receivedAt = normalizeDate(message.timestamp) ?? now;
-  const preview = message.text || "(mensaje sin texto)";
+  const preview = resolveMessengerMessageBody(message);
 
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
@@ -973,7 +975,7 @@ async function ensureMessengerMessage({
     inbox_item_id: inboxItemId,
     provider_message_id: message.messageId,
     author_type: "contact",
-    body: message.text || "(mensaje sin texto)",
+    body: resolveMessengerMessageBody(message),
     sent_at: receivedAt,
   });
 
@@ -987,6 +989,54 @@ function normalizeDate(value: string | null) {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function resolveMessengerMessageBody(message: MetaMessengerMessage) {
+  const text = message.text.trim();
+
+  if (text) {
+    return text;
+  }
+
+  const attachmentType = message.attachmentType?.toLowerCase() ?? "";
+  const attachmentUrl = message.attachmentUrl ?? "";
+
+  if (attachmentType === "audio") {
+    return "Audio recibido";
+  }
+
+  if (attachmentType === "video") {
+    return "Video recibido";
+  }
+
+  if (attachmentType === "image") {
+    return isGifAttachment(attachmentUrl) ? "GIF recibido" : "Imagen recibida";
+  }
+
+  if (attachmentType === "file") {
+    return "Archivo recibido";
+  }
+
+  if (attachmentType === "sticker") {
+    return "Sticker recibido";
+  }
+
+  if (attachmentType) {
+    return `Adjunto recibido (${attachmentType})`;
+  }
+
+  return "Mensaje no compatible recibido";
+}
+
+function isGifAttachment(url: string) {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname.toLowerCase().includes(".gif");
+  } catch {
+    return url.toLowerCase().includes(".gif");
+  }
 }
 
 function isSelfAuthoredComment({
