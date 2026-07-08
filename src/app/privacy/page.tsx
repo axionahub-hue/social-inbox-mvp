@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const publicAppUrl = "https://social-inbox-mvp.vercel.app";
-const contactEmail = "axiona.hub@gmail.com";
+const contactEmail = "info@axionahub.com";
 
 export default function PrivacyPage() {
   return (
