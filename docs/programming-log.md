@@ -525,3 +525,9 @@
 - Dato corregido: se elimino de Supabase el item duplicado no leido de `Academia Expertos de la Musica`, creado por una respuesta agente publicada como Page.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`; consulta Supabase confirmo `unreadOrNew: 0` y `selfUnread: 0`.
+
+### Panel lateral de cuentas colapsable
+
+- Resumen: se agrego un control desktop para contraer/expandir la columna izquierda de cuentas. Al contraerse, queda una barra de 72px con acciones rapidas para expandir, mostrar/ocultar cuentas, abrir configuracion Meta y anadir cuenta. Mobile conserva el comportamiento de panel desplegable superior.
+- Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, smoke en `http://localhost:3100` confirmando ancho 340px expandido, 72px contraido y retorno a 340px al expandir.

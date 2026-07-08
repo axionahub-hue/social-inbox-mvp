@@ -315,6 +315,7 @@ export default function Home() {
   const [inboxView, setInboxView] = useState<InboxView>("active");
   const [mobileInboxPanel, setMobileInboxPanel] = useState<MobileInboxPanel>("list");
   const [isMobileAccountsOpen, setIsMobileAccountsOpen] = useState(false);
+  const [isAccountsSidebarCollapsed, setIsAccountsSidebarCollapsed] = useState(false);
   const [visibleAccountIds, setVisibleAccountIds] = useState<string[]>(() =>
     channels.map((channel) => channel.id),
   );
@@ -1958,10 +1959,58 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
-      <div className="flex min-h-screen flex-col lg:h-screen lg:grid lg:grid-cols-[340px_minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
+      <div
+        className="flex min-h-screen flex-col lg:grid lg:h-screen lg:overflow-hidden"
+        style={{
+          gridTemplateColumns: isAccountsSidebarCollapsed
+            ? "72px minmax(340px,430px) minmax(0,1fr)"
+            : "340px minmax(340px,430px) minmax(0,1fr)",
+        }}
+      >
         <aside
           className={`${mobileInboxPanel === "detail" ? "hidden" : "flex"} min-h-0 flex-col border-b border-slate-200 bg-[#202020] text-white lg:flex lg:h-screen lg:border-b-0 lg:border-r lg:border-slate-800`}
         >
+          <div className={`${isAccountsSidebarCollapsed ? "lg:flex" : "lg:hidden"} hidden h-full min-h-0 flex-col items-center gap-2 px-2 py-3`}>
+            <button
+              aria-label="Expandir panel de cuentas"
+              className="grid size-10 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+              onClick={() => setIsAccountsSidebarCollapsed(false)}
+              title="Expandir cuentas"
+            >
+              <ChevronLeft className="rotate-180" size={18} />
+            </button>
+            <button
+              aria-label={visibleAccountIds.length === channelList.length ? "Ocultar todas las cuentas" : "Mostrar todas las cuentas"}
+              className="grid size-10 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+              onClick={toggleAllAccountsVisibility}
+              title={visibleAccountIds.length === channelList.length ? "Ocultar todas" : "Mostrar todas"}
+            >
+              {visibleAccountIds.length === channelList.length ? <Eye size={18} /> : <EyeOff size={18} />}
+            </button>
+            <button
+              aria-label="Configuracion Meta"
+              className="grid size-10 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+              onClick={() => setIsMetaSettingsOpen((current) => !current)}
+              title="Configuracion Meta"
+            >
+              <Settings size={18} />
+            </button>
+            <div className="mt-1 rounded-md bg-white/5 px-2 py-2 text-center text-[11px] font-semibold text-slate-300">
+              {visibleAccountIds.length}/{channelList.length}
+            </div>
+            <button
+              aria-label="Añadir cuenta"
+              className="mt-auto grid size-10 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+              onClick={() => {
+                setIsAccountsSidebarCollapsed(false);
+                setIsMetaSettingsOpen(true);
+              }}
+              title="Añadir cuenta"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+          <div className={`${isAccountsSidebarCollapsed ? "lg:hidden" : "lg:flex"} min-h-0 flex-1 flex-col`}>
           <div className="shrink-0 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
             <div>
@@ -1971,6 +2020,14 @@ export default function Home() {
                 <h1 className="mt-1 text-lg font-semibold tracking-tight">Cuentas</h1>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <button
+                aria-label="Contraer panel de cuentas"
+                className="hidden size-8 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10 lg:grid"
+                onClick={() => setIsAccountsSidebarCollapsed(true)}
+                title="Contraer cuentas"
+              >
+                <ChevronLeft size={17} />
+              </button>
               <button
                 className="grid size-8 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
                 onClick={toggleAllAccountsVisibility}
@@ -2506,6 +2563,7 @@ export default function Home() {
               </p>
             </div>
           ) : null}
+          </div>
           </div>
         </aside>
 
