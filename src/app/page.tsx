@@ -2758,7 +2758,7 @@ export default function Home() {
                         >
                           {message.sentAt}
                         </p>
-                        {message.author === "contact" ? (
+                        {message.author === "contact" && isCommentItem(selectedItem) ? (
                           <MessageModerationActions
                             hidden={selectedItem.hidden}
                             network={selectedItem.network}
@@ -2766,14 +2766,10 @@ export default function Home() {
                             onHideToggle={() =>
                               void runAction(selectedItem.hidden ? "unhide" : "hide")
                             }
-                            onDelete={
-                              isCommentItem(selectedItem)
-                                ? () => void runAction("delete_comment")
-                                : undefined
-                            }
+                            onDelete={() => void runAction("delete_comment")}
                             onReact={reactToSelectedItem}
                           />
-                        ) : (
+                        ) : message.author === "agent" ? (
                           <div className="mt-3 flex justify-end border-t border-white/10 pt-2">
                             <SmallActionButton
                               disabled={!message.providerMessageId}
@@ -2787,7 +2783,7 @@ export default function Home() {
                               <Trash2 size={14} />
                             </SmallActionButton>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   ))}
