@@ -29,8 +29,9 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 4. El webhook se guarda crudo en `webhook_events`.
 5. Un procesador normaliza eventos a `inbox_items` e `inbox_messages`.
 6. El agente responde desde la UI.
-7. `/api/inbox/action` ejecuta la accion en Meta y registra `action_log`.
-8. Mientras Meta real no este conectado, `/api/inbox/action` persiste el estado interno en Supabase para validar el flujo operativo completo.
+7. `/api/inbox/action` valida la accion. Si es interna, persiste directo; si toca Meta real, la guarda en `action_queue`, aplica estado optimista y responde rapido al frontend.
+8. El procesador de cola ejecuta Meta en segundo plano, registra `action_log` y actualiza `inbox_items`/`inbox_messages` segun exito o fallo.
+9. Mientras Meta real no este conectado, `/api/inbox/action` mantiene el flujo demo/sincrono para validar la experiencia.
 
 ## OAuth Meta
 
@@ -69,6 +70,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - En Facebook, una respuesta publica sobre comentario intenta ademas enviar una copia por `private_replies`; el ID del reply publico devuelto por Meta se guarda en `inbox_messages.provider_message_id` para permitir borrado posterior.
 - Para abrir la publicacion original, la UI usa `provider_permalink_url` cuando existe. Esto es critico para comentarios anidados, porque la URL derivada desde `provider_post_id` solo abre el post/reel y no necesariamente el hilo exacto. Si la columna aun no existe en un entorno, la UI cae a la URL derivada desde `provider_post_id`.
 - Para hilos anidados, `inbox_items` guarda `parent_comment_id`, `parent_comment_author` y `parent_comment_text` cuando Meta entrega o permite resolver el comentario padre. La vista interna muestra `Comentario padre`, `Respuesta recibida` y `Respuesta publicada` para entender el hilo sin abrir Facebook o Instagram. Si una actualizacion posterior llega sin esos datos, el persistidor no pisa el contexto ya guardado.
+- Las acciones reales contra Meta usan cola persistente. Mientras estan en proceso, `inbox_items.action_state = pending` y las respuestas agente quedan con `inbox_messages.delivery_status = pending`. Si Meta confirma, se limpia el estado pendiente. Si Meta rechaza, la conversacion vuelve a `Bandeja` como no leida (`status = new`, `unread_count = 1`), queda con `action_state = failed`, muestra warning y conserva el error en `action_error`.
 
 ## Sincronizacion de comentarios Facebook
 
@@ -182,6 +184,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los tokens de Meta no deben exponerse al cliente.
 - Los tokens de Meta no deben guardarse sin cifrado server-side.
 - Las acciones contra Meta siempre pasan por API server-side.
+- Las acciones contra Meta no deben bloquear la UI. Deben pasar por `action_queue`, conservar snapshot anterior y resolver exito/fallo de forma persistente.
 - `/api/inbox/action` recibe el bearer token Supabase desde la UI, valida que el item pertenezca al usuario y solo entonces descifra el page token para ejecutar acciones reales.
 - Las acciones reales cableadas en este corte aplican a comentarios Facebook: respuesta publica, private reply, like/unlike y ocultar/mostrar. Bloquear usuario y reacciones diferenciadas quedan como pasos separados.
 - Los webhooks se validan con `META_WEBHOOK_VERIFY_TOKEN` y `META_APP_SECRET`.

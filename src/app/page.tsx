@@ -12,6 +12,7 @@ import {
   EyeOff,
   ExternalLink,
   Heart,
+  LoaderCircle,
   MoreVertical,
   Pencil,
   Plus,
@@ -24,6 +25,7 @@ import {
   Smile,
   Sparkles,
   ThumbsUp,
+  TriangleAlert,
   Trash2,
   X,
 } from "lucide-react";
@@ -31,10 +33,12 @@ import { channels, inboxItems, quickReplies } from "@/lib/demo-data";
 import { createBrowserSupabaseClient, hasSupabaseConfig } from "@/lib/supabase";
 import type {
   ChannelConnection,
+  ActionState,
   IngestSource,
   InboxAction,
   InboxItem,
   InboxSource,
+  MessageDeliveryStatus,
   Network,
   QuickReply,
   ReplyMode,
@@ -186,6 +190,8 @@ type InboxMessageRow = {
   author_type: "contact" | "agent";
   body: string;
   sent_at: string;
+  delivery_status?: MessageDeliveryStatus | null;
+  action_queue_id?: string | null;
 };
 
 type InboxItemRow = {
@@ -204,6 +210,9 @@ type InboxItemRow = {
   preview: string;
   is_liked: boolean;
   is_hidden: boolean;
+  action_state?: ActionState | null;
+  action_error?: string | null;
+  action_queue_id?: string | null;
   unread_count: number;
   received_at: string;
   connected_accounts: ConnectedAccountRow | ConnectedAccountRow[] | null;
@@ -707,6 +716,9 @@ export default function Home() {
       parent_comment_id,
       parent_comment_author,
       parent_comment_text,
+      action_state,
+      action_error,
+      action_queue_id,
       title,
       preview,
       is_liked,
@@ -733,6 +745,8 @@ export default function Home() {
         provider_message_id,
         author_type,
         body,
+        delivery_status,
+        action_queue_id,
         sent_at
       )
     `;
@@ -742,7 +756,12 @@ export default function Home() {
       .replace("      provider_permalink_url,\n", "")
       .replace("      parent_comment_id,\n", "")
       .replace("      parent_comment_author,\n", "")
-      .replace("      parent_comment_text,\n", "");
+      .replace("      parent_comment_text,\n", "")
+      .replace("      action_state,\n", "")
+      .replace("      action_error,\n", "")
+      .replace("      action_queue_id,\n", "")
+      .replace("        delivery_status,\n", "")
+      .replace("        action_queue_id,\n", "");
     let inbox = (await supabase
       .from("inbox_items")
       .select(inboxSelect)
@@ -1764,6 +1783,9 @@ export default function Home() {
 
     const result = await response.json();
     setNotice(result.message ?? "Accion registrada.");
+    if (result.queued) {
+      void fetch("/api/inbox/action/process", { method: "POST" }).catch(() => undefined);
+    }
 
     if (!response.ok) {
       if (activeWorkspaceId) {
@@ -1794,7 +1816,7 @@ export default function Home() {
       );
     }
 
-    if ((action === "reply" || action === "delete_message" || action === "delete_comment") && activeWorkspaceId) {
+    if ((action === "reply" || action === "delete_message") && activeWorkspaceId) {
       const inboxData = await loadSupabaseInbox(activeWorkspaceId);
       setChannelList(inboxData.channels);
       setItems(inboxData.items);
@@ -2786,7 +2808,24 @@ export default function Home() {
                           Archivado
                         </span>
                       ) : null}
+                      {selectedItem.actionState === "pending" ? (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                          <LoaderCircle size={12} className="animate-spin" />
+                          Accion pendiente
+                        </span>
+                      ) : null}
+                      {selectedItem.actionState === "failed" ? (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                          <TriangleAlert size={12} />
+                          Accion fallida
+                        </span>
+                      ) : null}
                     </div>
+                    {selectedItem.actionState === "failed" && selectedItem.actionError ? (
+                      <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+                        {selectedItem.actionError}
+                      </div>
+                    ) : null}
                     <div className="mt-3">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -2873,6 +2912,9 @@ export default function Home() {
                         >
                           {message.sentAt}
                         </p>
+                        {message.author === "agent" && message.deliveryStatus ? (
+                          <MessageDeliveryBadge deliveryStatus={message.deliveryStatus} />
+                        ) : null}
                         {message.author === "contact" && isCommentItem(selectedItem) ? (
                           <MessageModerationActions
                             hidden={selectedItem.hidden}
@@ -3189,8 +3231,25 @@ function InboxRow({
                 Bloqueado
               </span>
             ) : null}
+            {item.actionState === "pending" ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                <LoaderCircle size={12} className="animate-spin" />
+                Pendiente
+              </span>
+            ) : null}
+            {item.actionState === "failed" ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                <TriangleAlert size={12} />
+                Revisar
+              </span>
+            ) : null}
           </div>
           <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-600">{item.preview}</p>
+          {item.actionState === "failed" && item.actionError ? (
+            <p className="mt-1 line-clamp-2 text-xs font-medium text-amber-800">
+              {item.actionError}
+            </p>
+          ) : null}
         </div>
       </div>
       </button>
@@ -3303,6 +3362,28 @@ function MessageModerationActions({
         </SmallActionButton>
       ) : null}
     </div>
+  );
+}
+
+function MessageDeliveryBadge({ deliveryStatus }: { deliveryStatus: MessageDeliveryStatus }) {
+  if (deliveryStatus === "sent") {
+    return null;
+  }
+
+  if (deliveryStatus === "failed") {
+    return (
+      <span className="mt-2 inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+        <TriangleAlert size={12} />
+        Fallo el envio
+      </span>
+    );
+  }
+
+  return (
+    <span className="mt-2 inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-xs font-semibold text-slate-200">
+      <LoaderCircle size={12} className="animate-spin" />
+      {deliveryStatus === "pending_delete" ? "Eliminando..." : "Enviando..."}
+    </span>
   );
 }
 
@@ -3469,6 +3550,10 @@ function isOptionalInboxColumnLoadError(message?: string | null) {
     "parent_comment_id",
     "parent_comment_author",
     "parent_comment_text",
+    "action_state",
+    "action_error",
+    "action_queue_id",
+    "delivery_status",
   ].some((column) => message.includes(column));
 }
 
@@ -3526,6 +3611,10 @@ function resolveRecipientExternalId(item: InboxItem) {
 }
 
 function matchesInboxView(item: InboxItem, inboxView: InboxView) {
+  if (item.actionState === "failed") {
+    return inboxView === "active";
+  }
+
   if (inboxView === "archived") {
     return item.status === "archived";
   }
@@ -3644,12 +3733,17 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     liked: row.is_liked,
     hidden: row.is_hidden,
     blocked: Boolean(contact?.is_blocked),
+    actionState: row.action_state ?? undefined,
+    actionError: row.action_error ?? undefined,
+    actionQueueId: row.action_queue_id ?? undefined,
     messages: messages.map((message) => ({
       id: message.id,
       providerMessageId: message.provider_message_id ?? undefined,
       author: message.author_type,
       body: message.body,
       sentAt: formatTimestamp(message.sent_at),
+      deliveryStatus: message.delivery_status ?? "sent",
+      actionQueueId: message.action_queue_id ?? undefined,
     })),
   };
 }
@@ -3665,6 +3759,8 @@ function applyInboxActionToItem(
       status: "responded",
       unreadCount: 0,
       preview: message,
+      actionState: "pending",
+      actionError: undefined,
       messages: [
         ...item.messages,
         {
@@ -3672,6 +3768,7 @@ function applyInboxActionToItem(
           author: "agent",
           body: message,
           sentAt: "Ahora",
+          deliveryStatus: "pending",
         },
       ],
     };
@@ -3686,6 +3783,26 @@ function applyInboxActionToItem(
     liked: action === "like" ? true : action === "unlike" ? false : item.liked,
     hidden: action === "hide" ? true : action === "unhide" ? false : item.hidden,
     blocked: action === "block" ? true : action === "unblock" ? false : item.blocked,
+    actionState:
+      action === "like" ||
+      action === "unlike" ||
+      action === "hide" ||
+      action === "unhide" ||
+      action === "block" ||
+      action === "unblock" ||
+      action === "delete_comment"
+        ? "pending"
+        : item.actionState,
+    actionError:
+      action === "like" ||
+      action === "unlike" ||
+      action === "hide" ||
+      action === "unhide" ||
+      action === "block" ||
+      action === "unblock" ||
+      action === "delete_comment"
+        ? undefined
+        : item.actionError,
     status:
       action === "archive"
         ? "archived"

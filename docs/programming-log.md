@@ -568,3 +568,11 @@
 - Backfill: se actualizaron tres mensajes recientes con ese `sticker_id` y se recalculo el preview de sus hilos.
 - Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar un nuevo pulgar arriba en Messenger.
+
+### Cola persistente para acciones Meta
+
+- Resumen: se agrego `action_queue` para que respuestas, likes, ocultar/mostrar, borrar comentarios y bloquear/desbloquear se encolen y no bloqueen la UI esperando Graph API. `/api/inbox/action` responde `202 queued`, aplica estado optimista persistente y dispara `/api/inbox/action/process` en segundo plano. El frontend tambien invoca el processor sin esperarlo como respaldo.
+- Regla de fallo: si Meta rechaza una accion, la conversacion vuelve a `Bandeja` como no leida, queda con `action_state = failed`, muestra warning y conserva `action_error`. Las respuestas agente quedan con `delivery_status = failed`.
+- Areas tocadas: `supabase/schema.sql`, `supabase/migrations/20260708_action_queue.sql`, `src/lib/inbox-action-queue.ts`, `src/app/api/inbox/action/route.ts`, `src/app/api/inbox/action/process/route.ts`, `src/app/page.tsx`, `src/lib/types.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, ejecutar migracion SQL en Supabase y probar respuesta/like/fallo real.
+- Nota: Codex no pudo aplicar la migracion directamente porque `.env.local` no contiene `SUPABASE_DB_URL` ni `DATABASE_URL`.

@@ -16,6 +16,8 @@ export type IngestSource =
   | "unknown";
 
 export type Sentiment = "hot" | "neutral" | "support";
+export type ActionState = "pending" | "failed";
+export type MessageDeliveryStatus = "pending" | "sent" | "failed" | "pending_delete";
 
 export type InboxItem = {
   id: string;
@@ -45,6 +47,9 @@ export type InboxItem = {
   liked: boolean;
   hidden: boolean;
   blocked: boolean;
+  actionState?: ActionState;
+  actionError?: string;
+  actionQueueId?: string;
   messages: InboxMessage[];
 };
 
@@ -54,6 +59,8 @@ export type InboxMessage = {
   body: string;
   sentAt: string;
   providerMessageId?: string;
+  deliveryStatus?: MessageDeliveryStatus;
+  actionQueueId?: string;
 };
 
 export type QuickReply = {

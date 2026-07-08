@@ -84,6 +84,9 @@ create table if not exists inbox_items (
   parent_comment_id text,
   parent_comment_author text,
   parent_comment_text text,
+  action_state text,
+  action_error text,
+  action_queue_id uuid,
   title text not null,
   preview text not null,
   is_liked boolean not null default false,
@@ -105,15 +108,26 @@ alter table inbox_items
   add column if not exists parent_comment_author text,
   add column if not exists parent_comment_text text;
 
+alter table inbox_items
+  add column if not exists action_state text,
+  add column if not exists action_error text,
+  add column if not exists action_queue_id uuid;
+
 create table if not exists inbox_messages (
   id uuid primary key default gen_random_uuid(),
   inbox_item_id uuid not null references inbox_items(id) on delete cascade,
   provider_message_id text,
   author_type text not null check (author_type in ('contact', 'agent')),
   body text not null,
+  delivery_status text not null default 'sent',
+  action_queue_id uuid,
   sent_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+alter table inbox_messages
+  add column if not exists delivery_status text not null default 'sent',
+  add column if not exists action_queue_id uuid;
 
 create table if not exists quick_replies (
   id uuid primary key default gen_random_uuid(),
@@ -137,6 +151,44 @@ create table if not exists action_log (
   created_at timestamptz not null default now()
 );
 
+create table if not exists action_queue (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  inbox_item_id uuid not null references inbox_items(id) on delete cascade,
+  action text not null,
+  payload jsonb not null default '{}'::jsonb,
+  previous_state jsonb not null default '{}'::jsonb,
+  status text not null default 'queued',
+  attempt_count integer not null default 0,
+  provider_mode text,
+  provider_ok boolean,
+  provider_payload jsonb not null default '{}'::jsonb,
+  last_error text,
+  locked_at timestamptz,
+  processed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'inbox_items_action_queue_id_fkey'
+  ) then
+    alter table inbox_items
+      add constraint inbox_items_action_queue_id_fkey
+      foreign key (action_queue_id) references action_queue(id) on delete set null;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'inbox_messages_action_queue_id_fkey'
+  ) then
+    alter table inbox_messages
+      add constraint inbox_messages_action_queue_id_fkey
+      foreign key (action_queue_id) references action_queue(id) on delete set null;
+  end if;
+end $$;
+
 create table if not exists webhook_events (
   id uuid primary key default gen_random_uuid(),
   provider text not null,
@@ -155,6 +207,9 @@ create index if not exists inbox_items_provider_refs_idx
 create index if not exists webhook_events_unprocessed_idx
   on webhook_events (provider, created_at)
   where processed_at is null;
+
+create index if not exists action_queue_status_created_idx
+  on action_queue (status, created_at);
 
 do $$
 begin
@@ -182,6 +237,7 @@ alter table contacts enable row level security;
 alter table inbox_items enable row level security;
 alter table inbox_messages enable row level security;
 alter table quick_replies enable row level security;
+alter table action_queue enable row level security;
 
 drop policy if exists "workspace owner access" on workspaces;
 create policy "workspace owner access"

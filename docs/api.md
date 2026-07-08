@@ -76,6 +76,21 @@ Respuesta demo:
 
 Si Supabase esta configurado y `itemId` corresponde a una fila real de `inbox_items`, el endpoint valida sesion Supabase por `Authorization: Bearer SUPABASE_ACCESS_TOKEN` antes de persistir o ejecutar contra Meta.
 
+Para acciones reales contra Meta, el endpoint responde rapido con `202` y guarda la accion en `action_queue`:
+
+```json
+{
+  "ok": true,
+  "mode": "queued",
+  "queued": true,
+  "queueId": "uuid",
+  "persisted": true,
+  "message": "Accion encolada. La app la aplicara en Meta en segundo plano."
+}
+```
+
+El procesador de cola ejecuta Meta despues de responder al frontend. Si Meta confirma, marca la accion como `succeeded`, limpia `inbox_items.action_state` y registra `action_log`. Si Meta rechaza, marca la accion como `failed`, devuelve la conversacion a `Bandeja` con `status = new`, `unread_count = 1`, `action_state = failed` y `action_error` visible en la UI.
+
 Para comentarios Facebook reales (`source = post_comment` o `ad_comment`) con `provider_comment_id` y page token cifrado, ejecuta contra Meta:
 
 - `reply` con `replyMode = public_comment`: `/{comment-id}/comments`.
@@ -101,6 +116,20 @@ Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 - `mark_unread`: marca `inbox_items.status = new` y deja `unread_count = 1`.
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
+
+### `POST /api/inbox/action/process`
+
+Procesa acciones pendientes de `action_queue`. Normalmente `/api/inbox/action` lo dispara en segundo plano, y la UI tambien lo invoca sin esperarlo como respaldo.
+
+Respuesta:
+
+```json
+{
+  "ok": true,
+  "processed": 2,
+  "failed": 1
+}
+```
 
 Nota: Graph acepto `message_tags` al crear replies de Page, pero lo ignoro silenciosamente y guardo el nombre como texto plano. Por eso la app no simula menciones en respuestas publicas. `block`/`unblock` usan el edge Page `/{page_id}/blocked`; si Meta rechaza el Page Scoped ID, los permisos o considera al autor no bloqueable (por ejemplo una persona con rol sobre la Page), la app no debe marcar bloqueo local. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
 
