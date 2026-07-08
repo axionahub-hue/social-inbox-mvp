@@ -102,6 +102,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.
 - Ocultar/mostrar Instagram usa `/{ig-comment-id}` con `hide=true|false`.
 - Eliminar comentarios Instagram usa `DELETE /{ig-comment-id}`.
+- Like/unlike en comentarios Instagram usa `/{ig-user-id}/likes` con `comment_id`.
+- A diferencia de Facebook, una respuesta publica Instagram no intenta enviar copia privada automatica. La respuesta por DM queda separada y depende de que Meta habilite la capacidad de Instagram Messaging para la app.
 - El webhook `/api/meta/webhook` queda preparado para `object = instagram`: normaliza cambios `comments` y eventos `entry.messaging[]` como `instagram_dm`.
 - Los DM Instagram entrantes se guardan como `inbox_items.source = instagram_dm`; las respuestas intentan usar el Send API de Instagram con `recipient.id`.
 - Para que DM Instagram funcione en tiempo real faltan activar los webhooks/tópicos Instagram correspondientes en Meta Developers y reautorizar con `instagram_manage_messages`.

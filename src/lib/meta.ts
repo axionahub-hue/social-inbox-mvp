@@ -1122,7 +1122,7 @@ async function sendMetaActionRequest(input: MetaActionInput) {
 }
 
 function shouldSendPrivateCopy(input: MetaActionInput) {
-  return input.action === "reply" && input.replyMode === "public_comment";
+  return input.action === "reply" && input.replyMode === "public_comment" && input.network !== "instagram";
 }
 
 function resolvePublicReplyWithPrivateCopyMessage(privateCopyResult: Awaited<ReturnType<typeof sendMetaActionRequest>>) {
@@ -1150,6 +1150,10 @@ function resolveMetaActionErrorMessage(input: MetaActionInput, payload: unknown)
   const errorSubcode = readMetaErrorSubcode(payload);
 
   if (input.action === "reply" && input.replyMode === "private_message") {
+    if (input.network === "instagram" && errorCode === 3) {
+      return "Meta rechazo el DM de Instagram porque la app aun no tiene habilitada la capacidad de Instagram Messaging para esta llamada.";
+    }
+
     if (errorCode === 10900) {
       return "Meta no permite enviar otra respuesta interna porque esta actividad ya tuvo una respuesta privada.";
     }
@@ -1363,9 +1367,13 @@ function resolveActionEndpoint(input: MetaActionInput) {
         ? `${input.externalId}/replies`
         : `${input.externalId}/comments`;
     case "like":
-      return `${input.externalId}/likes`;
+      return input.network === "instagram" && input.accountExternalId
+        ? `${input.accountExternalId}/likes`
+        : `${input.externalId}/likes`;
     case "unlike":
-      return `${input.externalId}/likes`;
+      return input.network === "instagram" && input.accountExternalId
+        ? `${input.accountExternalId}/likes`
+        : `${input.externalId}/likes`;
     case "hide":
     case "unhide":
       return input.externalId;
@@ -1394,6 +1402,9 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
       }
 
       return { message: input.message ?? "" };
+    case "like":
+    case "unlike":
+      return input.network === "instagram" ? { comment_id: input.externalId } : {};
     case "hide":
       return input.network === "instagram" ? { hide: true } : { is_hidden: true };
     case "unhide":

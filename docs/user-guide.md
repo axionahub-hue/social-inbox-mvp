@@ -136,6 +136,7 @@ Para conversaciones por mensaje interno de Facebook, Meta debe tener activo el c
 Para Instagram, Meta debe tener concedidos `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages` y, para reacciones, `instagram_manage_engagement`. Despues de agregarlos en Meta Login Configuration hay que repetir OAuth para que Supabase guarde esos scopes en las cuentas conectadas.
 
 En comentarios, las acciones junto al mensaje recibido permiten dar like, ocultar/mostrar y eliminar. Eliminar comentario borra primero en Meta y solo retira la conversacion local cuando Meta confirma.
+En Instagram, responder sobre comentario publica una respuesta publica. Responder por DM usa Instagram Messaging y puede requerir una capacidad adicional habilitada por Meta, aunque el scope `instagram_manage_messages` ya este concedido.
 
 ## Limitaciones actuales
 

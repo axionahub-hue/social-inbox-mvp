@@ -473,3 +473,9 @@
 - Areas tocadas: `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, `POST /api/meta/sync/instagram-comments` sin sesion devuelve `401`.
 - Pendiente: agregar en Meta Login Configuration `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages` e `instagram_manage_engagement`, reautorizar OAuth y probar comentario/DM real en produccion.
+
+### Ajustes acciones Instagram reales
+
+- Resumen: la prueba real en `expertos.delamusica` confirmo ingreso de comentario IG, respuesta publica y borrado de comentario/respuesta. Se corrigio `like/unlike` para Instagram usando `/{ig-user-id}/likes` con `comment_id`, se desactivo la copia privada automatica despues de respuesta publica Instagram y se agrego mensaje especifico para el error `(#3)` de Instagram Messaging sin capacidad habilitada.
+- Areas tocadas: `src/lib/meta.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar like/unlike con un comentario IG nuevo.
