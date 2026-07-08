@@ -105,7 +105,7 @@ Las cuentas pueden aparecer como:
 
 Desde el panel de cuentas se puede desconectar una cuenta no deseada con el icono de eliminar. Esto la quita del workspace y de la bandeja.
 
-El mismo panel muestra `Autores bloqueados`. Desde ahi se puede ver cada autor bloqueado por cuenta y desbloquearlo sin buscar la conversacion original. El bloqueo actual es interno de la app: marca al autor como bloqueado en el workspace, pero todavia no ejecuta un bloqueo externo en Meta.
+El mismo panel muestra `Autores bloqueados`. Desde ahi se puede ver cada autor bloqueado por cuenta y desbloquearlo sin buscar la conversacion original. En Facebook, la app intenta bloquear/desbloquear primero en Meta y solo actualiza el estado local si Meta confirma la accion.
 
 ## Configuracion Meta
 

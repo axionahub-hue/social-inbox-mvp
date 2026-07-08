@@ -873,9 +873,7 @@ export async function executeMetaAction(input: MetaActionInput) {
     input.action === "archive" ||
     input.action === "unarchive" ||
     input.action === "mark_read" ||
-    input.action === "mark_unread" ||
-    input.action === "block" ||
-    input.action === "unblock"
+    input.action === "mark_unread"
   ) {
     return {
       mode: "internal",
@@ -885,6 +883,15 @@ export async function executeMetaAction(input: MetaActionInput) {
   }
 
   if (!input.accessToken) {
+    if (input.action === "block" || input.action === "unblock") {
+      return {
+        mode: "meta",
+        ok: false,
+        message: "Falta conexion real con Meta para bloquear o desbloquear en la red social.",
+        payload: null,
+      };
+    }
+
     const replyModeLabel =
       input.action === "reply" && input.replyMode
         ? ` (${resolveReplyModeLabel(input.replyMode)})`
@@ -934,6 +941,16 @@ async function sendMetaActionRequest(input: MetaActionInput) {
 
   const endpoint = resolveActionEndpoint(input);
   const body = resolveActionBody(input);
+
+  if ((input.action === "block" || input.action === "unblock") && !body.psid) {
+    return {
+      mode: "meta",
+      ok: false,
+      message: "Falta el ID del autor para bloquearlo en Meta.",
+      payload: null,
+    };
+  }
+
   const method =
     input.action === "unlike" || input.action === "unblock" || input.action === "delete_message"
       ? "DELETE"
@@ -945,6 +962,9 @@ async function sendMetaActionRequest(input: MetaActionInput) {
 
   if (method === "DELETE") {
     url.searchParams.set("access_token", input.accessToken);
+    for (const [key, value] of Object.entries(stringifyMetaActionBody(body))) {
+      url.searchParams.set(key, value);
+    }
   } else {
     requestInit.headers = {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -971,7 +991,7 @@ async function sendMetaActionRequest(input: MetaActionInput) {
   return {
     mode: "meta",
     ok: true,
-    message: `Accion ${input.action} ejecutada en Meta.`,
+    message: resolveMetaActionSuccessMessage(input.action),
     payload,
   };
 }
@@ -1011,6 +1031,16 @@ function resolveMetaActionErrorMessage(input: MetaActionInput, payload: unknown)
 
     if (errorCode === 100 && errorSubcode === 1893060) {
       return "Meta no permite mensaje interno para este comentario porque no acepta su ID como private reply.";
+    }
+  }
+
+  if (input.action === "block" || input.action === "unblock") {
+    if (errorCode === 100) {
+      return "Meta no acepto el ID del autor para bloqueo. Puede faltar Page Scoped ID valido para esta pagina.";
+    }
+
+    if (errorCode === 200) {
+      return "Meta rechazo el bloqueo por permisos. Revisa que la cuenta tenga permisos/tarea de moderacion sobre la pagina.";
     }
   }
 
@@ -1234,6 +1264,12 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
       return { is_hidden: true };
     case "unhide":
       return { is_hidden: false };
+    case "block":
+      return input.recipientExternalId
+        ? { psid: JSON.stringify([input.recipientExternalId]) }
+        : {};
+    case "unblock":
+      return input.recipientExternalId ? { psid: input.recipientExternalId } : {};
     default:
       return {};
   }
@@ -1263,12 +1299,19 @@ function resolveInternalActionMessage(action: InboxAction) {
       return "Conversacion marcada como leida.";
     case "mark_unread":
       return "Conversacion marcada como no leida.";
-    case "block":
-      return "Autor bloqueado en la app.";
-    case "unblock":
-      return "Autor desbloqueado en la app.";
     default:
       return "Accion interna registrada.";
+  }
+}
+
+function resolveMetaActionSuccessMessage(action: InboxAction) {
+  switch (action) {
+    case "block":
+      return "Autor bloqueado en Meta y en la app.";
+    case "unblock":
+      return "Autor desbloqueado en Meta y en la app.";
+    default:
+      return `Accion ${action} ejecutada en Meta.`;
   }
 }
 

@@ -111,6 +111,8 @@ async function resolveAuthenticatedActionInput({
     "hide",
     "unhide",
     "delete_message",
+    "block",
+    "unblock",
   ]);
   const accessToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
 
@@ -144,7 +146,12 @@ async function resolveAuthenticatedActionInput({
       provider_post_id,
       connected_accounts (
         network,
+        provider_account_id,
         access_token_encrypted
+      ),
+      contacts (
+        provider_user_id,
+        handle
       )
     `,
     )
@@ -190,6 +197,7 @@ async function resolveAuthenticatedActionInput({
   }
 
   const account = firstOrNull(itemResult.data.connected_accounts);
+  const contact = firstOrNull(itemResult.data.contacts);
   const providerCommentId = itemResult.data.provider_comment_id as string | null;
   const providerThreadId = itemResult.data.provider_thread_id as string | null;
 
@@ -256,6 +264,46 @@ async function resolveAuthenticatedActionInput({
     };
   }
 
+  if (input.action === "block" || input.action === "unblock") {
+    if (account?.network !== "facebook" || !account.access_token_encrypted) {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json(
+          { ok: false, message: "No hay page token real para bloquear este autor en Meta." },
+          { status: 409 },
+        ),
+      };
+    }
+
+    const providerUserId = readContactProviderUserId(contact);
+
+    if (!providerUserId) {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json(
+          {
+            ok: false,
+            message:
+              "No hay ID de autor compatible con Meta para bloquearlo en la red social.",
+          },
+          { status: 409 },
+        ),
+      };
+    }
+
+    return {
+      input: {
+        ...input,
+        externalId: account.provider_account_id as string,
+        recipientExternalId: providerUserId,
+        accessToken: decryptMetaToken(account.access_token_encrypted),
+      },
+      canPersist: true,
+    };
+  }
+
   if (
     input.action === "reply" &&
     itemResult.data.source === "messenger" &&
@@ -300,6 +348,28 @@ async function resolveAuthenticatedActionInput({
 
 function firstOrNull<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
+
+function readContactProviderUserId(contact: unknown) {
+  if (!contact || typeof contact !== "object") {
+    return null;
+  }
+
+  const row = contact as { provider_user_id?: unknown; handle?: unknown };
+
+  if (typeof row.provider_user_id === "string" && row.provider_user_id) {
+    return row.provider_user_id;
+  }
+
+  if (typeof row.handle === "string") {
+    const [prefix, value] = row.handle.split(":");
+
+    if (prefix === "facebook" && value) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 async function persistInboxAction({

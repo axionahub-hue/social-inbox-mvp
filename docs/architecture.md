@@ -107,10 +107,11 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 
 ## Bloqueo de autores
 
-- `block` y `unblock` actualizan `contacts.is_blocked` como bloqueo interno de la app.
+- En Facebook, `block` y `unblock` intentan aplicar primero en Meta con el edge Page `/{page_id}/blocked` y el Page Scoped ID del autor.
+- La app solo actualiza `contacts.is_blocked` si Meta confirma la accion.
 - La cabecera de conversacion muestra una accion visible `Bloquear autor` / `Desbloquear`.
 - La columna de cuentas incluye el apartado `Autores bloqueados` para listar autores bloqueados y desbloquearlos sin buscar una conversacion especifica.
-- El bloqueo real contra Meta queda pendiente hasta validar el endpoint correcto por plataforma; la app no debe presentar el bloqueo interno como bloqueo externo en Facebook/Instagram.
+- El bloqueo externo de Instagram queda pendiente hasta validar el endpoint correcto por plataforma.
 
 ## Auth y workspace
 

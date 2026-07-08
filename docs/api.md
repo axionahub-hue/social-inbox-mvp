@@ -90,8 +90,8 @@ Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 - `delete_message`: exige `provider_message_id`; intenta borrar primero en Meta y solo si Meta confirma elimina la respuesta agente local.
 - `like`/`unlike`: actualiza `inbox_items.is_liked`.
 - `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
-- `block`: accion interna; actualiza `contacts.is_blocked = true`.
-- `unblock`: accion interna; actualiza `contacts.is_blocked = false`.
+- `block`: intenta `POST /{page_id}/blocked` en Meta con `psid` del autor; solo si Meta confirma actualiza `contacts.is_blocked = true`.
+- `unblock`: intenta `DELETE /{page_id}/blocked` en Meta con `psid` del autor; solo si Meta confirma actualiza `contacts.is_blocked = false`.
 - `archive`: marca `inbox_items.status = archived` y limpia `unread_count`.
 - `unarchive`: marca `inbox_items.status = open` y limpia `unread_count`.
 - `mark_read`: limpia `unread_count`; mantiene `status = responded` si la conversacion ya estaba respondida, si no marca `status = open`.
@@ -99,7 +99,7 @@ Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 
 Siempre registra la accion en `action_log` cuando Supabase esta configurado.
 
-Nota: Graph acepto `message_tags` al crear replies de Page, pero lo ignoro silenciosamente y guardo el nombre como texto plano. Por eso la app no simula menciones en respuestas publicas. `block`/`unblock` todavia se persiste internamente en `contacts.is_blocked`; falta confirmar y probar el endpoint Meta correcto para bloqueo de usuarios de Page. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
+Nota: Graph acepto `message_tags` al crear replies de Page, pero lo ignoro silenciosamente y guardo el nombre como texto plano. Por eso la app no simula menciones en respuestas publicas. `block`/`unblock` usan el edge Page `/{page_id}/blocked`; si Meta rechaza el Page Scoped ID o los permisos, la app no debe marcar bloqueo local. Para Facebook la UI muestra solo `Me gusta` porque la escritura estable cableada es `/{comment-id}/likes`; las reacciones diferenciadas quedan pendientes hasta tener un endpoint Meta soportado/probado para escribir `LOVE`, `HAHA`, etc.
 
 Nota private replies: aunque `pages_messaging` este concedido, Meta puede rechazar comentarios especificos con `(#100, subcode 1893060)` cuando no acepta ese `comment_id` como private reply. En ese caso la app no persiste respuesta privada y debe mostrar el motivo especifico.
 

@@ -431,3 +431,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar bloqueo/desbloqueo desde la UI.
 - Pendiente: bloqueo real externo en Meta.
+
+### Bloqueo real Facebook Page
+
+- Resumen: `block/unblock` dejaron de ser accion interna para Facebook. El backend ahora resuelve page token, Page ID y Page Scoped ID del autor, ejecuta `/{page_id}/blocked` en Meta con `psid`, y solo persiste `contacts.is_blocked` si Meta confirma.
+- Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar bloqueo/desbloqueo con autor real de Facebook/Messenger.
+- Pendiente: validar endpoint equivalente para Instagram.
