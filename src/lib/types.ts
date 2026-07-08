@@ -11,6 +11,7 @@ export type IngestSource =
   | "webhook"
   | "polling_fast"
   | "polling_full"
+  | "ads_auto"
   | "ads_manual"
   | "unknown";
 

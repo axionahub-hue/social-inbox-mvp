@@ -417,3 +417,10 @@
 - Areas tocadas: `src/app/api/meta/webhook/subscribe/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y pulsar el boton despues de activar `messages` en Meta Developers.
 - Pendiente: probar recepcion de un mensaje Messenger real luego de que el diagnostico muestre `feed + messages` y `4/4`.
+
+### Auto-sync Ads y apartado de bloqueados
+
+- Resumen: `/api/meta/sync/ad-comments` ahora acepta `mode = fast|full`; la UI ejecuta auto-sync Ads cada 30 segundos en modo rapido cuando hay permisos suficientes, y distingue `ads_auto` de `ads_manual` en los badges. Tambien se agrego apartado `Autores bloqueados` en la columna de cuentas y el boton visible `Bloquear autor` / `Desbloquear` en la cabecera de conversacion.
+- Areas tocadas: `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/inbox-persistence.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar auto-sync Ads con un comentario nuevo de anuncio y bloqueo/desbloqueo de autor.
+- Pendiente: bloqueo real externo en Meta e ingest automatico/webhook para Instagram comentarios y DM.

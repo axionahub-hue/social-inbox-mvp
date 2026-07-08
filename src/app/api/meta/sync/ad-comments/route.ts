@@ -12,12 +12,23 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 
 const syncSchema = z.object({
   workspaceId: z.string().uuid(),
+  mode: z.enum(["fast", "full"]).optional().default("full"),
 });
 
-const adAccountScanLimit = 25;
-const adsPerAccountScanLimit = 8;
-const adCommentTargetLimit = 20;
-const commentsPerAdTargetLimit = 10;
+const adSyncLimits = {
+  fast: {
+    adAccounts: 5,
+    adsPerAccount: 4,
+    targets: 8,
+    commentsPerTarget: 5,
+  },
+  full: {
+    adAccounts: 25,
+    adsPerAccount: 8,
+    targets: 20,
+    commentsPerTarget: 10,
+  },
+} as const;
 
 type FacebookAccountRow = {
   id: string;
@@ -125,12 +136,13 @@ export async function POST(request: Request) {
   const pageAccounts = ((accountsResult.data ?? []) as FacebookAccountRow[]).filter(
     (account) => account.access_token_encrypted,
   );
+  const limits = adSyncLimits[parsed.data.mode];
   const pageByProviderId = new Map(pageAccounts.map((account) => [account.provider_account_id, account]));
   const userToken = decryptMetaToken(connection.user_access_token_encrypted);
   const targets = await fetchMetaAdCommentTargets({
     accessToken: userToken,
-    adAccountLimit: adAccountScanLimit,
-    adsPerAccountLimit: adsPerAccountScanLimit,
+    adAccountLimit: limits.adAccounts,
+    adsPerAccountLimit: limits.adsPerAccount,
   });
   const recentSince = createRecentMetaCommentSince();
   const uniqueTargetsByPost = new Map(
@@ -138,7 +150,7 @@ export async function POST(request: Request) {
       .filter((target) => pageByProviderId.has(target.pageId))
       .map((target) => [target.postId, target]),
   );
-  const matchedTargets = Array.from(uniqueTargetsByPost.values()).slice(0, adCommentTargetLimit);
+  const matchedTargets = Array.from(uniqueTargetsByPost.values()).slice(0, limits.targets);
   let commentsFound = 0;
   let inserted = 0;
   let updated = 0;
@@ -156,7 +168,7 @@ export async function POST(request: Request) {
       const comments = await fetchMetaPostComments({
         accessToken: pageToken,
         postId: target.postId,
-        commentsLimit: commentsPerAdTargetLimit,
+        commentsLimit: limits.commentsPerTarget,
         since: recentSince,
       });
 
@@ -169,7 +181,7 @@ export async function POST(request: Request) {
           accountId: pageAccount.id,
           accountName: pageAccount.name,
           comment,
-          ingestSource: "ads_manual",
+          ingestSource: parsed.data.mode === "fast" ? "ads_auto" : "ads_manual",
           source: "ad_comment",
           providerAdId: target.adId,
         });
@@ -198,9 +210,10 @@ export async function POST(request: Request) {
     targets: {
       found: targets.length,
       matchedPages: matchedTargets.length,
-      scannedAdAccounts: adAccountScanLimit,
-      scannedAdsPerAccount: adsPerAccountScanLimit,
+      scannedAdAccounts: limits.adAccounts,
+      scannedAdsPerAccount: limits.adsPerAccount,
       scannedPosts: matchedTargets.length,
+      mode: parsed.data.mode,
     },
     comments: {
       found: commentsFound,

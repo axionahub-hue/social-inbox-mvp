@@ -59,6 +59,7 @@ const ingestSourceLabels: Record<IngestSource, string> = {
   webhook: "Webhook",
   polling_fast: "Polling rapido",
   polling_full: "Sync manual",
+  ads_auto: "Ads auto",
   ads_manual: "Ads manual",
   unknown: "Origen pendiente",
 };
@@ -67,6 +68,7 @@ const ingestSourceColors: Record<IngestSource, string> = {
   webhook: "bg-violet-50 text-violet-700 ring-violet-200",
   polling_fast: "bg-cyan-50 text-cyan-700 ring-cyan-200",
   polling_full: "bg-slate-100 text-slate-700 ring-slate-200",
+  ads_auto: "bg-orange-50 text-orange-800 ring-orange-200",
   ads_manual: "bg-amber-50 text-amber-800 ring-amber-200",
   unknown: "bg-slate-50 text-slate-500 ring-slate-200",
 };
@@ -111,6 +113,7 @@ const metaRequiredScopes = [
 ];
 
 const facebookCommentSyncIntervalMs = 5000;
+const metaAdCommentSyncIntervalMs = 30000;
 
 const metaCapabilityChecks = [
   {
@@ -212,6 +215,11 @@ type RunActionOptions = {
   messageId?: string;
 };
 
+type BlockedAuthor = {
+  key: string;
+  item: InboxItem;
+};
+
 type MetaWebhookDiagnostics = {
   app?: {
     pageFeedActive: boolean;
@@ -292,6 +300,7 @@ export default function Home() {
   const hasLoadedQuickReplies = useRef(false);
   const hasLoadedRemoteWorkspace = useRef(false);
   const commentSyncInFlight = useRef(false);
+  const adCommentSyncInFlight = useRef(false);
   const realtimeRefreshTimeout = useRef<number | null>(null);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
@@ -345,6 +354,10 @@ export default function Home() {
       channel.scopes.includes("pages_read_engagement") &&
       channel.scopes.includes("pages_read_user_content"),
   );
+  const canAutoSyncMetaAdComments =
+    grantedMetaScopes.includes("ads_read") &&
+    grantedMetaScopes.includes("pages_read_engagement") &&
+    realMetaChannels.some((channel) => channel.network === "facebook");
   const workspaceBootstrap = useRef<{
     userId: string;
     promise: Promise<string | null>;
@@ -374,6 +387,22 @@ export default function Home() {
     ? resolveRecipientExternalId(selectedItem)
     : undefined;
   const shouldShowReplyModeSelector = selectedItem ? isCommentItem(selectedItem) : false;
+  const blockedAuthors = useMemo(() => {
+    const blockedByAuthor = new Map<string, BlockedAuthor>();
+
+    for (const item of items) {
+      if (!item.blocked) {
+        continue;
+      }
+
+      const key = `${item.accountId}:${item.contactHandle}:${item.contactName}`;
+      if (!blockedByAuthor.has(key)) {
+        blockedByAuthor.set(key, { key, item });
+      }
+    }
+
+    return [...blockedByAuthor.values()];
+  }, [items]);
   const selectedItemSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const filteredItemIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
   const selectedVisibleCount = filteredItemIds.filter((id) => selectedItemSet.has(id)).length;
@@ -1437,25 +1466,37 @@ export default function Home() {
     }
   }
 
-  async function syncMetaAdComments() {
+  const syncMetaAdComments = useCallback(async ({ automatic = false }: { automatic?: boolean } = {}) => {
     if (!supabase || !currentUser || !activeWorkspaceId) {
-      setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar Ads.");
+      if (!automatic) {
+        setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar Ads.");
+      }
       return;
     }
 
-    setIsMetaAdCommentsSyncing(true);
+    if (adCommentSyncInFlight.current) {
+      return;
+    }
+
+    adCommentSyncInFlight.current = true;
+
+    if (!automatic) {
+      setIsMetaAdCommentsSyncing(true);
+    }
 
     try {
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
 
       if (!accessToken) {
-        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+        if (!automatic) {
+          setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+        }
         return;
       }
 
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+      const timeoutId = window.setTimeout(() => controller.abort(), automatic ? 15000 : 25000);
       const response = await fetch("/api/meta/sync/ad-comments", {
         method: "POST",
         signal: controller.signal,
@@ -1465,6 +1506,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           workspaceId: activeWorkspaceId,
+          mode: automatic ? "fast" : "full",
         }),
       });
       window.clearTimeout(timeoutId);
@@ -1475,7 +1517,9 @@ export default function Home() {
           ? ` Error: ${firstError.target ? `${firstError.target}: ` : ""}${firstError.message}`
           : "";
 
-      setMetaConnectionMessage(`${payload.message ?? "Sincronizacion Ads finalizada."}${errorDetail}`);
+      if (!automatic || !payload.ok || (payload.comments?.inserted ?? 0) > 0) {
+        setMetaConnectionMessage(`${payload.message ?? "Sincronizacion Ads finalizada."}${errorDetail}`);
+      }
 
       if (!response.ok || !payload.ok) {
         return;
@@ -1485,17 +1529,26 @@ export default function Home() {
       setChannelList(inboxData.channels);
       setItems(inboxData.items);
       setInboxSource("supabase");
-      setNotice(`${payload.comments?.inserted ?? 0} comentario(s) de Ads nuevo(s) importado(s).`);
+      if ((payload.comments?.inserted ?? 0) > 0) {
+        setNotice(`${payload.comments?.inserted ?? 0} comentario(s) de Ads nuevo(s) importado(s).`);
+      } else if (!automatic) {
+        setNotice("Sincronizacion Ads finalizada sin comentarios nuevos.");
+      }
     } catch (error) {
-      setMetaConnectionMessage(
-        error instanceof DOMException && error.name === "AbortError"
-          ? "La sincronizacion Ads tardo demasiado y fue cancelada en la UI. Intenta de nuevo en unos segundos."
-          : "No se pudo sincronizar comentarios de Ads.",
-      );
+      if (!automatic) {
+        setMetaConnectionMessage(
+          error instanceof DOMException && error.name === "AbortError"
+            ? "La sincronizacion Ads tardo demasiado y fue cancelada en la UI. Intenta de nuevo en unos segundos."
+            : "No se pudo sincronizar comentarios de Ads.",
+        );
+      }
     } finally {
-      setIsMetaAdCommentsSyncing(false);
+      adCommentSyncInFlight.current = false;
+      if (!automatic) {
+        setIsMetaAdCommentsSyncing(false);
+      }
     }
-  }
+  }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
 
   useEffect(() => {
     if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
@@ -1514,6 +1567,24 @@ export default function Home() {
       window.clearInterval(intervalId);
     };
   }, [activeWorkspaceId, canAutoSyncFacebookComments, currentUser, syncFacebookComments]);
+
+  useEffect(() => {
+    if (!canAutoSyncMetaAdComments || !currentUser || !activeWorkspaceId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void syncMetaAdComments({ automatic: true });
+    }, 6000);
+    const intervalId = window.setInterval(() => {
+      void syncMetaAdComments({ automatic: true });
+    }, metaAdCommentSyncIntervalMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [activeWorkspaceId, canAutoSyncMetaAdComments, currentUser, syncMetaAdComments]);
 
   async function runAction(action: InboxAction, message?: string, options?: RunActionOptions) {
     if (!selectedItem) return;
@@ -1553,7 +1624,15 @@ export default function Home() {
 
     setItems((current) =>
       current.map((item) =>
-        item.id === selectedItem.id ? applyInboxActionToItem(item, action, message) : item,
+        action === "block" || action === "unblock"
+          ? item.accountId === selectedItem.accountId &&
+            item.contactHandle === selectedItem.contactHandle &&
+            item.contactName === selectedItem.contactName
+            ? applyInboxActionToItem(item, action, message)
+            : item
+          : item.id === selectedItem.id
+            ? applyInboxActionToItem(item, action, message)
+            : item,
       ),
     );
 
@@ -1694,6 +1773,55 @@ export default function Home() {
     if (!selectedItem) return;
 
     void runAction("delete_message", undefined, { messageId });
+  }
+
+  async function unblockAuthorFromList(author: BlockedAuthor) {
+    const target = author.item;
+
+    setItems((current) =>
+      current.map((item) =>
+        item.accountId === target.accountId &&
+        item.contactHandle === target.contactHandle &&
+        item.contactName === target.contactName
+          ? { ...item, blocked: false }
+          : item,
+      ),
+    );
+
+    try {
+      const session = supabase ? await supabase.auth.getSession() : null;
+      const accessToken = session?.data.session?.access_token;
+      const response = await fetch("/api/inbox/action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          itemId: target.id,
+          externalId: target.providerCommentId ?? target.providerPostId ?? target.id,
+          action: "unblock",
+        }),
+      });
+      const result = await response.json();
+
+      setNotice(result.message ?? "Autor desbloqueado.");
+
+      if (!response.ok && activeWorkspaceId) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+    } catch {
+      if (activeWorkspaceId) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+      setNotice("No se pudo desbloquear el autor.");
+    }
   }
 
   return (
@@ -1880,6 +2008,50 @@ export default function Home() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="mt-3 rounded-md border border-white/10 bg-white/[0.04] p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Autores bloqueados
+                </p>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+                  {blockedAuthors.length}
+                </span>
+              </div>
+              {blockedAuthors.length > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {blockedAuthors.map((author) => (
+                    <div
+                      className="flex items-center gap-2 rounded-md border border-white/10 bg-black/10 p-2"
+                      key={author.key}
+                    >
+                      <div className="grid size-8 shrink-0 place-items-center rounded-md bg-slate-900 text-xs font-semibold text-white">
+                        {author.item.avatarInitials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-white">
+                          {author.item.contactName}
+                        </p>
+                        <p className="truncate text-[11px] text-slate-400">
+                          {author.item.accountName}
+                        </p>
+                      </div>
+                      <button
+                        className="grid size-8 shrink-0 place-items-center rounded-md border border-white/10 text-slate-200 hover:bg-white/10"
+                        onClick={() => void unblockAuthorFromList(author)}
+                        title="Desbloquear autor"
+                      >
+                        <Ban size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  No hay autores bloqueados.
+                </p>
+              )}
             </div>
           </div>
 
@@ -2131,8 +2303,10 @@ export default function Home() {
                 {isMetaAdCommentsSyncing ? "Sincronizando Ads..." : "Sincronizar comentarios Ads"}
               </button>
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                {canAutoSyncFacebookComments
-                  ? "Auto-sinc rapida activa mientras la app este abierta. Webhooks Meta se diagnostican arriba."
+                {canAutoSyncFacebookComments || canAutoSyncMetaAdComments
+                  ? `Auto-sinc activa: Facebook organico${
+                      canAutoSyncMetaAdComments ? " y Ads cada 30s" : ""
+                    }. Webhooks Meta se diagnostican arriba.`
                   : "Auto-sinc pendiente hasta conceder permisos de lectura de comentarios."}
               </p>
             </div>
@@ -2684,6 +2858,12 @@ function InboxRow({
                 {item.unreadCount}
               </span>
             ) : null}
+            {item.blocked ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-1 text-xs font-semibold text-white">
+                <Ban size={12} />
+                Bloqueado
+              </span>
+            ) : null}
           </div>
           <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-600">{item.preview}</p>
         </div>
@@ -2732,7 +2912,7 @@ function ConversationHeader({
               <h2 className="truncate text-lg font-semibold">{item.contactName}</h2>
               <Icon size={17} className="shrink-0 text-slate-500" />
               <button
-                className={`grid size-8 shrink-0 place-items-center rounded-md border ${
+                className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold ${
                   item.blocked
                     ? "border-slate-950 bg-slate-950 text-white"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -2741,6 +2921,7 @@ function ConversationHeader({
                 title={item.blocked ? "Desbloquear usuario" : "Bloquear usuario"}
               >
                 <Ban size={15} />
+                {item.blocked ? "Desbloquear" : "Bloquear autor"}
               </button>
             </div>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">

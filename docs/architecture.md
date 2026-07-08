@@ -100,9 +100,17 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `/api/meta/sync/ad-comments` lista anuncios recientes, lee el creative y usa `effective_object_story_id` u `object_story_id` para encontrar el post/story asociado al anuncio.
 - La sincronizacion filtra solo Pages conectadas al workspace y usa el page token cifrado para leer comentarios.
 - La pasada manual de Ads esta acotada para no bloquear la UI: no pagina todo el historico de anuncios, deduplica por post/story y limita cuantos posts de anuncio revisa por llamada.
+- La UI ejecuta una pasada automatica de Ads cada 30 segundos mientras la app esta abierta y existen permisos `ads_read` + `pages_read_engagement`. Esa pasada usa `mode = fast` con limites mas bajos que el boton manual.
 - Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico de Ads.
-- Los comentarios importados se normalizan como `source = ad_comment`, `ingest_source = ads_manual` y guardan `provider_ad_id`.
+- Los comentarios importados se normalizan como `source = ad_comment`; usan `ingest_source = ads_auto` si entran por auto-sync y `ads_manual` si entran por boton manual; guardan `provider_ad_id`.
 - Esta primera version puede no cubrir todos los formatos de anuncio; si un creative no expone story/post asociado, se debe ampliar la lectura de campos de creative.
+
+## Bloqueo de autores
+
+- `block` y `unblock` actualizan `contacts.is_blocked` como bloqueo interno de la app.
+- La cabecera de conversacion muestra una accion visible `Bloquear autor` / `Desbloquear`.
+- La columna de cuentas incluye el apartado `Autores bloqueados` para listar autores bloqueados y desbloquearlos sin buscar una conversacion especifica.
+- El bloqueo real contra Meta queda pendiente hasta validar el endpoint correcto por plataforma; la app no debe presentar el bloqueo interno como bloqueo externo en Facebook/Instagram.
 
 ## Auth y workspace
 

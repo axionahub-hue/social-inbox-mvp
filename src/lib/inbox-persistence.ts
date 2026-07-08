@@ -27,7 +27,7 @@ export async function persistFacebookComment({
   accountId: string;
   accountName: string;
   comment: MetaOrganicComment;
-  ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_manual" | "unknown";
+  ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_auto" | "ads_manual" | "unknown";
   source?: InboxSource;
   providerAdId?: string | null;
 }) {
