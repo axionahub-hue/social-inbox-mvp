@@ -79,7 +79,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full`, `ads_manual` o quedo como `unknown`.
-- Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible en Meta` en vez de inventar identidad. En comentarios de Ads se intento validar con consulta directa por `comment_id`; si Graph sigue devolviendo `from = null`, no hay identidad recuperable por API para ese comentario.
+- Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor pendiente` en vez de inventar identidad o pisar un autor real ya guardado.
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
@@ -120,6 +120,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `/api/meta/ads/diagnostics` valida si existe schema/token/scope y lista `/me/adaccounts`.
 - `/api/meta/sync/ad-comments` lista anuncios recientes, lee el creative y usa `effective_object_story_id` u `object_story_id` para encontrar el post/story asociado al anuncio.
 - La sincronizacion filtra solo Pages conectadas al workspace y usa el page token cifrado para leer comentarios.
+- Si un comentario de Ads llega sin `from`, la sincronizacion intenta una segunda lectura directa por `comment_id` antes de persistirlo. En pruebas reales, algunos comentarios de Ads devuelven `200 OK` pero sin campo `from` tanto por `/POST_ID/comments` como por `/{comment_id}`; esos casos quedan como `Autor pendiente` para no afirmar una identidad falsa.
 - La pasada manual de Ads esta acotada para no bloquear la UI: no pagina todo el historico de anuncios, deduplica por post/story y limita cuantos posts de anuncio revisa por llamada.
 - La UI ejecuta una pasada automatica de Ads cada 30 segundos mientras la app esta abierta y existen permisos `ads_read` + `pages_read_engagement`. Esa pasada usa `mode = full` y limites de pagina maximos habituales de Graph (`100`) para anuncios y comentarios. El boton manual queda como respaldo de diagnostico, no como requisito operativo.
 - Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico de Ads.

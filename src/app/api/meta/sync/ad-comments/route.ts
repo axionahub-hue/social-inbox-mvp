@@ -4,6 +4,7 @@ import {
   createRecentMetaCommentSince,
   decryptMetaToken,
   fetchMetaAdCommentTargets,
+  fetchMetaCommentContext,
   fetchMetaPostComments,
   metaRecentCommentWindowHours,
 } from "@/lib/meta";
@@ -179,12 +180,30 @@ export async function POST(request: Request) {
       commentsFound += comments.length;
 
       for (const comment of comments) {
+        const enrichedComment =
+          comment.fromId && comment.fromName
+            ? comment
+            : await fetchMetaCommentContext({
+                accessToken: pageToken,
+                commentId: comment.commentId,
+                postId: comment.postId,
+                fallback: {
+                  postId: comment.postId,
+                  commentId: comment.commentId,
+                  message: comment.message,
+                  fromId: comment.fromId,
+                  fromName: comment.fromName,
+                  createdTime: comment.createdTime,
+                  isHidden: comment.isHidden,
+                  permalink: comment.permalink,
+                },
+              });
         const result = await persistFacebookComment({
           supabase,
           workspaceId: parsed.data.workspaceId,
           accountId: pageAccount.id,
           accountName: pageAccount.name,
-          comment,
+          comment: enrichedComment,
           ingestSource: parsed.data.trigger === "auto" ? "ads_auto" : "ads_manual",
           source: "ad_comment",
           providerAdId: target.adId,

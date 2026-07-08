@@ -507,7 +507,7 @@ async function ensureFacebookContact({
   comment: MetaOrganicComment;
 }) {
   const providerUserId = comment.fromId ?? `comment-author:${comment.commentId}`;
-  const displayName = comment.fromName ?? "Autor no disponible en Meta";
+  const displayName = comment.fromName ?? "Autor pendiente";
   const existing = await supabase
     .from("contacts")
     .select("id")
@@ -521,13 +521,16 @@ async function ensureFacebookContact({
   }
 
   if (existing.data?.id) {
-    await supabase
-      .from("contacts")
-      .update({
-        display_name: displayName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existing.data.id);
+    if (comment.fromName) {
+      await supabase
+        .from("contacts")
+        .update({
+          display_name: displayName,
+          handle: comment.fromId ? `facebook:${comment.fromId}` : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.data.id);
+    }
 
     return existing.data.id as string;
   }

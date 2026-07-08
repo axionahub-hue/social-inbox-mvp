@@ -186,7 +186,7 @@
 
 ### UX operativa de bandeja y seleccion masiva
 
-- Resumen: se agregaron identificadores visibles de plataforma, cuenta y tipo de item en filas/cabecera, checkboxes por conversacion, seleccion de visibles, acciones masivas para leido/no leido/archivar/desarchivar, fecha con anio y fallback `Autor no disponible` cuando Meta no entrega autor del comentario.
+- Resumen: se agregaron identificadores visibles de plataforma, cuenta y tipo de item en filas/cabecera, checkboxes por conversacion, seleccion de visibles, acciones masivas para leido/no leido/archivar/desarchivar, fecha con anio y fallback inicial de autor pendiente cuando Meta no entrega autor del comentario.
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `GET /api/health`, smoke desktop/mobile con navegador sin errores de consola ni overflow horizontal; en movil se elimino el scroll interno doble de la bandeja.
 - Pendiente: agregar `pages_manage_engagement` para ejecutar acciones reales de moderacion en Meta y volver a probar si Meta devuelve autor de comentario con permisos ampliados.
@@ -488,6 +488,13 @@
 
 ### Emojis y autor real en Instagram DM
 
-- Resumen: el footer del composer suma un boton de emojis junto a archivar/desarchivar. El webhook Instagram DM ahora llama User Profile API con el IGSID para guardar `name` y `username` en `contacts`, corrigiendo contactos tipo `Instagram 265524`. Para comentarios Facebook Ads se verifico con Graph directo que algunos `comment_id` devuelven `from = null`; en esos casos el fallback pasa a `Autor no disponible en Meta`.
+- Resumen: el footer del composer suma un boton de emojis junto a archivar/desarchivar. El webhook Instagram DM ahora llama User Profile API con el IGSID para guardar `name` y `username` en `contacts`, corrigiendo contactos tipo `Instagram 265524`. Para comentarios Facebook Ads se verifico con Graph directo que algunos `comment_id` devuelven `from = null`; esos casos quedan como identidad pendiente.
 - Areas tocadas: `src/app/page.tsx`, `src/app/api/meta/webhook/route.ts`, `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, actualizar contactos existentes y probar nuevo DM Instagram.
+
+### Picker completo de emojis y autor pendiente Ads
+
+- Resumen: se reemplazo la lista corta de emojis por `emoji-picker-react`, con buscador y catalogo completo. Para comentarios Facebook Ads, la sincronizacion ya no pisa contactos reales cuando una lectura viene sin `from`; si falta identidad, intenta una consulta directa por `comment_id` y solo deja `Autor pendiente` cuando Graph tampoco devuelve autor.
+- Areas tocadas: `package.json`, `package-lock.json`, `src/app/page.tsx`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Se actualizaron contactos antiguos de Supabase con fallback previo a `Autor pendiente`.
+- Pendiente: desplegar en Vercel y probar un comentario Ads nuevo para confirmar si Meta entrega `from` en ese caso concreto.

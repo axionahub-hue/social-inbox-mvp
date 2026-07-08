@@ -40,6 +40,7 @@ import type {
   ReplyMode,
 } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
+import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 
 const sourceLabels: Record<InboxSource, string> = {
   messenger: "Messenger",
@@ -116,7 +117,6 @@ const metaRequiredScopes = [
 const facebookCommentSyncIntervalMs = 5000;
 const metaAdCommentSyncIntervalMs = 30000;
 const instagramCommentSyncIntervalMs = 10000;
-const emojiOptions = ["😀", "😊", "🙌", "👏", "🙏", "🎶", "🎤", "❤️", "🔥", "✨", "✅", "👍"];
 
 const metaCapabilityChecks = [
   {
@@ -1255,8 +1255,8 @@ export default function Home() {
     setIsQuickReplyPanelOpen(false);
   }
 
-  function insertEmoji(emoji: string) {
-    setComposer((current) => `${current}${emoji}`);
+  function insertEmoji(emojiData: EmojiClickData) {
+    setComposer((current) => `${current}${emojiData.emoji}`);
     setIsEmojiPanelOpen(false);
   }
 
@@ -2993,18 +2993,16 @@ export default function Home() {
                         <Smile size={17} />
                       </ActionButton>
                       {isEmojiPanelOpen ? (
-                        <div className="absolute bottom-12 left-0 z-20 grid w-48 grid-cols-6 gap-1 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
-                          {emojiOptions.map((emoji) => (
-                            <button
-                              className="grid size-7 place-items-center rounded text-base hover:bg-slate-100"
-                              key={emoji}
-                              onClick={() => insertEmoji(emoji)}
-                              title={`Insertar ${emoji}`}
-                              type="button"
-                            >
-                              {emoji}
-                            </button>
-                          ))}
+                        <div className="absolute bottom-12 left-0 z-20 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+                          <EmojiPicker
+                            height={360}
+                            lazyLoadEmojis
+                            onEmojiClick={insertEmoji}
+                            previewConfig={{ showPreview: false }}
+                            searchPlaceholder="Buscar emoji"
+                            theme={Theme.LIGHT}
+                            width={320}
+                          />
                         </div>
                       ) : null}
                     </div>
@@ -3470,9 +3468,15 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
   const account = firstOrNull(row.connected_accounts);
   const contact = firstOrNull(row.contacts);
   const contactName =
-    !contact?.display_name || contact.display_name === "Usuario Facebook"
-      ? "Autor no disponible"
+    !contact?.display_name ||
+    contact.display_name === "Usuario Facebook" ||
+    contact.display_name === "Autor no disponible" ||
+    contact.display_name === "Autor no disponible en Meta"
+      ? "Autor pendiente"
       : contact.display_name;
+  const contactHandle =
+    contact?.handle ??
+    (contactName === "Autor pendiente" ? "Identidad pendiente" : "Sin identificador");
   const messages = [...(row.inbox_messages ?? [])].sort(
     (left, right) => new Date(left.sent_at).getTime() - new Date(right.sent_at).getTime(),
   );
@@ -3486,7 +3490,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     sentiment: "neutral",
     accountName: account?.name ?? "Cuenta conectada",
     contactName,
-    contactHandle: contact?.handle ?? "Meta no envio identidad del autor",
+    contactHandle,
     avatarInitials: getInitials(contactName),
     title: row.title,
     preview: row.preview,

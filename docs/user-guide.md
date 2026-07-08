@@ -140,7 +140,7 @@ Para Instagram DM, ademas de scopes, Meta Developers debe tener Webhooks con obj
 Si al responder por DM aparece `(#3) Application does not have the capability`, revisa en App Review / Permissions and Features que `instagram_manage_messages` tenga acceso avanzado y que la capacidad de Instagram Messaging este disponible para la app.
 
 En comentarios, las acciones junto al mensaje recibido permiten dar like, ocultar/mostrar y eliminar. Eliminar comentario borra primero en Meta y solo retira la conversacion local cuando Meta confirma.
-En DM Instagram, la app intenta resolver el nombre del autor con el IGSID recibido por webhook. En comentarios de Ads, si Meta no devuelve `from` ni al consultar el comentario directo, la app muestra `Autor no disponible en Meta`.
+En DM Instagram, la app intenta resolver el nombre del autor con el IGSID recibido por webhook. En comentarios de Ads, si Meta no devuelve `from` en la lectura del post ni en la consulta directa del comentario, la app muestra `Autor pendiente` y mantiene el comentario accionable hasta que exista una ruta soportada para enriquecer esa identidad.
 En Instagram, responder sobre comentario publica una respuesta publica. Responder por DM usa Instagram Messaging y puede requerir una capacidad adicional habilitada por Meta, aunque el scope `instagram_manage_messages` ya este concedido.
 
 ## Limitaciones actuales
