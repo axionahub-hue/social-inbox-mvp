@@ -106,6 +106,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - A diferencia de Facebook, una respuesta publica Instagram no intenta enviar copia privada automatica. La respuesta por DM queda separada y depende de que Meta habilite la capacidad de Instagram Messaging para la app.
 - El webhook `/api/meta/webhook` queda preparado para `object = instagram`: normaliza cambios `comments` y eventos `entry.messaging[]` como `instagram_dm`.
 - Los DM Instagram entrantes se guardan como `inbox_items.source = instagram_dm`; las respuestas intentan usar el Send API de Instagram con `recipient.id`.
+- Las respuestas de Instagram DM usan Send API `me/messages` con Page token y `recipient.id = IGSID` recibido en el webhook.
 - Para que DM Instagram funcione en tiempo real hay que activar Webhooks `Instagram` con el campo `messages` en Meta Developers y reautorizar con `instagram_manage_messages`.
 - Si Meta devuelve `(#3) Application does not have the capability`, la app tiene el scope pero falta habilitar acceso avanzado/capacidad de Instagram Messaging en Meta.
 - Para reacciones/likes en comentarios Instagram se agrega `instagram_manage_engagement` como permiso objetivo.

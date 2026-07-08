@@ -1151,7 +1151,7 @@ function resolveMetaActionErrorMessage(input: MetaActionInput, payload: unknown)
 
   if (input.action === "reply" && input.replyMode === "private_message") {
     if (input.network === "instagram" && errorCode === 3) {
-      return "Meta rechazo el DM de Instagram porque la app aun no tiene habilitada la capacidad de Instagram Messaging para esta llamada.";
+      return "Meta rechazo el DM de Instagram. Revisa que Instagram Messaging tenga acceso/capacidad habilitada para la app y que el destinatario sea un IGSID valido del webhook.";
     }
 
     if (errorCode === 10900) {
@@ -1358,9 +1358,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
   switch (input.action) {
     case "reply":
       if (input.replyMode === "private_message") {
-        return input.network === "instagram" && input.accountExternalId
-          ? `${input.accountExternalId}/messages`
-          : "me/messages";
+        return "me/messages";
       }
 
       return input.network === "instagram"
