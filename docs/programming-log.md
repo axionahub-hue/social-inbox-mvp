@@ -505,3 +505,10 @@
 - Cambio: `persistFacebookComment` y `persistInstagramComment` ahora actualizan `contact_id` en items existentes para que una resincronizacion posterior pueda reemplazar `Autor pendiente` por el contacto real si Meta empieza a devolver identidad.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Pendiente: llevar la app Meta a Live/Full Access o confirmar con Meta App Review que `pages_read_user_content` permite exponer `from` para comentarios de Ads de usuarios reales.
+
+### Preservar autor real al reclasificar organico a Ads
+
+- Resumen: se corrigio un caso donde un comentario de Ad entraba primero por lectura organica con autor real y segundos despues `ads_auto` lo reclasificaba como `ad_comment` con una lectura sin `from`, reemplazando el contacto real por `Autor pendiente`. Ahora, si el item ya existe con contacto real y la nueva lectura no trae `from`, se conserva `contact_id` y solo se actualiza `source`, `provider_ad_id` y metadatos.
+- Dato corregido: el comentario `Cuanto sale el curso?` de Academia Expertos de la Musica quedo como `ad_comment` y se reasigno al contacto real `Alejandro Hernandez Yanez`.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`.

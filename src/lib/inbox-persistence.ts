@@ -58,8 +58,14 @@ export async function persistFacebookComment({
   }
 
   if (existingItem.data?.id) {
+    const nextContactId =
+      comment.fromId || comment.fromName ? contactId : await resolveExistingItemContactId({
+        supabase,
+        itemId: existingItem.data.id as string,
+        fallbackContactId: contactId,
+      });
     const updatePayload = {
-      contact_id: contactId,
+      contact_id: nextContactId,
       title,
       preview,
       source,
@@ -82,7 +88,7 @@ export async function persistFacebookComment({
       const retryResult = await supabase
         .from("inbox_items")
         .update({
-          contact_id: contactId,
+          contact_id: nextContactId,
           title,
           preview,
           source,
@@ -168,6 +174,46 @@ export async function persistFacebookComment({
   });
 
   return "inserted";
+}
+
+async function resolveExistingItemContactId({
+  supabase,
+  itemId,
+  fallbackContactId,
+}: {
+  supabase: SupabaseServiceClient;
+  itemId: string;
+  fallbackContactId: string;
+}) {
+  const existing = await supabase
+    .from("inbox_items")
+    .select("contact_id,contacts(provider_user_id,display_name,handle)")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (existing.error) {
+    throw new Error(existing.error.message);
+  }
+
+  const contact = firstOrNull(
+    existing.data?.contacts as
+      | { provider_user_id?: string | null; display_name?: string | null; handle?: string | null }
+      | Array<{
+          provider_user_id?: string | null;
+          display_name?: string | null;
+          handle?: string | null;
+        }>
+      | null
+      | undefined,
+  );
+  const providerUserId = contact?.provider_user_id ?? "";
+  const hasRealContact =
+    Boolean(existing.data?.contact_id) &&
+    Boolean(contact?.display_name) &&
+    Boolean(contact?.handle) &&
+    !providerUserId.startsWith("comment-author:");
+
+  return hasRealContact ? (existing.data!.contact_id as string) : fallbackContactId;
 }
 
 export async function persistInstagramComment({
@@ -838,4 +884,12 @@ function normalizeDate(value: string | null) {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function firstOrNull<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
 }
