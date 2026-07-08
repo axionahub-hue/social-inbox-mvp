@@ -80,6 +80,7 @@ export async function persistFacebookComment({
       ingest_source: ingestSource,
       provider_post_id: comment.postId,
       provider_ad_id: providerAdId,
+      provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
       updated_at: now,
     };
     const updateResult = await supabase
@@ -88,7 +89,7 @@ export async function persistFacebookComment({
       .eq("id", existingItem.data.id);
 
     if (updateResult.error) {
-      if (!updateResult.error.message.includes("ingest_source")) {
+      if (!isOptionalInboxColumnError(updateResult.error.message)) {
         throw new Error(updateResult.error.message);
       }
 
@@ -131,6 +132,7 @@ export async function persistFacebookComment({
     provider_comment_id: comment.commentId,
     provider_post_id: comment.postId,
     provider_ad_id: providerAdId,
+    provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
     title,
     preview,
     is_hidden: comment.isHidden,
@@ -145,7 +147,7 @@ export async function persistFacebookComment({
     .select("id")
     .single();
 
-  if (insertResult.error?.message.includes("ingest_source")) {
+  if (insertResult.error && isOptionalInboxColumnError(insertResult.error.message)) {
     insertResult = await supabase
       .from("inbox_items")
       .insert({
@@ -278,12 +280,32 @@ export async function persistInstagramComment({
         is_hidden: comment.isHidden,
         ingest_source: ingestSource,
         provider_post_id: comment.postId,
+        provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
         updated_at: now,
       })
       .eq("id", existingItem.data.id);
 
     if (updateResult.error) {
-      throw new Error(updateResult.error.message);
+      if (!isOptionalInboxColumnError(updateResult.error.message)) {
+        throw new Error(updateResult.error.message);
+      }
+
+      const retryResult = await supabase
+        .from("inbox_items")
+        .update({
+          contact_id: contactId,
+          title,
+          preview,
+          source: "post_comment",
+          is_hidden: comment.isHidden,
+          provider_post_id: comment.postId,
+          updated_at: now,
+        })
+        .eq("id", existingItem.data.id);
+
+      if (retryResult.error) {
+        throw new Error(retryResult.error.message);
+      }
     }
 
     await ensureInstagramMessage({
@@ -296,7 +318,7 @@ export async function persistInstagramComment({
     return "updated";
   }
 
-  const insertResult = await supabase
+  let insertResult = await supabase
     .from("inbox_items")
     .insert({
       workspace_id: workspaceId,
@@ -308,6 +330,7 @@ export async function persistInstagramComment({
       provider_comment_id: comment.commentId,
       provider_post_id: comment.postId,
       provider_ad_id: null,
+      provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
       title,
       preview,
       is_hidden: comment.isHidden,
@@ -318,6 +341,30 @@ export async function persistInstagramComment({
     })
     .select("id")
     .single();
+
+  if (insertResult.error && isOptionalInboxColumnError(insertResult.error.message)) {
+    insertResult = await supabase
+      .from("inbox_items")
+      .insert({
+        workspace_id: workspaceId,
+        account_id: accountId,
+        contact_id: contactId,
+        source: "post_comment",
+        status: "new",
+        provider_thread_id: comment.postId,
+        provider_comment_id: comment.commentId,
+        provider_post_id: comment.postId,
+        provider_ad_id: null,
+        title,
+        preview,
+        is_hidden: comment.isHidden,
+        unread_count: 1,
+        received_at: receivedAt,
+        updated_at: now,
+      })
+      .select("id")
+      .single();
+  }
 
   if (insertResult.error) {
     throw new Error(insertResult.error.message);
@@ -942,6 +989,10 @@ function isSelfAuthoredComment({
   accountExternalId: string;
 }) {
   return Boolean(authorId) && authorId === accountExternalId;
+}
+
+function isOptionalInboxColumnError(message: string) {
+  return message.includes("ingest_source") || message.includes("provider_permalink_url");
 }
 
 function firstOrNull<T>(value: T | T[] | null | undefined) {

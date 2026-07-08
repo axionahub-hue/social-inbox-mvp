@@ -538,3 +538,10 @@
 - Dato corregido: el mensaje `Buen dia profesor ! Que precio tiene el curso de tocar piano o teclado ?` de Academia Expertos de la Musica quedo asociado a `Charly AG`.
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: Graph `/{page-id}/conversations?user_id={PSID}` devolvio `Charly AG`; `npm run lint`, `npm run build`.
+
+### Permalink exacto para comentarios anidados
+
+- Resumen: se agrego `inbox_items.provider_permalink_url` para guardar el permalink exacto de Meta y usarlo en `Abrir publicacion original`. Esto evita perderse en Facebook cuando el item es una respuesta a otro comentario dentro de un hilo.
+- Dato auditado: el comentario de `Fernando Piedra T` fue respondido correctamente por Meta. La respuesta publica existe como `1005379315495187_27494472300206374`, parent directo `1005379315495187_1706997957184725`, y no esta oculta. Tambien se envio copia privada por Messenger. El item se actualizo con el permalink exacto del comentario de Fernando.
+- Areas tocadas: `supabase/schema.sql`, `src/lib/inbox-persistence.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: migracion aplicada en Supabase, backfill del item de Fernando, `npm run lint`, `npm run build`.

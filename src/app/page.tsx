@@ -196,6 +196,7 @@ type InboxItemRow = {
   ingest_source: IngestSource | null;
   provider_comment_id: string | null;
   provider_post_id: string | null;
+  provider_permalink_url?: string | null;
   title: string;
   preview: string;
   is_liked: boolean;
@@ -699,6 +700,7 @@ export default function Home() {
       ingest_source,
       provider_comment_id,
       provider_post_id,
+      provider_permalink_url,
       title,
       preview,
       is_liked,
@@ -729,6 +731,9 @@ export default function Home() {
       )
     `;
     const inboxSelectWithoutIngestSource = inboxSelect.replace("      ingest_source,\n", "");
+    const inboxSelectWithoutOptionalColumns = inboxSelect
+      .replace("      ingest_source,\n", "")
+      .replace("      provider_permalink_url,\n", "");
     let inbox = (await supabase
       .from("inbox_items")
       .select(inboxSelect)
@@ -742,6 +747,17 @@ export default function Home() {
       inbox = (await supabase
         .from("inbox_items")
         .select(inboxSelectWithoutIngestSource)
+        .eq("workspace_id", workspaceId)
+        .order("received_at", { ascending: false })) as {
+        data: unknown[] | null;
+        error: { message: string } | null;
+      };
+    }
+
+    if (inbox.error?.message.includes("provider_permalink_url")) {
+      inbox = (await supabase
+        .from("inbox_items")
+        .select(inboxSelectWithoutOptionalColumns)
         .eq("workspace_id", workspaceId)
         .order("received_at", { ascending: false })) as {
         data: unknown[] | null;
@@ -3556,6 +3572,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     assignee: "Sin asignar",
     providerPostId: row.provider_post_id ?? undefined,
     providerCommentId: row.provider_comment_id ?? undefined,
+    originalUrl: row.provider_permalink_url ?? undefined,
     ingestSource: row.ingest_source ?? "unknown",
     unreadCount: row.unread_count,
     liked: row.is_liked,

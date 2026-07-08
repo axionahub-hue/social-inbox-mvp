@@ -67,7 +67,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El footer del composer incluye acciones fijas de archivar/desarchivar e insertar emojis sin mover la caja de respuesta.
 - En comentarios, el composer exige elegir modo de respuesta: `public_comment` para responder sobre el comentario y notificar/etiquetar al autor cuando Meta lo permita, o `private_message` para responder por Messenger/DM. La decision viaja a `/api/inbox/action` como `replyMode`.
 - En Facebook, una respuesta publica sobre comentario intenta ademas enviar una copia por `private_replies`; el ID del reply publico devuelto por Meta se guarda en `inbox_messages.provider_message_id` para permitir borrado posterior.
-- Para abrir la publicacion original, la UI usa `originalUrl` si existe y, en Facebook, deriva una URL desde `provider_post_id`. El permalink exacto de Meta queda como mejora de datos persistidos cuando se agregue una columna dedicada.
+- Para abrir la publicacion original, la UI usa `provider_permalink_url` cuando existe. Esto es critico para comentarios anidados, porque la URL derivada desde `provider_post_id` solo abre el post/reel y no necesariamente el hilo exacto. Si la columna aun no existe en un entorno, la UI cae a la URL derivada desde `provider_post_id`.
 
 ## Sincronizacion de comentarios Facebook
 

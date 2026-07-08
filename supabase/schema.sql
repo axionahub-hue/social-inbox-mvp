@@ -80,6 +80,7 @@ create table if not exists inbox_items (
   provider_comment_id text,
   provider_post_id text,
   provider_ad_id text,
+  provider_permalink_url text,
   title text not null,
   preview text not null,
   is_liked boolean not null default false,
@@ -92,6 +93,9 @@ create table if not exists inbox_items (
 
 alter table inbox_items
   add column if not exists ingest_source text not null default 'unknown';
+
+alter table inbox_items
+  add column if not exists provider_permalink_url text;
 
 create table if not exists inbox_messages (
   id uuid primary key default gen_random_uuid(),
