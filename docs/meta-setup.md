@@ -40,6 +40,22 @@ En Vercel se debe reemplazar por:
 https://TU-DOMINIO/api/meta/oauth/callback
 ```
 
+## Politica de privacidad
+
+Meta puede pedir una URL publica de politica de privacidad antes de permitir publicar la app o solicitar accesos avanzados.
+
+En produccion usar:
+
+```text
+https://social-inbox-mvp.vercel.app/privacy
+```
+
+Si Meta pide tambien una URL de eliminacion de datos de usuario, se puede usar la seccion incluida en la misma pagina:
+
+```text
+https://social-inbox-mvp.vercel.app/privacy#eliminacion-de-datos
+```
+
 ## Permisos OAuth de prueba
 
 Por defecto, la app pide solo:
