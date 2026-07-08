@@ -78,6 +78,17 @@ En Vercel se deben crear las mismas variables de entorno. Despues del primer dep
 - Site URL: URL final de Vercel.
 - Redirect URLs: URL final de Vercel con comodin `/**`.
 
+## Cuota Free y egress
+
+El limite mas sensible en el plan Free para esta app es `Egress`, no el tamano de base de datos. La app debe evitar patrones que descarguen la bandeja completa en bucle:
+
+- La carga de inbox cliente esta limitada a los ultimos 120 items.
+- Las auto-sincronizaciones no recargan Supabase cuando Meta responde sin comentarios insertados ni actualizados.
+- Las auto-sincronizaciones se pausan si la pestana del navegador no esta visible.
+- Realtime se usa para enterarse de cambios, pero los refrescos se agrupan con debounce.
+
+Si el proyecto ya excedio `Egress` dentro del ciclo de facturacion, estos cambios reducen consumo futuro pero no reinician el contador de Supabase. Para seguir en plan Free, esperar el reset del ciclo y evitar dejar muchas pestanas abiertas de la app publica.
+
 ## Seguridad
 
 - `SUPABASE_SERVICE_ROLE_KEY` nunca va al cliente.

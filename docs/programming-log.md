@@ -576,3 +576,10 @@
 - Areas tocadas: `supabase/schema.sql`, `supabase/migrations/20260708_action_queue.sql`, `src/lib/inbox-action-queue.ts`, `src/app/api/inbox/action/route.ts`, `src/app/api/inbox/action/process/route.ts`, `src/app/page.tsx`, `src/lib/types.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, ejecutar migracion SQL en Supabase y probar respuesta/like/fallo real.
 - Nota: Codex no pudo aplicar la migracion directamente porque `.env.local` no contiene `SUPABASE_DB_URL` ni `DATABASE_URL`.
+
+### Reduccion de egress Supabase Free
+
+- Resumen: el panel de Supabase marco exceso de `Egress` aunque la base estaba en 6% de uso. Se redujo el patron que descargaba la bandeja completa despues de cada auto-sync, incluso cuando Meta no traia cambios.
+- Cambio: la carga de inbox queda limitada a 120 items, se elimina `access_token_encrypted` de la relacion duplicada por item, las auto-sincronizaciones solo recargan Supabase si insertan/actualizan comentarios o si son manuales, Ads automatico vuelve a `mode = fast`, y el polling automatico se pausa con la pestana oculta.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y monitorear `Egress` en Supabase despues del reset del ciclo.

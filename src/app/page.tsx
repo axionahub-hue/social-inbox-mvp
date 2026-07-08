@@ -120,6 +120,12 @@ const metaRequiredScopes = [
 const facebookCommentSyncIntervalMs = 5000;
 const metaAdCommentSyncIntervalMs = 30000;
 const instagramCommentSyncIntervalMs = 10000;
+const inboxPageSize = 120;
+const realtimeInboxRefreshDebounceMs = 2500;
+
+function shouldRunAutomaticSync() {
+  return typeof document === "undefined" || document.visibilityState === "visible";
+}
 
 const metaCapabilityChecks = [
   {
@@ -730,7 +736,6 @@ export default function Home() {
         provider_account_id,
         name,
         handle,
-        access_token_encrypted,
         scopes,
         updated_at
       ),
@@ -765,7 +770,8 @@ export default function Home() {
       .from("inbox_items")
       .select(inboxSelect)
       .eq("workspace_id", workspaceId)
-      .order("received_at", { ascending: false })) as {
+      .order("received_at", { ascending: false })
+      .limit(inboxPageSize)) as {
       data: unknown[] | null;
       error: { message: string } | null;
     };
@@ -775,7 +781,8 @@ export default function Home() {
         .from("inbox_items")
         .select(inboxSelectWithoutIngestSource)
         .eq("workspace_id", workspaceId)
-        .order("received_at", { ascending: false })) as {
+        .order("received_at", { ascending: false })
+        .limit(inboxPageSize)) as {
         data: unknown[] | null;
         error: { message: string } | null;
       };
@@ -786,7 +793,8 @@ export default function Home() {
         .from("inbox_items")
         .select(inboxSelectWithoutOptionalColumns)
         .eq("workspace_id", workspaceId)
-        .order("received_at", { ascending: false })) as {
+        .order("received_at", { ascending: false })
+        .limit(inboxPageSize)) as {
         data: unknown[] | null;
         error: { message: string } | null;
       };
@@ -1063,7 +1071,7 @@ export default function Home() {
           return inboxData.items[0]?.id;
         });
         realtimeRefreshTimeout.current = null;
-      }, 1200);
+      }, realtimeInboxRefreshDebounceMs);
     };
 
     const channel = supabase
@@ -1386,8 +1394,11 @@ export default function Home() {
 
       const insertedCount =
         typeof payload.comments?.inserted === "number" ? payload.comments.inserted : 0;
+      const updatedCount =
+        typeof payload.comments?.updated === "number" ? payload.comments.updated : 0;
+      const changedCount = insertedCount + updatedCount;
 
-      if (!automatic || insertedCount > 0 || !payload.ok) {
+      if (!automatic || changedCount > 0 || !payload.ok) {
         setMetaConnectionMessage(
           `${payload.message ?? "Sincronizacion finalizada."}${errorDetail}`,
         );
@@ -1397,10 +1408,12 @@ export default function Home() {
         return;
       }
 
-      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
-      setChannelList(inboxData.channels);
-      setItems(inboxData.items);
-      setInboxSource("supabase");
+      if (!automatic || changedCount > 0) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
 
       if (insertedCount > 0) {
         setNotice(`${insertedCount} comentario(s) nuevo(s) importado(s) automaticamente.`);
@@ -1461,8 +1474,11 @@ export default function Home() {
           : "";
       const insertedCount =
         typeof payload.comments?.inserted === "number" ? payload.comments.inserted : 0;
+      const updatedCount =
+        typeof payload.comments?.updated === "number" ? payload.comments.updated : 0;
+      const changedCount = insertedCount + updatedCount;
 
-      if (!automatic || insertedCount > 0 || !payload.ok) {
+      if (!automatic || changedCount > 0 || !payload.ok) {
         setMetaConnectionMessage(
           `${payload.message ?? "Sincronizacion Instagram finalizada."}${errorDetail}`,
         );
@@ -1472,10 +1488,12 @@ export default function Home() {
         return;
       }
 
-      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
-      setChannelList(inboxData.channels);
-      setItems(inboxData.items);
-      setInboxSource("supabase");
+      if (!automatic || changedCount > 0) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
 
       if (insertedCount > 0) {
         setNotice(`${insertedCount} comentario(s) Instagram nuevo(s) importado(s).`);
@@ -1658,7 +1676,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           workspaceId: activeWorkspaceId,
-          mode: "full",
+          mode: automatic ? "fast" : "full",
           trigger: automatic ? "auto" : "manual",
         }),
       });
@@ -1669,8 +1687,13 @@ export default function Home() {
         firstError && typeof firstError.message === "string"
           ? ` Error: ${firstError.target ? `${firstError.target}: ` : ""}${firstError.message}`
           : "";
+      const insertedCount =
+        typeof payload.comments?.inserted === "number" ? payload.comments.inserted : 0;
+      const updatedCount =
+        typeof payload.comments?.updated === "number" ? payload.comments.updated : 0;
+      const changedCount = insertedCount + updatedCount;
 
-      if (!automatic || !payload.ok || (payload.comments?.inserted ?? 0) > 0) {
+      if (!automatic || !payload.ok || changedCount > 0) {
         setMetaConnectionMessage(`${payload.message ?? "Sincronizacion Ads finalizada."}${errorDetail}`);
       }
 
@@ -1678,12 +1701,14 @@ export default function Home() {
         return;
       }
 
-      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
-      setChannelList(inboxData.channels);
-      setItems(inboxData.items);
-      setInboxSource("supabase");
-      if ((payload.comments?.inserted ?? 0) > 0) {
-        setNotice(`${payload.comments?.inserted ?? 0} comentario(s) de Ads nuevo(s) importado(s).`);
+      if (!automatic || changedCount > 0) {
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+      if (insertedCount > 0) {
+        setNotice(`${insertedCount} comentario(s) de Ads nuevo(s) importado(s).`);
       } else if (!automatic) {
         setNotice("Sincronizacion Ads finalizada sin comentarios nuevos.");
       }
@@ -1709,10 +1734,14 @@ export default function Home() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      void syncFacebookComments({ automatic: true });
+      if (shouldRunAutomaticSync()) {
+        void syncFacebookComments({ automatic: true });
+      }
     }, 1500);
     const intervalId = window.setInterval(() => {
-      void syncFacebookComments({ automatic: true });
+      if (shouldRunAutomaticSync()) {
+        void syncFacebookComments({ automatic: true });
+      }
     }, facebookCommentSyncIntervalMs);
 
     return () => {
@@ -1727,10 +1756,14 @@ export default function Home() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      void syncMetaAdComments({ automatic: true });
+      if (shouldRunAutomaticSync()) {
+        void syncMetaAdComments({ automatic: true });
+      }
     }, 6000);
     const intervalId = window.setInterval(() => {
-      void syncMetaAdComments({ automatic: true });
+      if (shouldRunAutomaticSync()) {
+        void syncMetaAdComments({ automatic: true });
+      }
     }, metaAdCommentSyncIntervalMs);
 
     return () => {
@@ -1745,10 +1778,14 @@ export default function Home() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      void syncInstagramComments({ automatic: true });
+      if (shouldRunAutomaticSync()) {
+        void syncInstagramComments({ automatic: true });
+      }
     }, 3000);
     const intervalId = window.setInterval(() => {
-      void syncInstagramComments({ automatic: true });
+      if (shouldRunAutomaticSync()) {
+        void syncInstagramComments({ automatic: true });
+      }
     }, instagramCommentSyncIntervalMs);
 
     return () => {

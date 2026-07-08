@@ -85,7 +85,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor pendiente` en vez de inventar identidad o pisar un autor real ya guardado.
 - Si el autor del comentario coincide con el `provider_account_id` de la cuenta conectada, el persistidor lo ignora: es una respuesta publicada por la propia Page/IG y no debe volver a Bandeja como no leida.
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
-- La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
+- La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta y visible como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
+- Para cuidar la cuota Free de Supabase, la UI no recarga la bandeja desde Supabase si una auto-sincronizacion no inserto ni actualizo comentarios. La carga de inbox queda limitada a los ultimos 120 items y Realtime agrupa refrescos con debounce.
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
 - Los webhooks reales son el mecanismo profesional para eventos instantaneos 24/7; requieren URL HTTPS publica, suscripcion del objeto Page a los campos `feed` y `messages`, y suscripcion de cada Page a la app. El OAuth intenta suscribir cada Page automaticamente cuando recibe page token. El endpoint guarda eventos crudos, normaliza cambios `Page/feed` de comentarios usando el mismo persistidor de inbox que la sincronizacion manual y normaliza `entry.messaging[]` como conversaciones Messenger.
 - `/api/meta/webhook/diagnostics` compara configuracion real de Meta (`/{app-id}/subscriptions`, `/{page-id}/subscribed_apps`) contra ultimos eventos recibidos para distinguir endpoint sano de falta de entrega real por Meta.
@@ -108,7 +109,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los comentarios Instagram se normalizan como `network = instagram` y `source = post_comment`; asi reutilizan bandeja, filtros, responder, ocultar/mostrar y eliminar sin cambiar el enum de Supabase.
 - La sincronizacion intenta leer replies de comentarios Instagram via `/{ig-comment-id}/replies`; cuando Meta lo permite, esas replies se guardan con referencia, autor y texto del comentario padre para mostrarlas como hilos anidados.
 - Los comentarios Instagram escritos por la propia cuenta conectada se descartan durante la ingesta para evitar duplicar respuestas agente como items entrantes.
-- La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta y los permisos estan concedidos.
+- La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta, visible y los permisos estan concedidos.
 - Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.
 - Ocultar/mostrar Instagram usa `/{ig-comment-id}` con `hide=true|false`.
 - Eliminar comentarios Instagram usa `DELETE /{ig-comment-id}`.
@@ -136,7 +137,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Cuando Meta empiece a devolver `from`, `persistFacebookComment` actualiza `contact_id` en items existentes para backfillear autores pendientes sin recrear conversaciones.
 - Si un comentario entra primero como organico con autor real y luego Ads lo reclasifica como `ad_comment` sin `from`, el persistidor conserva el `contact_id` real existente y solo actualiza la clasificacion/metadatos del anuncio.
 - La pasada manual de Ads esta acotada para no bloquear la UI: no pagina todo el historico de anuncios, deduplica por post/story y limita cuantos posts de anuncio revisa por llamada.
-- La UI ejecuta una pasada automatica de Ads cada 30 segundos mientras la app esta abierta y existen permisos `ads_read` + `pages_read_engagement`. Esa pasada usa `mode = full` y limites de pagina maximos habituales de Graph (`100`) para anuncios y comentarios. El boton manual queda como respaldo de diagnostico, no como requisito operativo.
+- La UI ejecuta una pasada automatica de Ads cada 30 segundos mientras la app esta abierta, visible y existen permisos `ads_read` + `pages_read_engagement`. Esa pasada usa `mode = fast` para no barrer volumen innecesario en cada ciclo. El boton manual usa `mode = full` como respaldo de diagnostico, no como requisito operativo.
 - Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico de Ads.
 - Los comentarios importados se normalizan como `source = ad_comment`; usan `ingest_source = ads_auto` si entran por auto-sync y `ads_manual` si entran por boton manual; guardan `provider_ad_id`.
 - Esta primera version puede no cubrir todos los formatos de anuncio; si un creative no expone story/post asociado, se debe ampliar la lectura de campos de creative.
