@@ -12,7 +12,6 @@ import {
   EyeOff,
   ExternalLink,
   Heart,
-  LoaderCircle,
   MoreVertical,
   Pencil,
   Plus,
@@ -1758,44 +1757,8 @@ export default function Home() {
     };
   }, [activeWorkspaceId, canAutoSyncInstagramComments, currentUser, syncInstagramComments]);
 
-  async function runAction(action: InboxAction, message?: string, options?: RunActionOptions) {
+  function runAction(action: InboxAction, message?: string, options?: RunActionOptions) {
     if (!selectedItem) return;
-
-    const session = supabase ? await supabase.auth.getSession() : null;
-    const accessToken = session?.data.session?.access_token;
-    const response = await fetch("/api/inbox/action", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      },
-      body: JSON.stringify({
-        itemId: selectedItem.id,
-        externalId:
-          selectedItem.providerCommentId ?? selectedItem.providerPostId ?? selectedItem.id,
-        action,
-        message,
-        messageId: options?.messageId,
-        replyMode: options?.replyMode,
-        recipientExternalId: options?.recipientExternalId,
-      }),
-    });
-
-    const result = await response.json();
-    setNotice(result.message ?? "Accion registrada.");
-    if (result.queued) {
-      void fetch("/api/inbox/action/process", { method: "POST" }).catch(() => undefined);
-    }
-
-    if (!response.ok) {
-      if (activeWorkspaceId) {
-        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
-        setChannelList(inboxData.channels);
-        setItems(inboxData.items);
-        setInboxSource("supabase");
-      }
-      return;
-    }
 
     if (action === "delete_comment") {
       setItems((current) => current.filter((item) => item.id !== selectedItem.id));
@@ -1816,11 +1779,66 @@ export default function Home() {
       );
     }
 
-    if ((action === "reply" || action === "delete_message") && activeWorkspaceId) {
-      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
-      setChannelList(inboxData.channels);
-      setItems(inboxData.items);
-      setInboxSource("supabase");
+    void sendActionInBackground({
+      action,
+      item: selectedItem,
+      message,
+      options,
+    });
+  }
+
+  async function sendActionInBackground({
+    action,
+    item,
+    message,
+    options,
+  }: {
+    action: InboxAction;
+    item: InboxItem;
+    message?: string;
+    options?: RunActionOptions;
+  }) {
+    try {
+      const session = supabase ? await supabase.auth.getSession() : null;
+      const accessToken = session?.data.session?.access_token;
+      const response = await fetch("/api/inbox/action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          itemId: item.id,
+          externalId: item.providerCommentId ?? item.providerPostId ?? item.id,
+          action,
+          message,
+          messageId: options?.messageId,
+          replyMode: options?.replyMode,
+          recipientExternalId: options?.recipientExternalId,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (result.queued) {
+        void fetch("/api/inbox/action/process", { method: "POST" }).catch(() => undefined);
+      }
+
+      if (!response.ok && activeWorkspaceId) {
+        setNotice(result.message ?? "No se pudo registrar la accion.");
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
+    } catch {
+      if (activeWorkspaceId) {
+        setNotice("No se pudo registrar la accion. Revisa la conexion.");
+        const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+        setChannelList(inboxData.channels);
+        setItems(inboxData.items);
+        setInboxSource("supabase");
+      }
     }
   }
 
@@ -2808,12 +2826,6 @@ export default function Home() {
                           Archivado
                         </span>
                       ) : null}
-                      {selectedItem.actionState === "pending" ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
-                          <LoaderCircle size={12} className="animate-spin" />
-                          Accion pendiente
-                        </span>
-                      ) : null}
                       {selectedItem.actionState === "failed" ? (
                         <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
                           <TriangleAlert size={12} />
@@ -3231,12 +3243,6 @@ function InboxRow({
                 Bloqueado
               </span>
             ) : null}
-            {item.actionState === "pending" ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
-                <LoaderCircle size={12} className="animate-spin" />
-                Pendiente
-              </span>
-            ) : null}
             {item.actionState === "failed" ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
                 <TriangleAlert size={12} />
@@ -3366,7 +3372,7 @@ function MessageModerationActions({
 }
 
 function MessageDeliveryBadge({ deliveryStatus }: { deliveryStatus: MessageDeliveryStatus }) {
-  if (deliveryStatus === "sent") {
+  if (deliveryStatus === "sent" || deliveryStatus === "pending" || deliveryStatus === "pending_delete") {
     return null;
   }
 
@@ -3379,12 +3385,7 @@ function MessageDeliveryBadge({ deliveryStatus }: { deliveryStatus: MessageDeliv
     );
   }
 
-  return (
-    <span className="mt-2 inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-xs font-semibold text-slate-200">
-      <LoaderCircle size={12} className="animate-spin" />
-      {deliveryStatus === "pending_delete" ? "Eliminando..." : "Enviando..."}
-    </span>
-  );
+  return null;
 }
 
 function SmallActionButton({
