@@ -531,3 +531,10 @@
 - Resumen: se agrego un control desktop para contraer/expandir la columna izquierda de cuentas. Al contraerse, queda una barra de 72px con acciones rapidas para expandir, mostrar/ocultar cuentas, abrir configuracion Meta y anadir cuenta. Mobile conserva el comportamiento de panel desplegable superior.
 - Areas tocadas: `src/app/page.tsx`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, smoke en `http://localhost:3100` confirmando ancho 340px expandido, 72px contraido y retorno a 340px al expandir.
+
+### Autor real en Messenger Facebook
+
+- Resumen: el webhook de Messenger ahora enriquece mensajes entrantes consultando conversaciones de la Page por PSID (`/{page-id}/conversations?user_id=...`) y toma el participante real. Esto corrige contactos tipo `Messenger ######` cuando Meta no incluye nombre en `entry.messaging[]`.
+- Dato corregido: el mensaje `Buen dia profesor ! Que precio tiene el curso de tocar piano o teclado ?` de Academia Expertos de la Musica quedo asociado a `Charly AG`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: Graph `/{page-id}/conversations?user_id={PSID}` devolvio `Charly AG`; `npm run lint`, `npm run build`.

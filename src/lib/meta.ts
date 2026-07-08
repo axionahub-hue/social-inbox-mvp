@@ -218,6 +218,26 @@ type MetaInstagramMessagingProfileResponse = {
   };
 };
 
+type MetaMessengerConversationParticipant = {
+  id?: string;
+  name?: string;
+  email?: string;
+};
+
+type MetaMessengerConversation = {
+  id?: string;
+  participants?: {
+    data?: MetaMessengerConversationParticipant[];
+  };
+};
+
+type MetaMessengerConversationsResponse = {
+  data?: MetaMessengerConversation[];
+  error?: {
+    message?: string;
+  };
+};
+
 type MetaPost = {
   id: string;
   message?: string;
@@ -908,6 +928,39 @@ export async function fetchMetaInstagramMessagingProfile({
     name: profile.name ?? null,
     username: profile.username ?? null,
     profilePic: profile.profile_pic ?? null,
+  };
+}
+
+export async function fetchMetaMessengerConversationProfile({
+  accessToken,
+  pageId,
+  userId,
+}: {
+  accessToken: string;
+  pageId: string;
+  userId: string;
+}) {
+  const conversations = await requestGraph<MetaMessengerConversationsResponse>(
+    `${pageId}/conversations`,
+    {
+      user_id: userId,
+      fields: "id,participants",
+      limit: "1",
+      access_token: accessToken,
+    },
+  );
+
+  if (conversations.error) {
+    throw new Error(conversations.error.message ?? "No se pudo leer el perfil Messenger.");
+  }
+
+  const participant = conversations.data?.[0]?.participants?.data?.find(
+    (entry) => entry.id === userId,
+  );
+
+  return {
+    id: participant?.id ?? userId,
+    name: participant?.name ?? null,
   };
 }
 

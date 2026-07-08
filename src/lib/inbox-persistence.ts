@@ -387,6 +387,7 @@ export async function persistFacebookMessengerMessage({
     const updateResult = await supabase
       .from("inbox_items")
       .update({
+        contact_id: contactId,
         status: "new",
         preview,
         unread_count: Number(existingItem.data.unread_count ?? 0) + 1,

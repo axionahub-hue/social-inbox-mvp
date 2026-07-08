@@ -3,6 +3,7 @@ import {
   decryptMetaToken,
   fetchMetaCommentContext,
   fetchMetaInstagramMessagingProfile,
+  fetchMetaMessengerConversationProfile,
   verifyMetaWebhookChallenge,
   verifyMetaWebhookSignature,
   type MetaOrganicComment,
@@ -282,18 +283,51 @@ async function processMetaWebhookPayload({
         continue;
       }
 
+      const enrichedMessengerMessage = await enrichFacebookMessengerMessage({
+        accessToken,
+        pageId: providerAccountId,
+        message: messengerMessage,
+      });
+
       await persistFacebookMessengerMessage({
         supabase,
         workspaceId: account.workspace_id,
         accountId: account.id,
         accountName: account.name,
-        message: messengerMessage,
+        message: enrichedMessengerMessage,
       });
       processed += 1;
     }
   }
 
   return processed;
+}
+
+async function enrichFacebookMessengerMessage({
+  accessToken,
+  pageId,
+  message,
+}: {
+  accessToken: string;
+  pageId: string;
+  message: MetaMessengerMessage;
+}) {
+  try {
+    const profile = await fetchMetaMessengerConversationProfile({
+      accessToken,
+      pageId,
+      userId: message.senderId,
+    });
+
+    return {
+      ...message,
+      senderName: profile.name,
+      senderUsername: null,
+      senderProfilePic: null,
+    };
+  } catch {
+    return message;
+  }
 }
 
 async function enrichInstagramDirectMessage({

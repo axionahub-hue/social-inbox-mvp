@@ -91,7 +91,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 
 - Los mensajes entrantes de Messenger llegan por webhook Page `messages`.
 - Cada evento `entry.messaging[]` se deduplica por `message.mid` y se guarda como `inbox_items.source = messenger`.
-- El contacto queda identificado por el Page-scoped sender id (`facebook:PSID`) cuando Meta no entrega nombre en el webhook.
+- El webhook intenta resolver el nombre real de Messenger consultando `/{page-id}/conversations?user_id={PSID}&fields=id,participants` con el Page token. Si Meta no devuelve participante, el contacto queda identificado por el Page-scoped sender id (`facebook:PSID`) como fallback.
 - Si un flujo posterior trae menos datos de identidad que un contacto ya enriquecido, no puede degradar el nombre/handle existente.
 - Las respuestas desde un item Messenger usan Send API `me/messages` con `recipient.id = PSID`. Esto es distinto a una private reply de comentario, que usa `recipient.comment_id`.
 
