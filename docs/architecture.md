@@ -91,6 +91,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los mensajes entrantes de Messenger llegan por webhook Page `messages`.
 - Cada evento `entry.messaging[]` se deduplica por `message.mid` y se guarda como `inbox_items.source = messenger`.
 - El contacto queda identificado por el Page-scoped sender id (`facebook:PSID`) cuando Meta no entrega nombre en el webhook.
+- Si un flujo posterior trae menos datos de identidad que un contacto ya enriquecido, no puede degradar el nombre/handle existente.
 - Las respuestas desde un item Messenger usan Send API `me/messages` con `recipient.id = PSID`. Esto es distinto a una private reply de comentario, que usa `recipient.comment_id`.
 
 ## Instagram comentarios y DM
@@ -109,6 +110,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Los DM Instagram entrantes se guardan como `inbox_items.source = instagram_dm`; las respuestas intentan usar el Send API de Instagram con `recipient.id`.
 - Las respuestas de Instagram DM usan Send API `me/messages` con Page token y `recipient.id = IGSID` recibido en el webhook.
 - Al recibir un DM Instagram, el webhook intenta enriquecer el contacto con User Profile API usando el IGSID para guardar nombre y username cuando Meta lo permite.
+- Los contactos Instagram de comentarios y DMs siguen la regla de no degradacion: una carga posterior con fallback (`Autor Instagram` o `Instagram ######`) no reemplaza un nombre/handle real ya guardado.
 - Para que DM Instagram funcione en tiempo real hay que activar Webhooks `Instagram` con el campo `messages` en Meta Developers y reautorizar con `instagram_manage_messages`.
 - Si Meta devuelve `(#3) Application does not have the capability`, la app tiene el scope pero falta habilitar acceso avanzado/capacidad de Instagram Messaging en Meta.
 - Para reacciones/likes en comentarios Instagram se agrega `instagram_manage_engagement` como permiso objetivo.

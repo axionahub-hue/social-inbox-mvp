@@ -512,3 +512,9 @@
 - Dato corregido: el comentario `Cuanto sale el curso?` de Academia Expertos de la Musica quedo como `ad_comment` y se reasigno al contacto real `Alejandro Hernandez Yanez`.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`.
+
+### No degradar identidad de contactos
+
+- Resumen: se extendio la regla de no degradacion a Instagram comentarios, Instagram DM y Messenger. Si un contacto ya tiene nombre/handle real, una actualizacion posterior con datos incompletos o fallback no reemplaza esa identidad. Los updates solo mejoran datos cuando pasan de fallback a identidad real o cuando agregan un handle faltante.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`.

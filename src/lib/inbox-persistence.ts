@@ -336,7 +336,7 @@ export async function persistFacebookMessengerMessage({
   const contactId = await ensureFacebookMessengerContact({
     supabase,
     workspaceId,
-    senderId: message.senderId,
+    message,
   });
   const providerThreadId = `messenger:${message.senderId}`;
   const existingItem = await supabase
@@ -614,9 +614,14 @@ async function ensureInstagramContact({
 }) {
   const providerUserId = comment.fromId ?? `instagram-comment-author:${comment.commentId}`;
   const displayName = comment.fromName ?? "Autor Instagram";
+  const handle = providerUserId.startsWith("instagram:")
+    ? providerUserId
+    : comment.fromName?.startsWith("@")
+      ? `instagram:${comment.fromName.slice(1)}`
+      : null;
   const existing = await supabase
     .from("contacts")
-    .select("id")
+    .select("id,display_name,handle")
     .eq("workspace_id", workspaceId)
     .eq("network", "instagram")
     .eq("provider_user_id", providerUserId)
@@ -627,22 +632,26 @@ async function ensureInstagramContact({
   }
 
   if (existing.data?.id) {
-    await supabase
-      .from("contacts")
-      .update({
-        display_name: displayName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existing.data.id);
+    if (shouldUpdateContactIdentity({
+      existingDisplayName: existing.data.display_name,
+      existingHandle: existing.data.handle,
+      nextDisplayName: displayName,
+      nextHandle: handle,
+      fallbackPrefixes: ["Autor Instagram", "instagram-comment-author:"],
+    })) {
+      await supabase
+        .from("contacts")
+        .update({
+          display_name: displayName,
+          handle: handle ?? existing.data.handle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.data.id);
+    }
 
     return existing.data.id as string;
   }
 
-  const handle = providerUserId.startsWith("instagram:")
-    ? providerUserId
-    : comment.fromName?.startsWith("@")
-      ? `instagram:${comment.fromName.slice(1)}`
-      : null;
   const inserted = await supabase
     .from("contacts")
     .insert({
@@ -665,16 +674,18 @@ async function ensureInstagramContact({
 async function ensureFacebookMessengerContact({
   supabase,
   workspaceId,
-  senderId,
+  message,
 }: {
   supabase: SupabaseServiceClient;
   workspaceId: string;
-  senderId: string;
+  message: MetaMessengerMessage;
 }) {
-  const displayName = `Messenger ${senderId.slice(-6)}`;
+  const senderId = message.senderId;
+  const displayName = message.senderName ?? `Messenger ${senderId.slice(-6)}`;
+  const handle = `facebook:${senderId}`;
   const existing = await supabase
     .from("contacts")
-    .select("id,display_name")
+    .select("id,display_name,handle")
     .eq("workspace_id", workspaceId)
     .eq("network", "facebook")
     .eq("provider_user_id", senderId)
@@ -685,6 +696,27 @@ async function ensureFacebookMessengerContact({
   }
 
   if (existing.data?.id) {
+    if (shouldUpdateContactIdentity({
+      existingDisplayName: existing.data.display_name,
+      existingHandle: existing.data.handle,
+      nextDisplayName: displayName,
+      nextHandle: handle,
+      fallbackPrefixes: ["Messenger "],
+    })) {
+      const updated = await supabase
+        .from("contacts")
+        .update({
+          display_name: displayName,
+          handle: handle ?? existing.data.handle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.data.id);
+
+      if (updated.error) {
+        throw new Error(updated.error.message);
+      }
+    }
+
     return existing.data.id as string;
   }
 
@@ -695,7 +727,7 @@ async function ensureFacebookMessengerContact({
       network: "facebook",
       provider_user_id: senderId,
       display_name: displayName,
-      handle: `facebook:${senderId}`,
+      handle,
     })
     .select("id")
     .single();
@@ -736,16 +768,18 @@ async function ensureInstagramDirectContact({
   }
 
   if (existing.data?.id) {
-    const shouldUpdate =
-      existing.data.display_name !== displayName ||
-      (handle && existing.data.handle !== handle);
-
-    if (shouldUpdate) {
+    if (shouldUpdateContactIdentity({
+      existingDisplayName: existing.data.display_name,
+      existingHandle: existing.data.handle,
+      nextDisplayName: displayName,
+      nextHandle: handle,
+      fallbackPrefixes: ["Instagram "],
+    })) {
       const updated = await supabase
         .from("contacts")
         .update({
           display_name: displayName,
-          handle,
+          handle: handle ?? existing.data.handle,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existing.data.id);
@@ -892,4 +926,43 @@ function firstOrNull<T>(value: T | T[] | null | undefined) {
   }
 
   return value ?? null;
+}
+
+function shouldUpdateContactIdentity({
+  existingDisplayName,
+  existingHandle,
+  fallbackPrefixes,
+  nextDisplayName,
+  nextHandle,
+}: {
+  existingDisplayName: string | null;
+  existingHandle: string | null;
+  fallbackPrefixes: string[];
+  nextDisplayName: string;
+  nextHandle: string | null;
+}) {
+  const existingIsFallback = isFallbackIdentity(existingDisplayName, fallbackPrefixes);
+  const nextIsFallback = isFallbackIdentity(nextDisplayName, fallbackPrefixes);
+
+  if (existingIsFallback && !nextIsFallback) {
+    return true;
+  }
+
+  if (!existingHandle && nextHandle) {
+    return true;
+  }
+
+  if (!existingIsFallback && nextIsFallback) {
+    return false;
+  }
+
+  return existingDisplayName !== nextDisplayName || Boolean(nextHandle && existingHandle !== nextHandle);
+}
+
+function isFallbackIdentity(value: string | null | undefined, fallbackPrefixes: string[]) {
+  if (!value) {
+    return true;
+  }
+
+  return fallbackPrefixes.some((prefix) => value.startsWith(prefix));
 }
