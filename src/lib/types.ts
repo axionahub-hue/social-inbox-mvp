@@ -36,6 +36,9 @@ export type InboxItem = {
   postTitle?: string;
   providerPostId?: string;
   providerCommentId?: string;
+  parentCommentId?: string;
+  parentCommentAuthor?: string;
+  parentCommentText?: string;
   ingestSource?: IngestSource;
   originalUrl?: string;
   unreadCount: number;

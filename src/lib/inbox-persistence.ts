@@ -59,6 +59,8 @@ export async function persistFacebookComment({
     ? `Comentario en:\n${comment.postMessage}`
     : `Comentario en ${accountName}`;
   const preview = comment.message || "(comentario sin texto)";
+  const threadContextForUpdate = resolveCommentThreadContext(comment, { preserveExisting: true });
+  const threadContextForInsert = resolveCommentThreadContext(comment);
 
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
@@ -81,6 +83,7 @@ export async function persistFacebookComment({
       provider_post_id: comment.postId,
       provider_ad_id: providerAdId,
       provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
+      ...threadContextForUpdate,
       updated_at: now,
     };
     const updateResult = await supabase
@@ -133,6 +136,7 @@ export async function persistFacebookComment({
     provider_post_id: comment.postId,
     provider_ad_id: providerAdId,
     provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
+    ...threadContextForInsert,
     title,
     preview,
     is_hidden: comment.isHidden,
@@ -264,6 +268,8 @@ export async function persistInstagramComment({
     ? `Comentario en:\n${comment.postMessage}`
     : `Comentario en ${accountName}`;
   const preview = comment.message || "(comentario sin texto)";
+  const threadContextForUpdate = resolveCommentThreadContext(comment, { preserveExisting: true });
+  const threadContextForInsert = resolveCommentThreadContext(comment);
 
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
@@ -281,6 +287,7 @@ export async function persistInstagramComment({
         ingest_source: ingestSource,
         provider_post_id: comment.postId,
         provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
+        ...threadContextForUpdate,
         updated_at: now,
       })
       .eq("id", existingItem.data.id);
@@ -331,6 +338,7 @@ export async function persistInstagramComment({
       provider_post_id: comment.postId,
       provider_ad_id: null,
       provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
+      ...threadContextForInsert,
       title,
       preview,
       is_hidden: comment.isHidden,
@@ -992,7 +1000,38 @@ function isSelfAuthoredComment({
 }
 
 function isOptionalInboxColumnError(message: string) {
-  return message.includes("ingest_source") || message.includes("provider_permalink_url");
+  return (
+    message.includes("ingest_source") ||
+    message.includes("provider_permalink_url") ||
+    message.includes("parent_comment_id") ||
+    message.includes("parent_comment_author") ||
+    message.includes("parent_comment_text")
+  );
+}
+
+function resolveCommentThreadContext(
+  comment: MetaOrganicComment,
+  options: { preserveExisting?: boolean } = {},
+) {
+  const context: {
+    parent_comment_id?: string | null;
+    parent_comment_author?: string | null;
+    parent_comment_text?: string | null;
+  } = {};
+
+  if (!options.preserveExisting || comment.parentCommentId != null) {
+    context.parent_comment_id = comment.parentCommentId ?? null;
+  }
+
+  if (!options.preserveExisting || comment.parentCommentAuthorName != null) {
+    context.parent_comment_author = comment.parentCommentAuthorName ?? null;
+  }
+
+  if (!options.preserveExisting || comment.parentCommentText != null) {
+    context.parent_comment_text = comment.parentCommentText ?? null;
+  }
+
+  return context;
 }
 
 function firstOrNull<T>(value: T | T[] | null | undefined) {

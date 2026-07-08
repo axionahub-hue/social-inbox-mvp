@@ -68,6 +68,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - En comentarios, el composer exige elegir modo de respuesta: `public_comment` para responder sobre el comentario y notificar/etiquetar al autor cuando Meta lo permita, o `private_message` para responder por Messenger/DM. La decision viaja a `/api/inbox/action` como `replyMode`.
 - En Facebook, una respuesta publica sobre comentario intenta ademas enviar una copia por `private_replies`; el ID del reply publico devuelto por Meta se guarda en `inbox_messages.provider_message_id` para permitir borrado posterior.
 - Para abrir la publicacion original, la UI usa `provider_permalink_url` cuando existe. Esto es critico para comentarios anidados, porque la URL derivada desde `provider_post_id` solo abre el post/reel y no necesariamente el hilo exacto. Si la columna aun no existe en un entorno, la UI cae a la URL derivada desde `provider_post_id`.
+- Para hilos anidados, `inbox_items` guarda `parent_comment_id`, `parent_comment_author` y `parent_comment_text` cuando Meta entrega o permite resolver el comentario padre. La vista interna muestra `Comentario padre`, `Respuesta recibida` y `Respuesta publicada` para entender el hilo sin abrir Facebook o Instagram. Si una actualizacion posterior llega sin esos datos, el persistidor no pisa el contexto ya guardado.
 
 ## Sincronizacion de comentarios Facebook
 
@@ -101,6 +102,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `POST /api/meta/sync/instagram-comments` lee media reciente y comentarios de cada cuenta Instagram elegible.
 - Solo procesa cuentas con `instagram_basic` e `instagram_manage_comments`.
 - Los comentarios Instagram se normalizan como `network = instagram` y `source = post_comment`; asi reutilizan bandeja, filtros, responder, ocultar/mostrar y eliminar sin cambiar el enum de Supabase.
+- La sincronizacion intenta leer replies de comentarios Instagram via `/{ig-comment-id}/replies`; cuando Meta lo permite, esas replies se guardan con referencia, autor y texto del comentario padre para mostrarlas como hilos anidados.
 - Los comentarios Instagram escritos por la propia cuenta conectada se descartan durante la ingesta para evitar duplicar respuestas agente como items entrantes.
 - La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta y los permisos estan concedidos.
 - Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.

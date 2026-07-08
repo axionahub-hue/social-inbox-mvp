@@ -545,3 +545,11 @@
 - Dato auditado: el comentario de `Fernando Piedra T` fue respondido correctamente por Meta. La respuesta publica existe como `1005379315495187_27494472300206374`, parent directo `1005379315495187_1706997957184725`, y no esta oculta. Tambien se envio copia privada por Messenger. El item se actualizo con el permalink exacto del comentario de Fernando.
 - Areas tocadas: `supabase/schema.sql`, `src/lib/inbox-persistence.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: migracion aplicada en Supabase, backfill del item de Fernando, `npm run lint`, `npm run build`.
+
+### Vista interna de hilos anidados
+
+- Resumen: se agregaron `parent_comment_id`, `parent_comment_author` y `parent_comment_text` a `inbox_items` para mostrar dentro de la app el contexto `Comentario padre`, `Respuesta recibida` y `Respuesta publicada`. Facebook ahora pide `parent{id,message,from{id,name}}` en lecturas de comentarios; Instagram intenta leer replies via `/{ig-comment-id}/replies` y guarda el padre cuando Meta lo permite.
+- Dato corregido: el item de `Fernando Piedra T` quedo backfilleado con el comentario padre de `Jessica Paola Murcia`, de modo que la conversacion se entiende sin abrir Facebook.
+- Proteccion: los updates no pisan contexto de hilo existente cuando un evento posterior llega sin padre/autor/texto.
+- Areas tocadas: `supabase/schema.sql`, `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/page.tsx`, `src/lib/types.ts`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con una respuesta anidada nueva en Facebook e Instagram.

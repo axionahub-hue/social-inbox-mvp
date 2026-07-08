@@ -197,6 +197,9 @@ type InboxItemRow = {
   provider_comment_id: string | null;
   provider_post_id: string | null;
   provider_permalink_url?: string | null;
+  parent_comment_id?: string | null;
+  parent_comment_author?: string | null;
+  parent_comment_text?: string | null;
   title: string;
   preview: string;
   is_liked: boolean;
@@ -701,6 +704,9 @@ export default function Home() {
       provider_comment_id,
       provider_post_id,
       provider_permalink_url,
+      parent_comment_id,
+      parent_comment_author,
+      parent_comment_text,
       title,
       preview,
       is_liked,
@@ -733,7 +739,10 @@ export default function Home() {
     const inboxSelectWithoutIngestSource = inboxSelect.replace("      ingest_source,\n", "");
     const inboxSelectWithoutOptionalColumns = inboxSelect
       .replace("      ingest_source,\n", "")
-      .replace("      provider_permalink_url,\n", "");
+      .replace("      provider_permalink_url,\n", "")
+      .replace("      parent_comment_id,\n", "")
+      .replace("      parent_comment_author,\n", "")
+      .replace("      parent_comment_text,\n", "");
     let inbox = (await supabase
       .from("inbox_items")
       .select(inboxSelect)
@@ -754,7 +763,7 @@ export default function Home() {
       };
     }
 
-    if (inbox.error?.message.includes("provider_permalink_url")) {
+    if (isOptionalInboxColumnLoadError(inbox.error?.message)) {
       inbox = (await supabase
         .from("inbox_items")
         .select(inboxSelectWithoutOptionalColumns)
@@ -2820,6 +2829,23 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {hasParentCommentContext(selectedItem) ? (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-amber-900">
+                          Comentario padre
+                        </span>
+                        <span className="text-sm font-semibold text-amber-950">
+                          {selectedItem.parentCommentAuthor ?? "Autor del comentario padre"}
+                        </span>
+                      </div>
+                      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-amber-950">
+                        {selectedItem.parentCommentText ??
+                          "Meta envio la referencia del comentario padre, pero aun no entrego su texto."}
+                      </p>
+                    </div>
+                  ) : null}
+
                   {selectedItem.messages.map((message) => (
                     <div
                       className={`flex ${message.author === "agent" ? "justify-end" : "justify-start"}`}
@@ -2832,7 +2858,14 @@ export default function Home() {
                             : "border border-slate-200 bg-white text-slate-800"
                         }`}
                       >
-                        <p className="leading-6">{message.body}</p>
+                        <p
+                          className={`mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                            message.author === "agent" ? "text-slate-300" : "text-slate-400"
+                          }`}
+                        >
+                          {getMessageThreadLabel(selectedItem, message)}
+                        </p>
+                        <p className="whitespace-pre-wrap break-words leading-6">{message.body}</p>
                         <p
                           className={`mt-2 text-xs ${
                             message.author === "agent" ? "text-slate-300" : "text-slate-500"
@@ -3428,6 +3461,17 @@ function resolveOriginalPostUrl(item: InboxItem) {
   return null;
 }
 
+function isOptionalInboxColumnLoadError(message?: string | null) {
+  if (!message) return false;
+
+  return [
+    "provider_permalink_url",
+    "parent_comment_id",
+    "parent_comment_author",
+    "parent_comment_text",
+  ].some((column) => message.includes(column));
+}
+
 function resolvePostContextText(item: InboxItem) {
   const title = item.title.trim();
   const commentPrefixWithBreak = "Comentario en:\n";
@@ -3446,6 +3490,25 @@ function resolvePostContextText(item: InboxItem) {
 
 function isCommentItem(item: InboxItem) {
   return item.source === "post_comment" || item.source === "ad_comment";
+}
+
+function hasParentCommentContext(item: InboxItem) {
+  return Boolean(item.parentCommentId || item.parentCommentAuthor || item.parentCommentText);
+}
+
+function getMessageThreadLabel(
+  item: InboxItem,
+  message: { author: "contact" | "agent" },
+) {
+  if (message.author === "agent") {
+    return isCommentItem(item) ? "Respuesta publicada" : "Respuesta enviada";
+  }
+
+  if (!isCommentItem(item)) {
+    return "Mensaje recibido";
+  }
+
+  return hasParentCommentContext(item) ? "Respuesta recibida" : "Comentario recibido";
 }
 
 function getDefaultReplyMode(item: InboxItem): ReplyMode {
@@ -3572,6 +3635,9 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     assignee: "Sin asignar",
     providerPostId: row.provider_post_id ?? undefined,
     providerCommentId: row.provider_comment_id ?? undefined,
+    parentCommentId: row.parent_comment_id ?? undefined,
+    parentCommentAuthor: row.parent_comment_author ?? undefined,
+    parentCommentText: row.parent_comment_text ?? undefined,
     originalUrl: row.provider_permalink_url ?? undefined,
     ingestSource: row.ingest_source ?? "unknown",
     unreadCount: row.unread_count,

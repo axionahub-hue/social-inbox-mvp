@@ -165,6 +165,14 @@ type MetaComment = {
   created_time?: string;
   is_hidden?: boolean;
   permalink_url?: string;
+  parent?: {
+    id?: string;
+    message?: string;
+    from?: {
+      id?: string;
+      name?: string;
+    };
+  };
   from?: {
     id?: string;
     name?: string;
@@ -207,6 +215,8 @@ type MetaInstagramCommentsResponse = {
     message?: string;
   };
 };
+
+type MetaInstagramCommentRepliesResponse = MetaInstagramCommentsResponse;
 
 type MetaInstagramMessagingProfileResponse = {
   id?: string;
@@ -288,6 +298,9 @@ export type MetaOrganicComment = {
   createdTime: string | null;
   isHidden: boolean;
   permalink: string | null;
+  parentCommentId?: string | null;
+  parentCommentText?: string | null;
+  parentCommentAuthorName?: string | null;
 };
 
 export type MetaAdCommentTarget = {
@@ -579,7 +592,7 @@ export async function fetchMetaOrganicComments({
         fallbackPost: post,
       });
       const comments = await requestGraph<MetaCommentsResponse>(`${post.id}/comments`, {
-        fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
+        fields: "id,message,from{id,name},created_time,is_hidden,permalink_url,parent{id,message,from{id,name}}",
         order: "reverse_chronological",
         limit: `${commentsLimit}`,
         ...(since ? { since: toMetaSinceParam(since) } : {}),
@@ -606,6 +619,9 @@ export async function fetchMetaOrganicComments({
           createdTime: comment.created_time ?? fullPost.created_time ?? post.created_time ?? null,
           isHidden: Boolean(comment.is_hidden),
           permalink: comment.permalink_url ?? null,
+          parentCommentId: comment.parent?.id ?? null,
+          parentCommentText: comment.parent?.message ?? null,
+          parentCommentAuthorName: comment.parent?.from?.name ?? null,
         }))
         .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
     }),
@@ -627,7 +643,7 @@ export async function fetchMetaCommentContext({
 }): Promise<MetaOrganicComment> {
   const [comment, post] = await Promise.all([
     requestGraph<MetaComment & { error?: { message?: string } }>(commentId, {
-      fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
+      fields: "id,message,from{id,name},created_time,is_hidden,permalink_url,parent{id,message,from{id,name}}",
       access_token: accessToken,
     }),
     fetchMetaPostDetail({
@@ -653,6 +669,11 @@ export async function fetchMetaCommentContext({
       : fallback.createdTime,
     isHidden: hasComment ? Boolean(comment.is_hidden) : fallback.isHidden,
     permalink: hasComment ? comment.permalink_url ?? fallback.permalink : fallback.permalink,
+    parentCommentId: hasComment ? comment.parent?.id ?? fallback.parentCommentId ?? null : fallback.parentCommentId ?? null,
+    parentCommentText: hasComment ? comment.parent?.message ?? fallback.parentCommentText ?? null : fallback.parentCommentText ?? null,
+    parentCommentAuthorName: hasComment
+      ? comment.parent?.from?.name ?? fallback.parentCommentAuthorName ?? null
+      : fallback.parentCommentAuthorName ?? null,
   };
 }
 
@@ -812,7 +833,7 @@ export async function fetchMetaPostComments({
     },
   });
   const comments = await requestGraph<MetaCommentsResponse>(`${postId}/comments`, {
-    fields: "id,message,from{id,name},created_time,is_hidden,permalink_url",
+    fields: "id,message,from{id,name},created_time,is_hidden,permalink_url,parent{id,message,from{id,name}}",
     order: "reverse_chronological",
     limit: `${commentsLimit}`,
     ...(since ? { since: toMetaSinceParam(since) } : {}),
@@ -835,6 +856,9 @@ export async function fetchMetaPostComments({
       createdTime: comment.created_time ?? fullPost.created_time ?? null,
       isHidden: Boolean(comment.is_hidden),
       permalink: comment.permalink_url ?? null,
+      parentCommentId: comment.parent?.id ?? null,
+      parentCommentText: comment.parent?.message ?? null,
+      parentCommentAuthorName: comment.parent?.from?.name ?? null,
     }))
     .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
 }
@@ -887,19 +911,57 @@ export async function fetchMetaInstagramComments({
         return [];
       }
 
-      return (comments.data ?? [])
-        .map((comment): MetaOrganicComment => ({
-          postId: mediaItem.id,
-          postMessage: mediaItem.caption ?? null,
-          postPermalink: mediaItem.permalink ?? null,
-          commentId: comment.id,
-          message: comment.text ?? "",
-          fromId: comment.username ? `instagram:${comment.username}` : null,
-          fromName: comment.username ? `@${comment.username}` : null,
-          createdTime: comment.timestamp ?? mediaItem.timestamp ?? null,
-          isHidden: Boolean(comment.hidden),
-          permalink: mediaItem.permalink ?? null,
-        }))
+      const parentComments = (comments.data ?? []).map((comment): MetaOrganicComment => ({
+        postId: mediaItem.id,
+        postMessage: mediaItem.caption ?? null,
+        postPermalink: mediaItem.permalink ?? null,
+        commentId: comment.id,
+        message: comment.text ?? "",
+        fromId: comment.username ? `instagram:${comment.username}` : null,
+        fromName: comment.username ? `@${comment.username}` : null,
+        createdTime: comment.timestamp ?? mediaItem.timestamp ?? null,
+        isHidden: Boolean(comment.hidden),
+        permalink: mediaItem.permalink ?? null,
+      }));
+      const repliesByComment = await Promise.all(
+        (comments.data ?? []).map(async (parentComment) => {
+          const replies = await requestGraph<MetaInstagramCommentRepliesResponse>(
+            `${parentComment.id}/replies`,
+            {
+              fields: "id,text,username,timestamp,hidden,like_count",
+              order: "reverse_chronological",
+              limit: `${commentsLimit}`,
+              access_token: accessToken,
+            },
+          );
+
+          if (replies.error) {
+            console.warn("meta_instagram_comment_replies_skipped", {
+              commentId: parentComment.id,
+              message: replies.error.message,
+            });
+            return [];
+          }
+
+          return (replies.data ?? []).map((reply): MetaOrganicComment => ({
+            postId: mediaItem.id,
+            postMessage: mediaItem.caption ?? null,
+            postPermalink: mediaItem.permalink ?? null,
+            commentId: reply.id,
+            message: reply.text ?? "",
+            fromId: reply.username ? `instagram:${reply.username}` : null,
+            fromName: reply.username ? `@${reply.username}` : null,
+            createdTime: reply.timestamp ?? mediaItem.timestamp ?? null,
+            isHidden: Boolean(reply.hidden),
+            permalink: mediaItem.permalink ?? null,
+            parentCommentId: parentComment.id,
+            parentCommentText: parentComment.text ?? null,
+            parentCommentAuthorName: parentComment.username ? `@${parentComment.username}` : null,
+          }));
+        }),
+      );
+
+      return [...parentComments, ...repliesByComment.flat()]
         .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
     }),
   );

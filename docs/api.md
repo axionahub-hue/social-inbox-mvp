@@ -262,6 +262,7 @@ Comportamiento:
 - consulta publicaciones recientes y luego el edge `/comments` de cada post con `order=reverse_chronological`;
 - filtra comentarios por `created_time` de las ultimas 72 horas;
 - guarda contactos, conversaciones y mensajes en `contacts`, `inbox_items` e `inbox_messages`.
+- si Meta entrega `parent`, guarda `parent_comment_id`, `parent_comment_author` y `parent_comment_text` en `inbox_items`; las actualizaciones que vengan sin esos campos no degradan el contexto existente.
 
 Respuesta:
 
@@ -320,6 +321,7 @@ Comportamiento:
 - omite cuentas sin `instagram_basic` e `instagram_manage_comments`;
 - lee media reciente via `/{ig-user-id}/media`;
 - lee comentarios por media via `/{ig-media-id}/comments`;
+- intenta leer replies via `/{ig-comment-id}/replies` para guardar contexto de comentario padre cuando exista;
 - filtra localmente comentarios dentro de las ultimas 72 horas;
 - guarda cada comentario como `network = instagram` y `source = post_comment`.
 

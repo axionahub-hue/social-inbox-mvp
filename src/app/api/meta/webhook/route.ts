@@ -52,6 +52,7 @@ type MetaPageFeedValue = {
 type MetaInstagramCommentValue = {
   id?: string;
   comment_id?: string;
+  parent_id?: string;
   media_id?: string;
   text?: string;
   message?: string;
@@ -62,6 +63,16 @@ type MetaInstagramCommentValue = {
     id?: string;
     caption?: string;
     permalink?: string;
+  };
+  parent?: {
+    id?: string;
+    text?: string;
+    message?: string;
+    username?: string;
+    from?: {
+      username?: string;
+      name?: string;
+    };
   };
   from?: {
     id?: string;
@@ -427,6 +438,9 @@ async function mapPageFeedChangeToComment({
     createdTime: normalizeWebhookTimestamp(changeValue.created_time),
     isHidden: Boolean(changeValue.is_hidden),
     permalink: changeValue.permalink_url ?? null,
+    parentCommentId: changeValue.parent_id && changeValue.parent_id !== postId ? changeValue.parent_id : null,
+    parentCommentText: null,
+    parentCommentAuthorName: null,
   };
 
   try {
@@ -471,6 +485,13 @@ function mapInstagramCommentChangeToComment(changeValue?: MetaPageFeedValue | Me
     createdTime: normalizeWebhookTimestamp(value.timestamp ?? value.created_time),
     isHidden: Boolean(value.hidden),
     permalink: value.media?.permalink ?? null,
+    parentCommentId: value.parent?.id ?? value.parent_id ?? null,
+    parentCommentText: value.parent?.text ?? value.parent?.message ?? null,
+    parentCommentAuthorName: value.parent?.username
+      ? `@${value.parent.username}`
+      : value.parent?.from?.username
+      ? `@${value.parent.from.username}`
+      : value.parent?.from?.name ?? null,
   } satisfies MetaOrganicComment;
 }
 
