@@ -208,6 +208,16 @@ type MetaInstagramCommentsResponse = {
   };
 };
 
+type MetaInstagramMessagingProfileResponse = {
+  id?: string;
+  name?: string;
+  username?: string;
+  profile_pic?: string;
+  error?: {
+    message?: string;
+  };
+};
+
 type MetaPost = {
   id: string;
   message?: string;
@@ -875,6 +885,30 @@ export async function fetchMetaInstagramComments({
   );
 
   return commentsByMedia.flat();
+}
+
+export async function fetchMetaInstagramMessagingProfile({
+  accessToken,
+  userId,
+}: {
+  accessToken: string;
+  userId: string;
+}) {
+  const profile = await requestGraph<MetaInstagramMessagingProfileResponse>(userId, {
+    fields: "name,username,profile_pic",
+    access_token: accessToken,
+  });
+
+  if (profile.error) {
+    throw new Error(profile.error.message ?? "No se pudo leer el perfil Instagram.");
+  }
+
+  return {
+    id: profile.id ?? userId,
+    name: profile.name ?? null,
+    username: profile.username ?? null,
+    profilePic: profile.profile_pic ?? null,
+  };
 }
 
 async function fetchMetaPostDetail({

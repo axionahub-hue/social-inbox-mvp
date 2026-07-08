@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   decryptMetaToken,
   fetchMetaCommentContext,
+  fetchMetaInstagramMessagingProfile,
   verifyMetaWebhookChallenge,
   verifyMetaWebhookSignature,
   type MetaOrganicComment,
@@ -11,6 +12,7 @@ import {
   persistFacebookMessengerMessage,
   persistInstagramComment,
   persistInstagramDirectMessage,
+  type MetaMessengerMessage,
   type SupabaseServiceClient,
 } from "@/lib/inbox-persistence";
 import { createServiceSupabaseClient } from "@/lib/supabase";
@@ -183,6 +185,8 @@ async function processMetaWebhookPayload({
         continue;
       }
 
+      const accessToken = decryptMetaToken(account.access_token_encrypted);
+
       for (const change of entry.changes ?? []) {
         if (change.field !== "comments") {
           continue;
@@ -215,12 +219,17 @@ async function processMetaWebhookPayload({
           continue;
         }
 
+        const enrichedMessage = await enrichInstagramDirectMessage({
+          accessToken,
+          message: instagramMessage,
+        });
+
         await persistInstagramDirectMessage({
           supabase,
           workspaceId: account.workspace_id,
           accountId: account.id,
           accountName: account.name,
-          message: instagramMessage,
+          message: enrichedMessage,
         });
         processed += 1;
       }
@@ -283,6 +292,30 @@ async function processMetaWebhookPayload({
   }
 
   return processed;
+}
+
+async function enrichInstagramDirectMessage({
+  accessToken,
+  message,
+}: {
+  accessToken: string;
+  message: MetaMessengerMessage;
+}) {
+  try {
+    const profile = await fetchMetaInstagramMessagingProfile({
+      accessToken,
+      userId: message.senderId,
+    });
+
+    return {
+      ...message,
+      senderName: profile.name,
+      senderUsername: profile.username,
+      senderProfilePic: profile.profilePic,
+    };
+  } catch {
+    return message;
+  }
 }
 
 async function findConnectedFacebookAccount({

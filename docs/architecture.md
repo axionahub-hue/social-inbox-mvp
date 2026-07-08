@@ -64,6 +64,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - En mobile, el panel de cuentas/configuracion se pliega arriba; la lista de inbox ocupa la pantalla principal y al elegir un item se muestra el panel de conversacion con boton `Volver a bandeja`.
 - Las vistas operativas son `Bandeja`, `Respondidos` y `Archivados`. `Bandeja` excluye `responded` y `archived`; al responder, el item pasa automaticamente a `Respondidos`.
 - El panel de conversacion separa contexto, mensaje y composer: el contexto muestra el texto completo de la publicacion; las acciones de reaccion/ocultar viven junto al mensaje recibido; bloquear vive en la cabecera del autor; archivar queda en el footer del composer.
+- El footer del composer incluye acciones fijas de archivar/desarchivar e insertar emojis sin mover la caja de respuesta.
 - En comentarios, el composer exige elegir modo de respuesta: `public_comment` para responder sobre el comentario y notificar/etiquetar al autor cuando Meta lo permita, o `private_message` para responder por Messenger/DM. La decision viaja a `/api/inbox/action` como `replyMode`.
 - En Facebook, una respuesta publica sobre comentario intenta ademas enviar una copia por `private_replies`; el ID del reply publico devuelto por Meta se guarda en `inbox_messages.provider_message_id` para permitir borrado posterior.
 - Para abrir la publicacion original, la UI usa `originalUrl` si existe y, en Facebook, deriva una URL desde `provider_post_id`. El permalink exacto de Meta queda como mejora de datos persistidos cuando se agregue una columna dedicada.
@@ -78,7 +79,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full`, `ads_manual` o quedo como `unknown`.
-- Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible` en vez de inventar identidad.
+- Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor no disponible en Meta` en vez de inventar identidad. En comentarios de Ads se intento validar con consulta directa por `comment_id`; si Graph sigue devolviendo `from = null`, no hay identidad recuperable por API para ese comentario.
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
@@ -107,6 +108,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El webhook `/api/meta/webhook` queda preparado para `object = instagram`: normaliza cambios `comments` y eventos `entry.messaging[]` como `instagram_dm`.
 - Los DM Instagram entrantes se guardan como `inbox_items.source = instagram_dm`; las respuestas intentan usar el Send API de Instagram con `recipient.id`.
 - Las respuestas de Instagram DM usan Send API `me/messages` con Page token y `recipient.id = IGSID` recibido en el webhook.
+- Al recibir un DM Instagram, el webhook intenta enriquecer el contacto con User Profile API usando el IGSID para guardar nombre y username cuando Meta lo permite.
 - Para que DM Instagram funcione en tiempo real hay que activar Webhooks `Instagram` con el campo `messages` en Meta Developers y reautorizar con `instagram_manage_messages`.
 - Si Meta devuelve `(#3) Application does not have the capability`, la app tiene el scope pero falta habilitar acceso avanzado/capacidad de Instagram Messaging en Meta.
 - Para reacciones/likes en comentarios Instagram se agrega `instagram_manage_engagement` como permiso objetivo.

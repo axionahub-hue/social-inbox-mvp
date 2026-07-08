@@ -485,3 +485,9 @@
 - Resumen: el diagnostico de Webhooks ahora separa `Page feed/messages` de `Instagram comments/messages`. El backend revisa `/{app-id}/subscriptions` para objeto `instagram`, informa si `comments` y `messages` estan activos y muestra cuentas IG con token. La UI muestra un bloque `Instagram Webhooks / DM` con la accion concreta: activar Webhooks > Instagram > messages y revisar acceso avanzado/capacidad de Instagram Messaging si Meta devuelve `(#3)`.
 - Areas tocadas: `src/app/api/meta/webhook/diagnostics/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y usar `Diagnosticar webhooks` en produccion.
+
+### Emojis y autor real en Instagram DM
+
+- Resumen: el footer del composer suma un boton de emojis junto a archivar/desarchivar. El webhook Instagram DM ahora llama User Profile API con el IGSID para guardar `name` y `username` en `contacts`, corrigiendo contactos tipo `Instagram 265524`. Para comentarios Facebook Ads se verifico con Graph directo que algunos `comment_id` devuelven `from = null`; en esos casos el fallback pasa a `Autor no disponible en Meta`.
+- Areas tocadas: `src/app/page.tsx`, `src/app/api/meta/webhook/route.ts`, `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, actualizar contactos existentes y probar nuevo DM Instagram.

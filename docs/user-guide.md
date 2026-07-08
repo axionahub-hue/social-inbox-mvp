@@ -89,6 +89,8 @@ El boton con icono de destellos junto al composer abre el panel `Respuestas rapi
 
 En modo demo, las respuestas quedan guardadas en el navegador. Con sesion Supabase, se guardan en `quick_replies`.
 
+El boton con cara junto a `Archivar` abre una paleta breve de emojis e inserta el emoji elegido al final del texto del composer.
+
 ## Cuentas conectadas
 
 La app muestra cuentas conectadas en el panel izquierdo. En modo demo salen del fixture local; con sesion activa salen de `connected_accounts` en Supabase. Cada cuenta tiene un ojo para decidir si sus conversaciones aparecen en el inbox.
@@ -138,6 +140,7 @@ Para Instagram DM, ademas de scopes, Meta Developers debe tener Webhooks con obj
 Si al responder por DM aparece `(#3) Application does not have the capability`, revisa en App Review / Permissions and Features que `instagram_manage_messages` tenga acceso avanzado y que la capacidad de Instagram Messaging este disponible para la app.
 
 En comentarios, las acciones junto al mensaje recibido permiten dar like, ocultar/mostrar y eliminar. Eliminar comentario borra primero en Meta y solo retira la conversacion local cuando Meta confirma.
+En DM Instagram, la app intenta resolver el nombre del autor con el IGSID recibido por webhook. En comentarios de Ads, si Meta no devuelve `from` ni al consultar el comentario directo, la app muestra `Autor no disponible en Meta`.
 En Instagram, responder sobre comentario publica una respuesta publica. Responder por DM usa Instagram Messaging y puede requerir una capacidad adicional habilitada por Meta, aunque el scope `instagram_manage_messages` ya este concedido.
 
 ## Limitaciones actuales

@@ -21,6 +21,7 @@ import {
   Search,
   Send,
   Settings,
+  Smile,
   Sparkles,
   ThumbsUp,
   Trash2,
@@ -115,6 +116,7 @@ const metaRequiredScopes = [
 const facebookCommentSyncIntervalMs = 5000;
 const metaAdCommentSyncIntervalMs = 30000;
 const instagramCommentSyncIntervalMs = 10000;
+const emojiOptions = ["😀", "😊", "🙌", "👏", "🙏", "🎶", "🎤", "❤️", "🔥", "✨", "✅", "👍"];
 
 const metaCapabilityChecks = [
   {
@@ -325,6 +327,7 @@ export default function Home() {
   const realtimeRefreshTimeout = useRef<number | null>(null);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
+  const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
   const [openOriginalPostMenuItemId, setOpenOriginalPostMenuItemId] = useState<string | null>(null);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
   const [quickReplyDraft, setQuickReplyDraft] =
@@ -1250,6 +1253,11 @@ export default function Home() {
   function insertQuickReply(reply: QuickReply) {
     setComposer(reply.body);
     setIsQuickReplyPanelOpen(false);
+  }
+
+  function insertEmoji(emoji: string) {
+    setComposer((current) => `${current}${emoji}`);
+    setIsEmojiPanelOpen(false);
   }
 
   async function startMetaOAuth() {
@@ -2965,17 +2973,41 @@ export default function Home() {
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                    <ActionButton
-                      active={selectedItem.status === "archived"}
-                      title={selectedItem.status === "archived" ? "Desarchivar" : "Archivar"}
-                      onClick={() =>
-                        void runAction(
-                          selectedItem.status === "archived" ? "unarchive" : "archive",
-                        )
-                      }
-                    >
-                      <Archive size={17} />
-                    </ActionButton>
+                    <div className="relative flex gap-2">
+                      <ActionButton
+                        active={selectedItem.status === "archived"}
+                        title={selectedItem.status === "archived" ? "Desarchivar" : "Archivar"}
+                        onClick={() =>
+                          void runAction(
+                            selectedItem.status === "archived" ? "unarchive" : "archive",
+                          )
+                        }
+                      >
+                        <Archive size={17} />
+                      </ActionButton>
+                      <ActionButton
+                        active={isEmojiPanelOpen}
+                        title="Insertar emoji"
+                        onClick={() => setIsEmojiPanelOpen((current) => !current)}
+                      >
+                        <Smile size={17} />
+                      </ActionButton>
+                      {isEmojiPanelOpen ? (
+                        <div className="absolute bottom-12 left-0 z-20 grid w-48 grid-cols-6 gap-1 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                          {emojiOptions.map((emoji) => (
+                            <button
+                              className="grid size-7 place-items-center rounded text-base hover:bg-slate-100"
+                              key={emoji}
+                              onClick={() => insertEmoji(emoji)}
+                              title={`Insertar ${emoji}`}
+                              type="button"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                     <p className="text-xs text-slate-500">{notice}</p>
                   </div>
                 </div>

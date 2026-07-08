@@ -10,6 +10,9 @@ export type MetaMessengerMessage = {
   messageId: string;
   text: string;
   timestamp: string | null;
+  senderName?: string | null;
+  senderUsername?: string | null;
+  senderProfilePic?: string | null;
 };
 
 export async function persistFacebookComment({
@@ -397,7 +400,7 @@ export async function persistInstagramDirectMessage({
   const contactId = await ensureInstagramDirectContact({
     supabase,
     workspaceId,
-    senderId: message.senderId,
+    message,
   });
   const providerThreadId = `instagram:${message.senderId}`;
   const existingItem = await supabase
@@ -504,7 +507,7 @@ async function ensureFacebookContact({
   comment: MetaOrganicComment;
 }) {
   const providerUserId = comment.fromId ?? `comment-author:${comment.commentId}`;
-  const displayName = comment.fromName ?? "Autor no disponible";
+  const displayName = comment.fromName ?? "Autor no disponible en Meta";
   const existing = await supabase
     .from("contacts")
     .select("id")
@@ -655,16 +658,22 @@ async function ensureFacebookMessengerContact({
 async function ensureInstagramDirectContact({
   supabase,
   workspaceId,
-  senderId,
+  message,
 }: {
   supabase: SupabaseServiceClient;
   workspaceId: string;
-  senderId: string;
+  message: MetaMessengerMessage;
 }) {
-  const displayName = `Instagram ${senderId.slice(-6)}`;
+  const senderId = message.senderId;
+  const displayName =
+    message.senderName ??
+    (message.senderUsername ? `@${message.senderUsername}` : `Instagram ${senderId.slice(-6)}`);
+  const handle = message.senderUsername
+    ? `instagram:${message.senderUsername}`
+    : `instagram:${senderId}`;
   const existing = await supabase
     .from("contacts")
-    .select("id,display_name")
+    .select("id,display_name,handle")
     .eq("workspace_id", workspaceId)
     .eq("network", "instagram")
     .eq("provider_user_id", senderId)
@@ -675,6 +684,25 @@ async function ensureInstagramDirectContact({
   }
 
   if (existing.data?.id) {
+    const shouldUpdate =
+      existing.data.display_name !== displayName ||
+      (handle && existing.data.handle !== handle);
+
+    if (shouldUpdate) {
+      const updated = await supabase
+        .from("contacts")
+        .update({
+          display_name: displayName,
+          handle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.data.id);
+
+      if (updated.error) {
+        throw new Error(updated.error.message);
+      }
+    }
+
     return existing.data.id as string;
   }
 
@@ -685,7 +713,7 @@ async function ensureInstagramDirectContact({
       network: "instagram",
       provider_user_id: senderId,
       display_name: displayName,
-      handle: `instagram:${senderId}`,
+      handle,
     })
     .select("id")
     .single();
