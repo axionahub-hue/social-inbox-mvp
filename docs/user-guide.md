@@ -131,6 +131,8 @@ La auto-sincronizacion local evita depender del boton manual durante desarrollo,
 
 Para conversaciones por mensaje interno de Facebook, Meta debe tener activo el campo webhook Page `messages`. Los comentarios organicos/ad entran por `feed`; las respuestas del usuario dentro de Messenger entran por `messages`. En el panel `Diagnosticar webhooks`, `App Page fields` debe mostrar `feed + messages`.
 
+En comentarios, las acciones junto al mensaje recibido permiten dar like, ocultar/mostrar y eliminar. Eliminar comentario borra primero en Meta y solo retira la conversacion local cuando Meta confirma.
+
 ## Limitaciones actuales
 
 - Con `pages_show_list`, Meta puede detectar paginas, pero no garantiza comentarios, ads ni DMs hasta ampliar permisos.

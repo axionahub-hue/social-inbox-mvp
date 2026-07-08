@@ -21,6 +21,7 @@ const actionSchema = z.object({
     "unarchive",
     "mark_read",
     "mark_unread",
+    "delete_comment",
     "delete_message",
   ]),
   message: z.string().optional(),
@@ -110,6 +111,7 @@ async function resolveAuthenticatedActionInput({
     "unlike",
     "hide",
     "unhide",
+    "delete_comment",
     "delete_message",
     "block",
     "unblock",
@@ -304,6 +306,33 @@ async function resolveAuthenticatedActionInput({
     };
   }
 
+  if (input.action === "delete_comment") {
+    if (
+      account?.network !== "facebook" ||
+      !account.access_token_encrypted ||
+      !providerCommentId ||
+      (itemResult.data.source !== "post_comment" && itemResult.data.source !== "ad_comment")
+    ) {
+      return {
+        input,
+        canPersist: false,
+        response: NextResponse.json(
+          { ok: false, message: "No hay comentario real de Facebook para eliminar en Meta." },
+          { status: 409 },
+        ),
+      };
+    }
+
+    return {
+      input: {
+        ...input,
+        externalId: providerCommentId,
+        accessToken: decryptMetaToken(account.access_token_encrypted),
+      },
+      canPersist: true,
+    };
+  }
+
   if (
     input.action === "reply" &&
     itemResult.data.source === "messenger" &&
@@ -430,6 +459,15 @@ async function persistInboxAction({
       .eq("id", messageId)
       .eq("inbox_item_id", itemId)
       .eq("author_type", "agent");
+
+    return !error;
+  }
+
+  if (action === "delete_comment") {
+    const { error } = await supabase
+      .from("inbox_items")
+      .delete()
+      .eq("id", itemId);
 
     return !error;
   }

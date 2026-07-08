@@ -1623,21 +1623,26 @@ export default function Home() {
       return;
     }
 
-    setItems((current) =>
-      current.map((item) =>
-        action === "block" || action === "unblock"
-          ? item.accountId === selectedItem.accountId &&
-            item.contactHandle === selectedItem.contactHandle &&
-            item.contactName === selectedItem.contactName
-            ? applyInboxActionToItem(item, action, message)
-            : item
-          : item.id === selectedItem.id
-            ? applyInboxActionToItem(item, action, message)
-            : item,
-      ),
-    );
+    if (action === "delete_comment") {
+      setItems((current) => current.filter((item) => item.id !== selectedItem.id));
+      setSelectedId(filteredItems.find((item) => item.id !== selectedItem.id)?.id ?? "");
+    } else {
+      setItems((current) =>
+        current.map((item) =>
+          action === "block" || action === "unblock"
+            ? item.accountId === selectedItem.accountId &&
+              item.contactHandle === selectedItem.contactHandle &&
+              item.contactName === selectedItem.contactName
+              ? applyInboxActionToItem(item, action, message)
+              : item
+            : item.id === selectedItem.id
+              ? applyInboxActionToItem(item, action, message)
+              : item,
+        ),
+      );
+    }
 
-    if ((action === "reply" || action === "delete_message") && activeWorkspaceId) {
+    if ((action === "reply" || action === "delete_message" || action === "delete_comment") && activeWorkspaceId) {
       const inboxData = await loadSupabaseInbox(activeWorkspaceId);
       setChannelList(inboxData.channels);
       setItems(inboxData.items);
@@ -2580,6 +2585,11 @@ export default function Home() {
                             onHideToggle={() =>
                               void runAction(selectedItem.hidden ? "unhide" : "hide")
                             }
+                            onDelete={
+                              isCommentItem(selectedItem)
+                                ? () => void runAction("delete_comment")
+                                : undefined
+                            }
                             onReact={reactToSelectedItem}
                           />
                         ) : (
@@ -2941,12 +2951,14 @@ function MessageModerationActions({
   hidden,
   reaction,
   supportsOnlyLikeReaction,
+  onDelete,
   onHideToggle,
   onReact,
 }: {
   hidden: boolean;
   reaction: ReactionKind | null;
   supportsOnlyLikeReaction: boolean;
+  onDelete?: () => void;
   onHideToggle: () => void;
   onReact: (reaction: ReactionKind) => void;
 }) {
@@ -2984,6 +2996,14 @@ function MessageModerationActions({
       >
         {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
       </SmallActionButton>
+      {onDelete ? (
+        <SmallActionButton
+          title="Eliminar comentario"
+          onClick={onDelete}
+        >
+          <Trash2 size={14} />
+        </SmallActionButton>
+      ) : null}
     </div>
   );
 }

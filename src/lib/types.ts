@@ -85,4 +85,5 @@ export type InboxAction =
   | "unarchive"
   | "mark_read"
   | "mark_unread"
+  | "delete_comment"
   | "delete_message";

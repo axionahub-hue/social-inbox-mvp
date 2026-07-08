@@ -966,7 +966,10 @@ async function sendMetaActionRequest(input: MetaActionInput) {
   }
 
   const method =
-    input.action === "unlike" || input.action === "unblock" || input.action === "delete_message"
+    input.action === "unlike" ||
+    input.action === "unblock" ||
+    input.action === "delete_message" ||
+    input.action === "delete_comment"
       ? "DELETE"
       : "POST";
   const url = new URL(`${graphBaseUrl}/${endpoint}`);
@@ -1253,6 +1256,7 @@ function resolveActionEndpoint(input: MetaActionInput) {
     case "block":
     case "unblock":
       return `${input.externalId}/blocked`;
+    case "delete_comment":
     case "delete_message":
       return input.externalId;
     case "archive":
@@ -1324,6 +1328,8 @@ function resolveMetaActionSuccessMessage(action: InboxAction) {
       return "Autor bloqueado en Meta y en la app.";
     case "unblock":
       return "Autor desbloqueado en Meta y en la app.";
+    case "delete_comment":
+      return "Comentario eliminado en Meta y en la app.";
     default:
       return `Accion ${action} ejecutada en Meta.`;
   }

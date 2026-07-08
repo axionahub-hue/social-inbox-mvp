@@ -459,3 +459,10 @@
 - Areas tocadas: `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y verificar que el comentario `excelente` entre sin tocar boton.
 - Pendiente: migrar esta consulta a job server-side programado para que funcione aun con la app cerrada.
+
+### Eliminacion real de comentarios recibidos
+
+- Resumen: se agrego accion `delete_comment` para comentarios organicos y de Ads. La UI muestra el icono de eliminar junto a like/ocultar, el backend ejecuta `DELETE /{comment_id}` en Meta y solo elimina la conversacion local si Meta confirma.
+- Areas tocadas: `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con un comentario real.
+- Pendiente: confirmar comportamiento de Meta si se elimina un comentario que ya tenia respuestas agente.
