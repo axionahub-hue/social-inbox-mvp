@@ -19,6 +19,8 @@ type FacebookAccountRow = {
   access_token_encrypted: string | null;
 };
 
+type InstagramAccountRow = FacebookAccountRow;
+
 export async function POST(request: Request) {
   const parsed = diagnosticsSchema.safeParse(await request.json());
 
@@ -84,9 +86,25 @@ export async function POST(request: Request) {
     );
   }
 
+  const instagramAccountsResult = await supabase
+    .from("connected_accounts")
+    .select("id,provider_account_id,name,access_token_encrypted")
+    .eq("workspace_id", parsed.data.workspaceId)
+    .eq("network", "instagram");
+
+  if (instagramAccountsResult.error) {
+    return NextResponse.json(
+      { ok: false, message: instagramAccountsResult.error.message },
+      { status: 500 },
+    );
+  }
+
   const appSubscriptions = await fetchMetaAppSubscriptions();
   const appPageSubscription = (appSubscriptions.data ?? []).find(
     (subscription) => subscription.object === "page",
+  );
+  const appInstagramSubscription = (appSubscriptions.data ?? []).find(
+    (subscription) => subscription.object === "instagram",
   );
   const appPageFeedActive = Boolean(
     appPageSubscription?.active &&
@@ -96,7 +114,16 @@ export async function POST(request: Request) {
     appPageSubscription?.active &&
       appPageSubscription.fields?.some((field) => field.name === "messages"),
   );
+  const appInstagramCommentsActive = Boolean(
+    appInstagramSubscription?.active &&
+      appInstagramSubscription.fields?.some((field) => field.name === "comments"),
+  );
+  const appInstagramMessagesActive = Boolean(
+    appInstagramSubscription?.active &&
+      appInstagramSubscription.fields?.some((field) => field.name === "messages"),
+  );
   const accounts = (accountsResult.data ?? []) as FacebookAccountRow[];
+  const instagramAccounts = (instagramAccountsResult.data ?? []) as InstagramAccountRow[];
   const pageDiagnostics = await Promise.all(
     accounts.map(async (account) => {
       if (!account.access_token_encrypted) {
@@ -165,6 +192,24 @@ export async function POST(request: Request) {
       callbackUrl: appPageSubscription?.callback_url ?? null,
       fields: appPageSubscription?.fields ?? [],
       error: appSubscriptions.error?.message ?? null,
+    },
+    instagram: {
+      commentsActive: appInstagramCommentsActive,
+      messagesActive: appInstagramMessagesActive,
+      ready: appInstagramCommentsActive && appInstagramMessagesActive,
+      callbackUrl: appInstagramSubscription?.callback_url ?? null,
+      fields: appInstagramSubscription?.fields ?? [],
+      accountCount: instagramAccounts.length,
+      tokenAccountCount: instagramAccounts.filter((account) => account.access_token_encrypted).length,
+      accounts: instagramAccounts.map((account) => ({
+        accountId: account.provider_account_id,
+        accountName: account.name,
+        hasToken: Boolean(account.access_token_encrypted),
+      })),
+      missingSetup:
+        !appInstagramSubscription || !appInstagramMessagesActive
+          ? "Activa Webhooks > Instagram > messages en Meta Developers. Si el envio por DM sigue con error #3, revisa el acceso avanzado/capacidad de Instagram Messaging para la app."
+          : null,
     },
     pages: pageDiagnostics,
     latestEvents: (latestEvents.data ?? []).map((event) => ({

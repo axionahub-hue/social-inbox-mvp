@@ -479,3 +479,9 @@
 - Resumen: la prueba real en `expertos.delamusica` confirmo ingreso de comentario IG, respuesta publica y borrado de comentario/respuesta. Se corrigio `like/unlike` para Instagram usando `/{ig-user-id}/likes` con `comment_id`, se desactivo la copia privada automatica despues de respuesta publica Instagram y se agrego mensaje especifico para el error `(#3)` de Instagram Messaging sin capacidad habilitada.
 - Areas tocadas: `src/lib/meta.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar like/unlike con un comentario IG nuevo.
+
+### Diagnostico Instagram Messaging
+
+- Resumen: el diagnostico de Webhooks ahora separa `Page feed/messages` de `Instagram comments/messages`. El backend revisa `/{app-id}/subscriptions` para objeto `instagram`, informa si `comments` y `messages` estan activos y muestra cuentas IG con token. La UI muestra un bloque `Instagram Webhooks / DM` con la accion concreta: activar Webhooks > Instagram > messages y revisar acceso avanzado/capacidad de Instagram Messaging si Meta devuelve `(#3)`.
+- Areas tocadas: `src/app/api/meta/webhook/diagnostics/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y usar `Diagnosticar webhooks` en produccion.

@@ -234,6 +234,21 @@ type MetaWebhookDiagnostics = {
     fields: Array<{ name?: string; version?: string }>;
     error: string | null;
   };
+  instagram?: {
+    commentsActive: boolean;
+    messagesActive: boolean;
+    ready: boolean;
+    callbackUrl: string | null;
+    fields: Array<{ name?: string; version?: string }>;
+    accountCount: number;
+    tokenAccountCount: number;
+    accounts: Array<{
+      accountId: string;
+      accountName: string;
+      hasToken: boolean;
+    }>;
+    missingSetup: string | null;
+  };
   pages?: Array<{
     pageId: string;
     pageName: string;
@@ -2332,6 +2347,59 @@ export default function Home() {
                   <p className="break-all">
                     Callback: {metaWebhookDiagnostics.app?.callbackUrl ?? "No reportado"}
                   </p>
+                  <div className="mt-2 rounded-md border border-pink-100 bg-pink-50 p-2 text-pink-950">
+                    <p className="font-semibold">Instagram Webhooks / DM</p>
+                    <p>
+                      App Instagram fields:{" "}
+                      <span
+                        className={
+                          metaWebhookDiagnostics.instagram?.ready
+                            ? "font-semibold text-emerald-700"
+                            : "font-semibold text-amber-800"
+                        }
+                      >
+                        {metaWebhookDiagnostics.instagram?.ready
+                          ? "comments + messages"
+                          : "Incompleto"}
+                      </span>
+                    </p>
+                    <p>
+                      Comments:{" "}
+                      <span
+                        className={
+                          metaWebhookDiagnostics.instagram?.commentsActive
+                            ? "font-semibold text-emerald-700"
+                            : "font-semibold text-amber-800"
+                        }
+                      >
+                        {metaWebhookDiagnostics.instagram?.commentsActive ? "Activo" : "No activo"}
+                      </span>
+                      {" | "}
+                      Messages:{" "}
+                      <span
+                        className={
+                          metaWebhookDiagnostics.instagram?.messagesActive
+                            ? "font-semibold text-emerald-700"
+                            : "font-semibold text-amber-800"
+                        }
+                      >
+                        {metaWebhookDiagnostics.instagram?.messagesActive ? "Activo" : "No activo"}
+                      </span>
+                    </p>
+                    <p className="break-all">
+                      Callback IG: {metaWebhookDiagnostics.instagram?.callbackUrl ?? "No reportado"}
+                    </p>
+                    <p>
+                      Cuentas IG con token:{" "}
+                      {metaWebhookDiagnostics.instagram?.tokenAccountCount ?? 0}/
+                      {metaWebhookDiagnostics.instagram?.accountCount ?? 0}
+                    </p>
+                    {metaWebhookDiagnostics.instagram?.missingSetup ? (
+                      <p className="mt-1 leading-5 text-amber-900">
+                        {metaWebhookDiagnostics.instagram.missingSetup}
+                      </p>
+                    ) : null}
+                  </div>
                   <p>
                     Paginas feed+messages:{" "}
                     {(metaWebhookDiagnostics.pages ?? []).filter((page) => page.subscribed).length}

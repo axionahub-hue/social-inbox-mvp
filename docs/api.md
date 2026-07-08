@@ -369,7 +369,9 @@ Comportamiento:
 
 - valida sesion Supabase;
 - consulta `/{app-id}/subscriptions` con app token para confirmar objeto `Page` y campos `feed,messages`;
+- consulta el mismo listado para confirmar si existe objeto `Instagram` con campos `comments,messages`;
 - consulta `/{page-id}/subscribed_apps` con page token por cada pagina Facebook conectada;
+- informa cuantas cuentas Instagram conectadas tienen token guardado;
 - devuelve los ultimos eventos `webhook_events` guardados para comparar configuracion con entregas reales.
 
 ### `POST /api/meta/webhook/subscribe`

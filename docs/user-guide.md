@@ -134,6 +134,8 @@ La auto-sincronizacion local evita depender del boton manual durante desarrollo,
 Para conversaciones por mensaje interno de Facebook, Meta debe tener activo el campo webhook Page `messages`. Los comentarios organicos/ad entran por `feed`; las respuestas del usuario dentro de Messenger entran por `messages`. En el panel `Diagnosticar webhooks`, `App Page fields` debe mostrar `feed + messages`.
 
 Para Instagram, Meta debe tener concedidos `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages` y, para reacciones, `instagram_manage_engagement`. Despues de agregarlos en Meta Login Configuration hay que repetir OAuth para que Supabase guarde esos scopes en las cuentas conectadas.
+Para Instagram DM, ademas de scopes, Meta Developers debe tener Webhooks con objeto `Instagram` y campo `messages` activo. En `Diagnosticar webhooks`, el bloque `Instagram Webhooks / DM` debe mostrar `comments + messages`; si muestra `Incompleto`, entra a Meta Developers > Webhooks, selecciona `Instagram` y suscribe `messages`.
+Si al responder por DM aparece `(#3) Application does not have the capability`, revisa en App Review / Permissions and Features que `instagram_manage_messages` tenga acceso avanzado y que la capacidad de Instagram Messaging este disponible para la app.
 
 En comentarios, las acciones junto al mensaje recibido permiten dar like, ocultar/mostrar y eliminar. Eliminar comentario borra primero en Meta y solo retira la conversacion local cuando Meta confirma.
 En Instagram, responder sobre comentario publica una respuesta publica. Responder por DM usa Instagram Messaging y puede requerir una capacidad adicional habilitada por Meta, aunque el scope `instagram_manage_messages` ya este concedido.
