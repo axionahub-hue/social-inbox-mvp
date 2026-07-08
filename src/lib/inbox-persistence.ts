@@ -59,6 +59,7 @@ export async function persistFacebookComment({
 
   if (existingItem.data?.id) {
     const updatePayload = {
+      contact_id: contactId,
       title,
       preview,
       source,
@@ -81,6 +82,7 @@ export async function persistFacebookComment({
       const retryResult = await supabase
         .from("inbox_items")
         .update({
+          contact_id: contactId,
           title,
           preview,
           source,
@@ -210,6 +212,7 @@ export async function persistInstagramComment({
     const updateResult = await supabase
       .from("inbox_items")
       .update({
+        contact_id: contactId,
         title,
         preview,
         source: "post_comment",

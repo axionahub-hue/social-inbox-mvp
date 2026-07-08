@@ -498,3 +498,10 @@
 - Areas tocadas: `package.json`, `package-lock.json`, `src/app/page.tsx`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Se actualizaron contactos antiguos de Supabase con fallback previo a `Autor pendiente`.
 - Pendiente: desplegar en Vercel y probar un comentario Ads nuevo para confirmar si Meta entrega `from` en ese caso concreto.
+
+### Diagnostico autor Ads oculto por Graph
+
+- Resumen: se audito el comentario Ads `Info por fa` en Academia Expertos de la Musica. Supabase lo guardo como `source = ad_comment`, `ingest_source = ads_auto`, sin webhook crudo asociado. Las consultas `/{comment_id}`, `/POST_ID/comments` con `reverse_chronological`, `chronological`, `filter=stream`, Page token guardado, Page token fresco y Graph v18-v25 devolvieron el comentario sin `from`. El post publicitario muestra respuestas de la Page con `from`, pero comentarios de usuarios sin autor. La Page tiene tarea `MODERATE`, asi que no es falta de rol sobre la Page.
+- Cambio: `persistFacebookComment` y `persistInstagramComment` ahora actualizan `contact_id` en items existentes para que una resincronizacion posterior pueda reemplazar `Autor pendiente` por el contacto real si Meta empieza a devolver identidad.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Pendiente: llevar la app Meta a Live/Full Access o confirmar con Meta App Review que `pages_read_user_content` permite exponer `from` para comentarios de Ads de usuarios reales.
