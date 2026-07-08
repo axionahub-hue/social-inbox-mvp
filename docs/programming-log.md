@@ -424,3 +424,10 @@
 - Areas tocadas: `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `src/lib/types.ts`, `src/lib/inbox-persistence.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar auto-sync Ads con un comentario nuevo de anuncio y bloqueo/desbloqueo de autor.
 - Pendiente: bloqueo real externo en Meta e ingest automatico/webhook para Instagram comentarios y DM.
+
+### Mensaje correcto para bloqueo interno
+
+- Resumen: `block/unblock` se clasificaron como acciones internas en `executeMetaAction` para evitar el mensaje incorrecto `modo demo`. El bloqueo sigue persistiendo en `contacts.is_blocked` y ahora responde `Autor bloqueado en la app` / `Autor desbloqueado en la app`.
+- Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar bloqueo/desbloqueo desde la UI.
+- Pendiente: bloqueo real externo en Meta.

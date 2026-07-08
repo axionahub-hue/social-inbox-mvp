@@ -90,8 +90,8 @@ Despues de una respuesta exitosa de Meta o una accion interna exitosa, persiste:
 - `delete_message`: exige `provider_message_id`; intenta borrar primero en Meta y solo si Meta confirma elimina la respuesta agente local.
 - `like`/`unlike`: actualiza `inbox_items.is_liked`.
 - `hide`/`unhide`: actualiza `inbox_items.is_hidden`.
-- `block`: actualiza `contacts.is_blocked = true`.
-- `unblock`: actualiza `contacts.is_blocked = false`.
+- `block`: accion interna; actualiza `contacts.is_blocked = true`.
+- `unblock`: accion interna; actualiza `contacts.is_blocked = false`.
 - `archive`: marca `inbox_items.status = archived` y limpia `unread_count`.
 - `unarchive`: marca `inbox_items.status = open` y limpia `unread_count`.
 - `mark_read`: limpia `unread_count`; mantiene `status = responded` si la conversacion ya estaba respondida, si no marca `status = open`.

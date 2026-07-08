@@ -873,7 +873,9 @@ export async function executeMetaAction(input: MetaActionInput) {
     input.action === "archive" ||
     input.action === "unarchive" ||
     input.action === "mark_read" ||
-    input.action === "mark_unread"
+    input.action === "mark_unread" ||
+    input.action === "block" ||
+    input.action === "unblock"
   ) {
     return {
       mode: "internal",
@@ -1261,6 +1263,10 @@ function resolveInternalActionMessage(action: InboxAction) {
       return "Conversacion marcada como leida.";
     case "mark_unread":
       return "Conversacion marcada como no leida.";
+    case "block":
+      return "Autor bloqueado en la app.";
+    case "unblock":
+      return "Autor desbloqueado en la app.";
     default:
       return "Accion interna registrada.";
   }
