@@ -21,7 +21,6 @@ import {
   Search,
   Send,
   Settings,
-  Smile,
   Sparkles,
   ThumbsUp,
   Trash2,
@@ -213,7 +212,7 @@ type SupabaseInboxData = {
 
 type InboxView = "active" | "responded" | "archived";
 type BulkInboxAction = "mark_read" | "mark_unread" | "archive" | "unarchive";
-type ReactionKind = "like" | "love" | "smile";
+type ReactionKind = "like";
 type MobileInboxPanel = "list" | "detail";
 type RunActionOptions = {
   replyMode?: ReplyMode;
@@ -3087,24 +3086,6 @@ function MessageModerationActions({
       >
         {isInstagram ? <Heart size={14} /> : <ThumbsUp size={14} />}
       </SmallActionButton>
-      {!isInstagram ? (
-        <>
-          <SmallActionButton
-            active={reaction === "love"}
-            title={reaction === "love" ? "Quitar me encanta" : "Me encanta"}
-            onClick={() => onReact("love")}
-          >
-            <Heart size={14} />
-          </SmallActionButton>
-          <SmallActionButton
-            active={reaction === "smile"}
-            title={reaction === "smile" ? "Quitar reaccion" : "Me divierte"}
-            onClick={() => onReact("smile")}
-          >
-            <Smile size={14} />
-          </SmallActionButton>
-        </>
-      ) : null}
       <SmallActionButton
         active={hidden}
         title={hidden ? "Mostrar comentario" : "Ocultar comentario"}
