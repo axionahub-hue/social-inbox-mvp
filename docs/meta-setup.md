@@ -56,6 +56,14 @@ Si Meta pide tambien una URL de eliminacion de datos de usuario, se puede usar l
 https://social-inbox-mvp.vercel.app/privacy#eliminacion-de-datos
 ```
 
+## Condiciones de servicio
+
+Si Meta pide una URL publica de condiciones de servicio, usar:
+
+```text
+https://social-inbox-mvp.vercel.app/terms
+```
+
 ## Permisos OAuth de prueba
 
 Por defecto, la app pide solo:
