@@ -92,6 +92,21 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - El contacto queda identificado por el Page-scoped sender id (`facebook:PSID`) cuando Meta no entrega nombre en el webhook.
 - Las respuestas desde un item Messenger usan Send API `me/messages` con `recipient.id = PSID`. Esto es distinto a una private reply de comentario, que usa `recipient.comment_id`.
 
+## Instagram comentarios y DM
+
+- Las cuentas Instagram se guardan como `connected_accounts.network = instagram` usando el Instagram Business Account ID asociado a una Page.
+- `POST /api/meta/sync/instagram-comments` lee media reciente y comentarios de cada cuenta Instagram elegible.
+- Solo procesa cuentas con `instagram_basic` e `instagram_manage_comments`.
+- Los comentarios Instagram se normalizan como `network = instagram` y `source = post_comment`; asi reutilizan bandeja, filtros, responder, ocultar/mostrar y eliminar sin cambiar el enum de Supabase.
+- La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta y los permisos estan concedidos.
+- Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.
+- Ocultar/mostrar Instagram usa `/{ig-comment-id}` con `hide=true|false`.
+- Eliminar comentarios Instagram usa `DELETE /{ig-comment-id}`.
+- El webhook `/api/meta/webhook` queda preparado para `object = instagram`: normaliza cambios `comments` y eventos `entry.messaging[]` como `instagram_dm`.
+- Los DM Instagram entrantes se guardan como `inbox_items.source = instagram_dm`; las respuestas intentan usar el Send API de Instagram con `recipient.id`.
+- Para que DM Instagram funcione en tiempo real faltan activar los webhooks/tópicos Instagram correspondientes en Meta Developers y reautorizar con `instagram_manage_messages`.
+- Para reacciones/likes en comentarios Instagram se agrega `instagram_manage_engagement` como permiso objetivo.
+
 ## Comentarios de Ads
 
 - Los comentarios de Ads no se tratan como comentarios organicos de Page.

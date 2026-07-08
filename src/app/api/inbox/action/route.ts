@@ -105,7 +105,7 @@ async function resolveAuthenticatedActionInput({
   response?: NextResponse;
 }> {
   const internalActions = new Set(["archive", "unarchive", "mark_read", "mark_unread"]);
-  const metaFacebookCommentActions = new Set([
+  const metaCommentActions = new Set([
     "reply",
     "like",
     "unlike",
@@ -194,7 +194,7 @@ async function resolveAuthenticatedActionInput({
     return { input, canPersist: true };
   }
 
-  if (!metaFacebookCommentActions.has(input.action)) {
+  if (!metaCommentActions.has(input.action)) {
     return { input, canPersist: true };
   }
 
@@ -245,12 +245,15 @@ async function resolveAuthenticatedActionInput({
       };
     }
 
-    if (account?.network !== "facebook" || !account.access_token_encrypted) {
+    if (
+      (account?.network !== "facebook" && account?.network !== "instagram") ||
+      !account.access_token_encrypted
+    ) {
       return {
         input,
         canPersist: false,
         response: NextResponse.json(
-          { ok: false, message: "No hay page token real para eliminar esta respuesta en Meta." },
+          { ok: false, message: "No hay token real para eliminar esta respuesta en Meta." },
           { status: 409 },
         ),
       };
@@ -260,6 +263,8 @@ async function resolveAuthenticatedActionInput({
       input: {
         ...input,
         externalId: messageResult.data.provider_message_id as string,
+        network: account.network,
+        accountExternalId: account.provider_account_id as string,
         accessToken: decryptMetaToken(account.access_token_encrypted),
       },
       canPersist: true,
@@ -308,7 +313,7 @@ async function resolveAuthenticatedActionInput({
 
   if (input.action === "delete_comment") {
     if (
-      account?.network !== "facebook" ||
+      (account?.network !== "facebook" && account?.network !== "instagram") ||
       !account.access_token_encrypted ||
       !providerCommentId ||
       (itemResult.data.source !== "post_comment" && itemResult.data.source !== "ad_comment")
@@ -317,7 +322,7 @@ async function resolveAuthenticatedActionInput({
         input,
         canPersist: false,
         response: NextResponse.json(
-          { ok: false, message: "No hay comentario real de Facebook para eliminar en Meta." },
+          { ok: false, message: "No hay comentario real de Meta para eliminar." },
           { status: 409 },
         ),
       };
@@ -327,6 +332,7 @@ async function resolveAuthenticatedActionInput({
       input: {
         ...input,
         externalId: providerCommentId,
+        network: account.network,
         accessToken: decryptMetaToken(account.access_token_encrypted),
       },
       canPersist: true,
@@ -357,7 +363,32 @@ async function resolveAuthenticatedActionInput({
   }
 
   if (
-    account?.network !== "facebook" ||
+    input.action === "reply" &&
+    itemResult.data.source === "instagram_dm" &&
+    account?.network === "instagram" &&
+    account.access_token_encrypted &&
+    providerThreadId
+  ) {
+    const recipientExternalId = providerThreadId.replace(/^instagram:/, "");
+
+    return {
+      input: {
+        ...input,
+        externalId: providerThreadId.startsWith("instagram:")
+          ? providerThreadId
+          : `instagram:${providerThreadId}`,
+        recipientExternalId,
+        replyMode: "private_message",
+        network: "instagram",
+        accountExternalId: account.provider_account_id as string,
+        accessToken: decryptMetaToken(account.access_token_encrypted),
+      },
+      canPersist: true,
+    };
+  }
+
+  if (
+    (account?.network !== "facebook" && account?.network !== "instagram") ||
     !account.access_token_encrypted ||
     !providerCommentId ||
     (itemResult.data.source !== "post_comment" && itemResult.data.source !== "ad_comment")
@@ -369,6 +400,8 @@ async function resolveAuthenticatedActionInput({
     input: {
       ...input,
       externalId: providerCommentId,
+      network: account.network,
+      accountExternalId: account.provider_account_id as string,
       accessToken: decryptMetaToken(account.access_token_encrypted),
     },
     canPersist: true,

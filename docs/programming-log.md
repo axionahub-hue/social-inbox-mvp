@@ -466,3 +466,10 @@
 - Areas tocadas: `src/lib/types.ts`, `src/lib/meta.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar con un comentario real.
 - Pendiente: confirmar comportamiento de Meta si se elimina un comentario que ya tenia respuestas agente.
+
+### Instagram comentarios y base DM
+
+- Resumen: se agrego `/api/meta/sync/instagram-comments` para leer media/comentarios de cuentas Instagram conectadas, filtrar ultimas 72h y persistir como `network = instagram` + `source = post_comment`. La UI ejecuta auto-sync IG cada 10 segundos con permisos listos y ofrece boton manual de diagnostico. `/api/inbox/action` ahora resuelve acciones de comentario Facebook/Instagram y usa endpoints IG para responder, ocultar/mostrar y eliminar. El webhook Meta queda preparado para `object = instagram`, persistiendo cambios `comments` y eventos `entry.messaging[]` como `instagram_dm`.
+- Areas tocadas: `src/lib/meta.ts`, `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/api/inbox/action/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`, `POST /api/meta/sync/instagram-comments` sin sesion devuelve `401`.
+- Pendiente: agregar en Meta Login Configuration `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages` e `instagram_manage_engagement`, reautorizar OAuth y probar comentario/DM real en produccion.

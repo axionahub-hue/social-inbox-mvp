@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { InboxAction, ReplyMode } from "@/lib/types";
+import type { InboxAction, Network, ReplyMode } from "@/lib/types";
 
 const graphVersion = process.env.META_GRAPH_VERSION ?? "v25.0";
 const graphBaseUrl = `https://graph.facebook.com/${graphVersion}`;
@@ -26,6 +26,7 @@ export const metaTargetScopes = [
   "business_management",
   "instagram_basic",
   "instagram_manage_comments",
+  "instagram_manage_engagement",
   "instagram_manage_messages",
 ] as const;
 
@@ -41,6 +42,8 @@ type MetaOAuthStatePayload = {
 export type MetaActionInput = {
   action: InboxAction;
   externalId: string;
+  network?: Network;
+  accountExternalId?: string;
   accessToken?: string;
   message?: string;
   replyMode?: ReplyMode;
@@ -165,6 +168,43 @@ type MetaComment = {
   from?: {
     id?: string;
     name?: string;
+  };
+};
+
+type MetaInstagramMedia = {
+  id: string;
+  caption?: string;
+  permalink?: string;
+  timestamp?: string;
+  comments_count?: number;
+};
+
+type MetaInstagramMediaResponse = {
+  data?: MetaInstagramMedia[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
+
+type MetaInstagramComment = {
+  id: string;
+  text?: string;
+  timestamp?: string;
+  username?: string;
+  hidden?: boolean;
+  like_count?: number;
+};
+
+type MetaInstagramCommentsResponse = {
+  data?: MetaInstagramComment[];
+  paging?: {
+    next?: string;
+  };
+  error?: {
+    message?: string;
   };
 };
 
@@ -769,6 +809,74 @@ export async function fetchMetaPostComments({
     .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
 }
 
+export async function fetchMetaInstagramComments({
+  accessToken,
+  instagramAccountId,
+  commentsLimit = 25,
+  mediaLimit = 50,
+  mediaWithCommentsLimit = 30,
+  since,
+}: {
+  accessToken: string;
+  instagramAccountId: string;
+  commentsLimit?: number;
+  mediaLimit?: number;
+  mediaWithCommentsLimit?: number;
+  since?: string;
+}) {
+  const media = await requestGraph<MetaInstagramMediaResponse>(`${instagramAccountId}/media`, {
+    fields: "id,caption,permalink,timestamp,comments_count",
+    limit: `${mediaLimit}`,
+    access_token: accessToken,
+  });
+
+  if (media.error) {
+    throw new Error(media.error.message ?? "No se pudieron leer publicaciones de Instagram.");
+  }
+
+  const mediaWithComments = (media.data ?? [])
+    .filter((item) => (item.comments_count ?? 0) > 0)
+    .slice(0, mediaWithCommentsLimit);
+  const commentsByMedia = await Promise.all(
+    mediaWithComments.map(async (mediaItem) => {
+      const comments = await requestGraph<MetaInstagramCommentsResponse>(
+        `${mediaItem.id}/comments`,
+        {
+          fields: "id,text,username,timestamp,hidden,like_count",
+          order: "reverse_chronological",
+          limit: `${commentsLimit}`,
+          access_token: accessToken,
+        },
+      );
+
+      if (comments.error) {
+        console.warn("meta_instagram_comments_skipped", {
+          mediaId: mediaItem.id,
+          message: comments.error.message,
+        });
+        return [];
+      }
+
+      return (comments.data ?? [])
+        .map((comment): MetaOrganicComment => ({
+          postId: mediaItem.id,
+          postMessage: mediaItem.caption ?? null,
+          postPermalink: mediaItem.permalink ?? null,
+          commentId: comment.id,
+          message: comment.text ?? "",
+          fromId: comment.username ? `instagram:${comment.username}` : null,
+          fromName: comment.username ? `@${comment.username}` : null,
+          createdTime: comment.timestamp ?? mediaItem.timestamp ?? null,
+          isHidden: Boolean(comment.hidden),
+          permalink: mediaItem.permalink ?? null,
+        }))
+        .filter((comment) => isMetaCommentOnOrAfter(comment.createdTime, since));
+    }),
+  );
+
+  return commentsByMedia.flat();
+}
+
 async function fetchMetaPostDetail({
   accessToken,
   fallbackPost,
@@ -1245,7 +1353,15 @@ function createMetaTokenEncryptionKey() {
 function resolveActionEndpoint(input: MetaActionInput) {
   switch (input.action) {
     case "reply":
-      return input.replyMode === "private_message" ? "me/messages" : `${input.externalId}/comments`;
+      if (input.replyMode === "private_message") {
+        return input.network === "instagram" && input.accountExternalId
+          ? `${input.accountExternalId}/messages`
+          : "me/messages";
+      }
+
+      return input.network === "instagram"
+        ? `${input.externalId}/replies`
+        : `${input.externalId}/comments`;
     case "like":
       return `${input.externalId}/likes`;
     case "unlike":
@@ -1279,9 +1395,9 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
 
       return { message: input.message ?? "" };
     case "hide":
-      return { is_hidden: true };
+      return input.network === "instagram" ? { hide: true } : { is_hidden: true };
     case "unhide":
-      return { is_hidden: false };
+      return input.network === "instagram" ? { hide: false } : { is_hidden: false };
     case "block":
       return input.recipientExternalId
         ? { psid: JSON.stringify([input.recipientExternalId]) }
@@ -1294,7 +1410,10 @@ function resolveActionBody(input: MetaActionInput): Record<string, string | bool
 }
 
 function resolvePrivateMessageRecipient(input: MetaActionInput) {
-  if (input.externalId.startsWith("messenger:") && input.recipientExternalId) {
+  if (
+    (input.externalId.startsWith("messenger:") || input.externalId.startsWith("instagram:")) &&
+    input.recipientExternalId
+  ) {
     return { id: input.recipientExternalId };
   }
 

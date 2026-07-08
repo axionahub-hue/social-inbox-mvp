@@ -9,6 +9,8 @@ import {
 import {
   persistFacebookComment,
   persistFacebookMessengerMessage,
+  persistInstagramComment,
+  persistInstagramDirectMessage,
   type SupabaseServiceClient,
 } from "@/lib/inbox-persistence";
 import { createServiceSupabaseClient } from "@/lib/supabase";
@@ -23,7 +25,7 @@ type MetaWebhookEntry = {
   time?: number;
   changes?: Array<{
     field?: string;
-    value?: MetaPageFeedValue;
+    value?: MetaPageFeedValue | MetaInstagramCommentValue;
   }>;
   messaging?: MetaMessagingEvent[];
 };
@@ -41,6 +43,31 @@ type MetaPageFeedValue = {
   from?: {
     id?: string;
     name?: string;
+  };
+};
+
+type MetaInstagramCommentValue = {
+  id?: string;
+  comment_id?: string;
+  media_id?: string;
+  text?: string;
+  message?: string;
+  timestamp?: string | number;
+  created_time?: string | number;
+  hidden?: boolean;
+  media?: {
+    id?: string;
+    caption?: string;
+    permalink?: string;
+  };
+  from?: {
+    id?: string;
+    username?: string;
+    name?: string;
+  };
+  user?: {
+    id?: string;
+    username?: string;
   };
 };
 
@@ -67,6 +94,8 @@ type ConnectedFacebookAccount = {
   name: string;
   access_token_encrypted: string | null;
 };
+
+type ConnectedInstagramAccount = ConnectedFacebookAccount;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -138,13 +167,68 @@ async function processMetaWebhookPayload({
   let processed = 0;
 
   for (const entry of payload.entry ?? []) {
-    const pageId = entry.id;
+    const providerAccountId = entry.id;
 
-    if (!pageId) {
+    if (!providerAccountId) {
       continue;
     }
 
-    const account = await findConnectedFacebookAccount({ pageId, supabase });
+    if (payload.object === "instagram") {
+      const account = await findConnectedInstagramAccount({
+        instagramAccountId: providerAccountId,
+        supabase,
+      });
+
+      if (!account?.access_token_encrypted) {
+        continue;
+      }
+
+      for (const change of entry.changes ?? []) {
+        if (change.field !== "comments") {
+          continue;
+        }
+
+        const comment = mapInstagramCommentChangeToComment(change.value);
+
+        if (!comment) {
+          continue;
+        }
+
+        await persistInstagramComment({
+          supabase,
+          workspaceId: account.workspace_id,
+          accountId: account.id,
+          accountName: account.name,
+          comment,
+          ingestSource: "webhook",
+        });
+        processed += 1;
+      }
+
+      for (const messagingEvent of entry.messaging ?? []) {
+        const instagramMessage = mapMessagingEventToMessage({
+          pageId: providerAccountId,
+          event: messagingEvent,
+        });
+
+        if (!instagramMessage) {
+          continue;
+        }
+
+        await persistInstagramDirectMessage({
+          supabase,
+          workspaceId: account.workspace_id,
+          accountId: account.id,
+          accountName: account.name,
+          message: instagramMessage,
+        });
+        processed += 1;
+      }
+
+      continue;
+    }
+
+    const account = await findConnectedFacebookAccount({ pageId: providerAccountId, supabase });
 
     if (!account?.access_token_encrypted) {
       continue;
@@ -159,7 +243,7 @@ async function processMetaWebhookPayload({
 
       const comment = await mapPageFeedChangeToComment({
         accessToken,
-        changeValue: change.value,
+        changeValue: change.value as MetaPageFeedValue | undefined,
       });
 
       if (!comment) {
@@ -179,7 +263,7 @@ async function processMetaWebhookPayload({
 
     for (const messagingEvent of entry.messaging ?? []) {
       const messengerMessage = mapMessagingEventToMessage({
-        pageId,
+        pageId: providerAccountId,
         event: messagingEvent,
       });
 
@@ -220,6 +304,27 @@ async function findConnectedFacebookAccount({
   }
 
   return result.data as ConnectedFacebookAccount | null;
+}
+
+async function findConnectedInstagramAccount({
+  instagramAccountId,
+  supabase,
+}: {
+  instagramAccountId: string;
+  supabase: SupabaseServiceClient;
+}) {
+  const result = await supabase
+    .from("connected_accounts")
+    .select("id,workspace_id,provider_account_id,name,access_token_encrypted")
+    .eq("network", "instagram")
+    .eq("provider_account_id", instagramAccountId)
+    .maybeSingle();
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return result.data as ConnectedInstagramAccount | null;
 }
 
 async function mapPageFeedChangeToComment({
@@ -269,6 +374,35 @@ async function mapPageFeedChangeToComment({
       postPermalink: null,
     };
   }
+}
+
+function mapInstagramCommentChangeToComment(changeValue?: MetaPageFeedValue | MetaInstagramCommentValue) {
+  if (!changeValue) {
+    return null;
+  }
+
+  const value = changeValue as MetaInstagramCommentValue;
+  const commentId = value.comment_id ?? value.id;
+  const postId = value.media_id ?? value.media?.id;
+
+  if (!commentId || !postId) {
+    return null;
+  }
+
+  const username = value.from?.username ?? value.user?.username ?? value.from?.name;
+
+  return {
+    postId,
+    postMessage: value.media?.caption ?? null,
+    postPermalink: value.media?.permalink ?? null,
+    commentId,
+    message: value.text ?? value.message ?? "",
+    fromId: username ? `instagram:${username}` : value.from?.id ?? value.user?.id ?? null,
+    fromName: username ? `@${username}` : null,
+    createdTime: normalizeWebhookTimestamp(value.timestamp ?? value.created_time),
+    isHidden: Boolean(value.hidden),
+    permalink: value.media?.permalink ?? null,
+  } satisfies MetaOrganicComment;
 }
 
 function normalizeWebhookTimestamp(value: number | string | undefined) {

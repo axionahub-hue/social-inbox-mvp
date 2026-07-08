@@ -109,11 +109,13 @@ const metaRequiredScopes = [
   "business_management",
   "instagram_basic",
   "instagram_manage_comments",
+  "instagram_manage_engagement",
   "instagram_manage_messages",
 ];
 
 const facebookCommentSyncIntervalMs = 5000;
 const metaAdCommentSyncIntervalMs = 30000;
+const instagramCommentSyncIntervalMs = 10000;
 
 const metaCapabilityChecks = [
   {
@@ -139,6 +141,10 @@ const metaCapabilityChecks = [
   {
     label: "Instagram comentarios",
     scopes: ["instagram_basic", "instagram_manage_comments"],
+  },
+  {
+    label: "Instagram reacciones",
+    scopes: ["instagram_basic", "instagram_manage_engagement"],
   },
   {
     label: "Instagram DM",
@@ -301,6 +307,7 @@ export default function Home() {
   const hasLoadedRemoteWorkspace = useRef(false);
   const commentSyncInFlight = useRef(false);
   const adCommentSyncInFlight = useRef(false);
+  const instagramCommentSyncInFlight = useRef(false);
   const realtimeRefreshTimeout = useRef<number | null>(null);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
@@ -358,6 +365,10 @@ export default function Home() {
     grantedMetaScopes.includes("ads_read") &&
     grantedMetaScopes.includes("pages_read_engagement") &&
     realMetaChannels.some((channel) => channel.network === "facebook");
+  const canAutoSyncInstagramComments =
+    grantedMetaScopes.includes("instagram_basic") &&
+    grantedMetaScopes.includes("instagram_manage_comments") &&
+    realMetaChannels.some((channel) => channel.network === "instagram");
   const workspaceBootstrap = useRef<{
     userId: string;
     promise: Promise<string | null>;
@@ -1339,6 +1350,81 @@ export default function Home() {
     }
   }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
 
+  const syncInstagramComments = useCallback(async ({ automatic = false }: { automatic?: boolean } = {}) => {
+    if (instagramCommentSyncInFlight.current) {
+      return;
+    }
+
+    if (!supabase || !currentUser || !activeWorkspaceId) {
+      if (!automatic) {
+        setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar Instagram.");
+      }
+      return;
+    }
+
+    instagramCommentSyncInFlight.current = true;
+
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+
+    if (!accessToken) {
+      if (!automatic) {
+        setMetaConnectionMessage("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      }
+      instagramCommentSyncInFlight.current = false;
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/meta/sync/instagram-comments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+          mode: automatic ? "fast" : "full",
+        }),
+      });
+      const payload = await response.json();
+      const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
+      const errorDetail =
+        firstError && typeof firstError.message === "string"
+          ? ` Error: ${firstError.account ? `${firstError.account}: ` : ""}${firstError.message}`
+          : "";
+      const insertedCount =
+        typeof payload.comments?.inserted === "number" ? payload.comments.inserted : 0;
+
+      if (!automatic || insertedCount > 0 || !payload.ok) {
+        setMetaConnectionMessage(
+          `${payload.message ?? "Sincronizacion Instagram finalizada."}${errorDetail}`,
+        );
+      }
+
+      if (!response.ok || !payload.ok) {
+        return;
+      }
+
+      const inboxData = await loadSupabaseInbox(activeWorkspaceId);
+      setChannelList(inboxData.channels);
+      setItems(inboxData.items);
+      setInboxSource("supabase");
+
+      if (insertedCount > 0) {
+        setNotice(`${insertedCount} comentario(s) Instagram nuevo(s) importado(s).`);
+      } else if (!automatic) {
+        setNotice("Sincronizacion Instagram finalizada sin comentarios nuevos.");
+      }
+    } catch {
+      if (!automatic) {
+        setMetaConnectionMessage("No se pudo sincronizar comentarios Instagram.");
+      }
+    } finally {
+      instagramCommentSyncInFlight.current = false;
+    }
+  }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
+
   async function runMetaWebhookDiagnostics() {
     if (!supabase || !currentUser || !activeWorkspaceId) {
       setMetaConnectionMessage("Inicia sesion Supabase antes de diagnosticar Webhooks.");
@@ -1586,6 +1672,24 @@ export default function Home() {
       window.clearInterval(intervalId);
     };
   }, [activeWorkspaceId, canAutoSyncMetaAdComments, currentUser, syncMetaAdComments]);
+
+  useEffect(() => {
+    if (!canAutoSyncInstagramComments || !currentUser || !activeWorkspaceId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void syncInstagramComments({ automatic: true });
+    }, 3000);
+    const intervalId = window.setInterval(() => {
+      void syncInstagramComments({ automatic: true });
+    }, instagramCommentSyncIntervalMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [activeWorkspaceId, canAutoSyncInstagramComments, currentUser, syncInstagramComments]);
 
   async function runAction(action: InboxAction, message?: string, options?: RunActionOptions) {
     if (!selectedItem) return;
@@ -2174,6 +2278,13 @@ export default function Home() {
                 Sincronizar comentarios FB
               </button>
               <button
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-pink-200 bg-pink-50 px-3 text-sm font-semibold text-pink-800"
+                onClick={() => void syncInstagramComments()}
+              >
+                <Camera size={16} />
+                Sincronizar comentarios IG
+              </button>
+              <button
                 className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
                 disabled={isMetaWebhookDiagnosticsLoading}
                 onClick={() => void runMetaWebhookDiagnostics()}
@@ -2310,8 +2421,11 @@ export default function Home() {
               </button>
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments || canAutoSyncMetaAdComments
+                || canAutoSyncInstagramComments
                   ? `Auto-sinc activa: Facebook organico${
                       canAutoSyncMetaAdComments ? " y Ads completo cada 30s" : ""
+                    }${
+                      canAutoSyncInstagramComments ? " e Instagram comentarios cada 10s" : ""
                     }. Webhooks Meta se diagnostican arriba.`
                   : "Auto-sinc pendiente hasta conceder permisos de lectura de comentarios."}
               </p>

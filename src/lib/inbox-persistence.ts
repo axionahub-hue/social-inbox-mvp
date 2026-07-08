@@ -165,6 +165,109 @@ export async function persistFacebookComment({
   return "inserted";
 }
 
+export async function persistInstagramComment({
+  supabase,
+  workspaceId,
+  accountId,
+  accountName,
+  comment,
+  ingestSource = "unknown",
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  accountId: string;
+  accountName: string;
+  comment: MetaOrganicComment;
+  ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_auto" | "ads_manual" | "unknown";
+}) {
+  const contactId = await ensureInstagramContact({
+    supabase,
+    workspaceId,
+    comment,
+  });
+  const existingItem = await supabase
+    .from("inbox_items")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("account_id", accountId)
+    .eq("provider_comment_id", comment.commentId)
+    .maybeSingle();
+  const now = new Date().toISOString();
+  const receivedAt = normalizeDate(comment.createdTime) ?? now;
+  const title = comment.postMessage
+    ? `Comentario en:\n${comment.postMessage}`
+    : `Comentario en ${accountName}`;
+  const preview = comment.message || "(comentario sin texto)";
+
+  if (existingItem.error) {
+    throw new Error(existingItem.error.message);
+  }
+
+  if (existingItem.data?.id) {
+    const updateResult = await supabase
+      .from("inbox_items")
+      .update({
+        title,
+        preview,
+        source: "post_comment",
+        is_hidden: comment.isHidden,
+        ingest_source: ingestSource,
+        provider_post_id: comment.postId,
+        updated_at: now,
+      })
+      .eq("id", existingItem.data.id);
+
+    if (updateResult.error) {
+      throw new Error(updateResult.error.message);
+    }
+
+    await ensureInstagramMessage({
+      supabase,
+      inboxItemId: existingItem.data.id,
+      comment,
+      receivedAt,
+    });
+
+    return "updated";
+  }
+
+  const insertResult = await supabase
+    .from("inbox_items")
+    .insert({
+      workspace_id: workspaceId,
+      account_id: accountId,
+      contact_id: contactId,
+      source: "post_comment",
+      status: "new",
+      provider_thread_id: comment.postId,
+      provider_comment_id: comment.commentId,
+      provider_post_id: comment.postId,
+      provider_ad_id: null,
+      title,
+      preview,
+      is_hidden: comment.isHidden,
+      ingest_source: ingestSource,
+      unread_count: 1,
+      received_at: receivedAt,
+      updated_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (insertResult.error) {
+    throw new Error(insertResult.error.message);
+  }
+
+  await ensureInstagramMessage({
+    supabase,
+    inboxItemId: insertResult.data.id as string,
+    comment,
+    receivedAt,
+  });
+
+  return "inserted";
+}
+
 export async function persistFacebookMessengerMessage({
   supabase,
   workspaceId,
@@ -278,6 +381,119 @@ export async function persistFacebookMessengerMessage({
   return "inserted";
 }
 
+export async function persistInstagramDirectMessage({
+  supabase,
+  workspaceId,
+  accountId,
+  accountName,
+  message,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  accountId: string;
+  accountName: string;
+  message: MetaMessengerMessage;
+}) {
+  const contactId = await ensureInstagramDirectContact({
+    supabase,
+    workspaceId,
+    senderId: message.senderId,
+  });
+  const providerThreadId = `instagram:${message.senderId}`;
+  const existingItem = await supabase
+    .from("inbox_items")
+    .select("id,unread_count")
+    .eq("workspace_id", workspaceId)
+    .eq("account_id", accountId)
+    .eq("source", "instagram_dm")
+    .eq("provider_thread_id", providerThreadId)
+    .maybeSingle();
+  const now = new Date().toISOString();
+  const receivedAt = normalizeDate(message.timestamp) ?? now;
+  const preview = message.text || "(mensaje sin texto)";
+
+  if (existingItem.error) {
+    throw new Error(existingItem.error.message);
+  }
+
+  if (existingItem.data?.id) {
+    const existingMessage = await supabase
+      .from("inbox_messages")
+      .select("id")
+      .eq("inbox_item_id", existingItem.data.id)
+      .eq("provider_message_id", message.messageId)
+      .maybeSingle();
+
+    if (existingMessage.error) {
+      throw new Error(existingMessage.error.message);
+    }
+
+    if (existingMessage.data?.id) {
+      return "duplicate";
+    }
+
+    const updateResult = await supabase
+      .from("inbox_items")
+      .update({
+        status: "new",
+        preview,
+        unread_count: Number(existingItem.data.unread_count ?? 0) + 1,
+        received_at: receivedAt,
+        updated_at: now,
+      })
+      .eq("id", existingItem.data.id);
+
+    if (updateResult.error) {
+      throw new Error(updateResult.error.message);
+    }
+
+    await ensureMessengerMessage({
+      supabase,
+      inboxItemId: existingItem.data.id as string,
+      message,
+      receivedAt,
+    });
+
+    return "updated";
+  }
+
+  const insertResult = await supabase
+    .from("inbox_items")
+    .insert({
+      workspace_id: workspaceId,
+      account_id: accountId,
+      contact_id: contactId,
+      source: "instagram_dm",
+      status: "new",
+      provider_thread_id: providerThreadId,
+      provider_comment_id: null,
+      provider_post_id: null,
+      provider_ad_id: null,
+      title: `Instagram DM en ${accountName}`,
+      preview,
+      is_hidden: false,
+      ingest_source: "webhook",
+      unread_count: 1,
+      received_at: receivedAt,
+      updated_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (insertResult.error) {
+    throw new Error(insertResult.error.message);
+  }
+
+  await ensureMessengerMessage({
+    supabase,
+    inboxItemId: insertResult.data.id as string,
+    message,
+    receivedAt,
+  });
+
+  return "inserted";
+}
+
 async function ensureFacebookContact({
   supabase,
   workspaceId,
@@ -321,6 +537,65 @@ async function ensureFacebookContact({
       provider_user_id: providerUserId,
       display_name: displayName,
       handle: comment.fromId ? `facebook:${comment.fromId}` : null,
+    })
+    .select("id")
+    .single();
+
+  if (inserted.error) {
+    throw new Error(inserted.error.message);
+  }
+
+  return inserted.data.id as string;
+}
+
+async function ensureInstagramContact({
+  supabase,
+  workspaceId,
+  comment,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  comment: MetaOrganicComment;
+}) {
+  const providerUserId = comment.fromId ?? `instagram-comment-author:${comment.commentId}`;
+  const displayName = comment.fromName ?? "Autor Instagram";
+  const existing = await supabase
+    .from("contacts")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("network", "instagram")
+    .eq("provider_user_id", providerUserId)
+    .maybeSingle();
+
+  if (existing.error) {
+    throw new Error(existing.error.message);
+  }
+
+  if (existing.data?.id) {
+    await supabase
+      .from("contacts")
+      .update({
+        display_name: displayName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.data.id);
+
+    return existing.data.id as string;
+  }
+
+  const handle = providerUserId.startsWith("instagram:")
+    ? providerUserId
+    : comment.fromName?.startsWith("@")
+      ? `instagram:${comment.fromName.slice(1)}`
+      : null;
+  const inserted = await supabase
+    .from("contacts")
+    .insert({
+      workspace_id: workspaceId,
+      network: "instagram",
+      provider_user_id: providerUserId,
+      display_name: displayName,
+      handle,
     })
     .select("id")
     .single();
@@ -377,7 +652,91 @@ async function ensureFacebookMessengerContact({
   return inserted.data.id as string;
 }
 
+async function ensureInstagramDirectContact({
+  supabase,
+  workspaceId,
+  senderId,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  senderId: string;
+}) {
+  const displayName = `Instagram ${senderId.slice(-6)}`;
+  const existing = await supabase
+    .from("contacts")
+    .select("id,display_name")
+    .eq("workspace_id", workspaceId)
+    .eq("network", "instagram")
+    .eq("provider_user_id", senderId)
+    .maybeSingle();
+
+  if (existing.error) {
+    throw new Error(existing.error.message);
+  }
+
+  if (existing.data?.id) {
+    return existing.data.id as string;
+  }
+
+  const inserted = await supabase
+    .from("contacts")
+    .insert({
+      workspace_id: workspaceId,
+      network: "instagram",
+      provider_user_id: senderId,
+      display_name: displayName,
+      handle: `instagram:${senderId}`,
+    })
+    .select("id")
+    .single();
+
+  if (inserted.error) {
+    throw new Error(inserted.error.message);
+  }
+
+  return inserted.data.id as string;
+}
+
 async function ensureFacebookMessage({
+  supabase,
+  inboxItemId,
+  comment,
+  receivedAt,
+}: {
+  supabase: SupabaseServiceClient;
+  inboxItemId: string;
+  comment: MetaOrganicComment;
+  receivedAt: string;
+}) {
+  const existing = await supabase
+    .from("inbox_messages")
+    .select("id")
+    .eq("inbox_item_id", inboxItemId)
+    .eq("provider_message_id", comment.commentId)
+    .maybeSingle();
+
+  if (existing.error) {
+    throw new Error(existing.error.message);
+  }
+
+  if (existing.data?.id) {
+    return;
+  }
+
+  const inserted = await supabase.from("inbox_messages").insert({
+    inbox_item_id: inboxItemId,
+    provider_message_id: comment.commentId,
+    author_type: "contact",
+    body: comment.message || "(comentario sin texto)",
+    sent_at: receivedAt,
+  });
+
+  if (inserted.error) {
+    throw new Error(inserted.error.message);
+  }
+}
+
+async function ensureInstagramMessage({
   supabase,
   inboxItemId,
   comment,

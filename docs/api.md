@@ -294,6 +294,59 @@ Respuesta:
 
 Si no existen `pages_read_engagement` y `pages_read_user_content`, responde controlado con `eligible = 0`.
 
+### `POST /api/meta/sync/instagram-comments`
+
+Sincroniza comentarios recientes de cuentas profesionales Instagram conectadas.
+
+Headers:
+
+```text
+Authorization: Bearer SUPABASE_ACCESS_TOKEN
+```
+
+Payload:
+
+```json
+{
+  "workspaceId": "uuid-del-workspace",
+  "mode": "fast"
+}
+```
+
+Comportamiento:
+
+- valida sesion Supabase y propiedad del workspace;
+- selecciona cuentas `network = instagram` con token cifrado;
+- omite cuentas sin `instagram_basic` e `instagram_manage_comments`;
+- lee media reciente via `/{ig-user-id}/media`;
+- lee comentarios por media via `/{ig-media-id}/comments`;
+- filtra localmente comentarios dentro de las ultimas 72 horas;
+- guarda cada comentario como `network = instagram` y `source = post_comment`.
+
+Respuesta:
+
+```json
+{
+  "ok": true,
+  "message": "Sincronizacion Instagram: 1 comentario(s) de las ultimas 72h, 1 nuevo(s), 0 actualizado(s).",
+  "accounts": {
+    "total": 2,
+    "eligible": 2,
+    "skippedForPermission": 0
+  },
+  "comments": {
+    "found": 1,
+    "inserted": 1,
+    "updated": 0,
+    "since": "2026-07-04T12:00:00.000Z"
+  },
+  "accountSummaries": [],
+  "errors": []
+}
+```
+
+Si faltan permisos de Instagram, responde controlado con `eligible = 0`.
+
 ### `POST /api/meta/webhook/diagnostics`
 
 Diagnostica la configuracion Webhooks Meta para el workspace autenticado.

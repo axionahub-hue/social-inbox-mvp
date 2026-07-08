@@ -117,11 +117,13 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - diagnostico de capacidades por scopes concedidos;
 - boton `Iniciar OAuth Meta`.
 - boton `Sincronizar comentarios FB` para importar comentarios organicos cuando `pages_read_engagement` y `pages_read_user_content` esten concedidos.
+- boton `Sincronizar comentarios IG` para diagnosticar manualmente comentarios Instagram cuando `instagram_basic` e `instagram_manage_comments` esten concedidos.
 - boton `Diagnosticar Ads` para confirmar que Marketing API ve cuentas publicitarias con `ads_read`.
 - boton `Sincronizar comentarios Ads` para importar comentarios de anuncios detectables por Marketing API y guardarlos como `Comentario ad`.
 - Las sincronizaciones de comentarios solo traen las ultimas 72 horas; la app no importa historicos por defecto.
 - actualizacion de bandeja por Supabase Realtime cuando entra o cambia una conversacion;
 - auto-sincronizacion de comentarios Facebook cada 5 segundos mientras la app esta abierta y los permisos esten listos.
+- auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta y `instagram_basic` + `instagram_manage_comments` esten listos.
 - auto-sincronizacion completa de comentarios Ads cada 30 segundos mientras la app esta abierta y `ads_read` este listo. El boton manual queda como respaldo de diagnostico, no como paso operativo obligatorio.
 
 El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
@@ -130,6 +132,8 @@ Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo 
 La auto-sincronizacion local evita depender del boton manual durante desarrollo, pero no reemplaza los webhooks. Para recibir eventos aunque la app no este abierta, se debe publicar la app en una URL HTTPS, configurar Webhooks Meta y tener `inbox_items` habilitado en Supabase Realtime para pintar los cambios en pantalla.
 
 Para conversaciones por mensaje interno de Facebook, Meta debe tener activo el campo webhook Page `messages`. Los comentarios organicos/ad entran por `feed`; las respuestas del usuario dentro de Messenger entran por `messages`. En el panel `Diagnosticar webhooks`, `App Page fields` debe mostrar `feed + messages`.
+
+Para Instagram, Meta debe tener concedidos `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages` y, para reacciones, `instagram_manage_engagement`. Despues de agregarlos en Meta Login Configuration hay que repetir OAuth para que Supabase guarde esos scopes en las cuentas conectadas.
 
 En comentarios, las acciones junto al mensaje recibido permiten dar like, ocultar/mostrar y eliminar. Eliminar comentario borra primero en Meta y solo retira la conversacion local cuando Meta confirma.
 
