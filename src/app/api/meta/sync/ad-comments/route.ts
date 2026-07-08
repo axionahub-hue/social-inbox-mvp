@@ -202,6 +202,7 @@ export async function POST(request: Request) {
           supabase,
           workspaceId: parsed.data.workspaceId,
           accountId: pageAccount.id,
+          accountExternalId: pageAccount.provider_account_id,
           accountName: pageAccount.name,
           comment: enrichedComment,
           ingestSource: parsed.data.trigger === "auto" ? "ads_auto" : "ads_manual",

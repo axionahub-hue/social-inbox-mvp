@@ -140,6 +140,7 @@ export async function POST(request: Request) {
             supabase,
             workspaceId: parsed.data.workspaceId,
             accountId: account.id,
+            accountExternalId: account.provider_account_id,
             accountName: account.name,
             comment,
             ingestSource,

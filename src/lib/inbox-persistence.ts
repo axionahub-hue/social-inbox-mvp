@@ -3,6 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 import type { InboxSource } from "@/lib/types";
 
 export type SupabaseServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
+export type CommentPersistenceResult = "inserted" | "updated" | "skipped_self";
 
 export type MetaMessengerMessage = {
   senderId: string;
@@ -19,6 +20,7 @@ export async function persistFacebookComment({
   supabase,
   workspaceId,
   accountId,
+  accountExternalId,
   accountName,
   comment,
   ingestSource = "unknown",
@@ -28,12 +30,17 @@ export async function persistFacebookComment({
   supabase: SupabaseServiceClient;
   workspaceId: string;
   accountId: string;
+  accountExternalId: string;
   accountName: string;
   comment: MetaOrganicComment;
   ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_auto" | "ads_manual" | "unknown";
   source?: InboxSource;
   providerAdId?: string | null;
-}) {
+}): Promise<CommentPersistenceResult> {
+  if (isSelfAuthoredComment({ authorId: comment.fromId, accountExternalId })) {
+    return "skipped_self";
+  }
+
   const contactId = await ensureFacebookContact({
     supabase,
     workspaceId,
@@ -220,6 +227,7 @@ export async function persistInstagramComment({
   supabase,
   workspaceId,
   accountId,
+  accountExternalId,
   accountName,
   comment,
   ingestSource = "unknown",
@@ -227,10 +235,15 @@ export async function persistInstagramComment({
   supabase: SupabaseServiceClient;
   workspaceId: string;
   accountId: string;
+  accountExternalId: string;
   accountName: string;
   comment: MetaOrganicComment;
   ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_auto" | "ads_manual" | "unknown";
-}) {
+}): Promise<CommentPersistenceResult> {
+  if (isSelfAuthoredComment({ authorId: comment.fromId, accountExternalId })) {
+    return "skipped_self";
+  }
+
   const contactId = await ensureInstagramContact({
     supabase,
     workspaceId,
@@ -918,6 +931,16 @@ function normalizeDate(value: string | null) {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function isSelfAuthoredComment({
+  authorId,
+  accountExternalId,
+}: {
+  authorId?: string | null;
+  accountExternalId: string;
+}) {
+  return Boolean(authorId) && authorId === accountExternalId;
 }
 
 function firstOrNull<T>(value: T | T[] | null | undefined) {

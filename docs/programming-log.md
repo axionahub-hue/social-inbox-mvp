@@ -518,3 +518,10 @@
 - Resumen: se extendio la regla de no degradacion a Instagram comentarios, Instagram DM y Messenger. Si un contacto ya tiene nombre/handle real, una actualizacion posterior con datos incompletos o fallback no reemplaza esa identidad. Los updates solo mejoran datos cuando pasan de fallback a identidad real o cuando agregan un handle faltante.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`.
+
+### Evitar respuestas propias como no leidas
+
+- Resumen: se detecto que Meta devuelve por `feed` las respuestas publicadas por la propia Page y la app las estaba creando como comentarios entrantes nuevos. El persistidor de comentarios Facebook/Instagram ahora recibe `accountExternalId` y descarta comentarios cuyo `fromId` coincide con la cuenta conectada.
+- Dato corregido: se elimino de Supabase el item duplicado no leido de `Academia Expertos de la Musica`, creado por una respuesta agente publicada como Page.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`; consulta Supabase confirmo `unreadOrNew: 0` y `selfUnread: 0`.

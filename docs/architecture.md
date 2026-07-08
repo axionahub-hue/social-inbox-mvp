@@ -80,6 +80,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
 - Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full`, `ads_manual` o quedo como `unknown`.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor pendiente` en vez de inventar identidad o pisar un autor real ya guardado.
+- Si el autor del comentario coincide con el `provider_account_id` de la cuenta conectada, el persistidor lo ignora: es una respuesta publicada por la propia Page/IG y no debe volver a Bandeja como no leida.
 - La UI se suscribe a Supabase Realtime sobre `inbox_items` para refrescar la bandeja cuando entra o cambia una conversacion.
 - La UI ejecuta auto-sincronizacion cada 5 segundos mientras la app esta abierta como respaldo cuando Meta no entregue un webhook. Esa llamada usa `mode = fast`, procesa cuentas en paralelo y lee menos publicaciones/comentarios para priorizar latencia.
 - El boton manual `Sincronizar comentarios FB` usa `mode = full` para una lectura mas profunda cuando se necesita auditar historico.
@@ -100,6 +101,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `POST /api/meta/sync/instagram-comments` lee media reciente y comentarios de cada cuenta Instagram elegible.
 - Solo procesa cuentas con `instagram_basic` e `instagram_manage_comments`.
 - Los comentarios Instagram se normalizan como `network = instagram` y `source = post_comment`; asi reutilizan bandeja, filtros, responder, ocultar/mostrar y eliminar sin cambiar el enum de Supabase.
+- Los comentarios Instagram escritos por la propia cuenta conectada se descartan durante la ingesta para evitar duplicar respuestas agente como items entrantes.
 - La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta y los permisos estan concedidos.
 - Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.
 - Ocultar/mostrar Instagram usa `/{ig-comment-id}` con `hide=true|false`.
