@@ -12,6 +12,7 @@ export type MetaMessengerMessage = {
   text: string;
   attachmentType?: string | null;
   attachmentUrl?: string | null;
+  attachmentStickerId?: string | null;
   timestamp: string | null;
   senderName?: string | null;
   senderUsername?: string | null;
@@ -1018,7 +1019,9 @@ function resolveMessengerMessageBody(message: MetaMessengerMessage) {
   }
 
   if (attachmentType === "sticker") {
-    return "Sticker recibido";
+    return isMessengerThumbSticker(message.attachmentStickerId)
+      ? "Pulgar arriba recibido"
+      : "Sticker recibido";
   }
 
   if (attachmentType) {
@@ -1026,6 +1029,10 @@ function resolveMessengerMessageBody(message: MetaMessengerMessage) {
   }
 
   return "Mensaje no compatible recibido";
+}
+
+function isMessengerThumbSticker(stickerId?: string | null) {
+  return stickerId === "369239263222822";
 }
 
 function isGifAttachment(url: string) {

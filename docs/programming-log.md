@@ -561,3 +561,10 @@
 - Backfill: se actualizaron los mensajes recientes de prueba que estaban como `(mensaje sin texto)` a `Audio recibido`, `Imagen recibida` y `GIF recibido`, y se actualizo el preview del hilo.
 - Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar nuevamente audio/foto/sticker/GIF en IG DM y pulgar arriba/sticker en Messenger.
+
+### Pulgar arriba Messenger
+
+- Resumen: en prueba real Messenger envio foto como `image`, emoji como `text`, audio como `audio` y pulgar arriba rapido como dos attachments (`image` + `sticker`) con `sticker_id = 369239263222822`. El webhook ahora prioriza `sticker` sobre `image` y el persistidor muestra ese sticker como `Pulgar arriba recibido`.
+- Backfill: se actualizaron tres mensajes recientes con ese `sticker_id` y se recalculo el preview de sus hilos.
+- Areas tocadas: `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar un nuevo pulgar arriba en Messenger.

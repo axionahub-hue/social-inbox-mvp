@@ -533,13 +533,23 @@ function mapMessagingEventToMessage({
     return null;
   }
 
+  const attachment = resolvePrimaryMessagingAttachment(event.message.attachments);
+
   return {
     senderId,
     recipientId: event.recipient?.id ?? null,
     messageId,
     text: event.message.text ?? "",
-    attachmentType: event.message.attachments?.[0]?.type ?? null,
-    attachmentUrl: event.message.attachments?.[0]?.payload?.url ?? null,
+    attachmentType: attachment?.type ?? null,
+    attachmentUrl: attachment?.payload?.url ?? null,
+    attachmentStickerId:
+      attachment?.payload?.sticker_id != null ? String(attachment.payload.sticker_id) : null,
     timestamp: event.timestamp ? new Date(event.timestamp).toISOString() : null,
   };
+}
+
+function resolvePrimaryMessagingAttachment(
+  attachments: NonNullable<MetaMessagingEvent["message"]>["attachments"],
+) {
+  return attachments?.find((attachment) => attachment.type === "sticker") ?? attachments?.[0];
 }

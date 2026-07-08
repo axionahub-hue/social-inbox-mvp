@@ -76,6 +76,7 @@ Al responder una conversacion, sale de `Bandeja` y pasa a `Respondidos`. Las con
 
 - Los emojis escritos dentro de comentarios, Messenger o Instagram DM se muestran como texto normal.
 - Si Messenger o Instagram DM envian un adjunto sin texto, la app muestra una etiqueta legible: `Audio recibido`, `Imagen recibida`, `GIF recibido`, `Video recibido`, `Archivo recibido` o `Sticker recibido`.
+- El pulgar arriba rapido de Messenger se muestra como `Pulgar arriba recibido`.
 - Si Meta envia un contenido no soportado sin tipo de adjunto, se muestra `Mensaje no compatible recibido` para que no parezca que no llego nada.
 
 ## Uso en celular
