@@ -1040,7 +1040,7 @@ function resolveMetaActionErrorMessage(input: MetaActionInput, payload: unknown)
     }
 
     if (errorCode === 200) {
-      return "Meta rechazo el bloqueo por permisos. Revisa que la cuenta tenga permisos/tarea de moderacion sobre la pagina.";
+      return "Meta rechazo el bloqueo. La pagina tiene permisos de moderacion, pero ese autor puede no ser bloqueable por Meta, por ejemplo si administra o modera la pagina.";
     }
   }
 

@@ -438,3 +438,10 @@
 - Areas tocadas: `src/app/api/inbox/action/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y probar bloqueo/desbloqueo con autor real de Facebook/Messenger.
 - Pendiente: validar endpoint equivalente para Instagram.
+
+### Mensaje de bloqueo no aplicable
+
+- Resumen: se verifico que el token de Ecuakaraoke Internacional puede leer `/{page_id}/blocked`, que las paginas devuelven tarea `MODERATE` y que el fallo real fue `(#200) Permissions error` al intentar bloquear al autor `Mauro Hernan Moras`. Se ajusto el mensaje para explicar que Meta puede rechazar autores no bloqueables, por ejemplo personas con rol sobre la Page.
+- Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar con un autor que no administre/modere la pagina.
+- Pendiente: confirmar bloqueo real con una cuenta externa sin rol sobre la Page.
