@@ -2694,8 +2694,8 @@ export default function Home() {
                         {message.author === "contact" ? (
                           <MessageModerationActions
                             hidden={selectedItem.hidden}
+                            network={selectedItem.network}
                             reaction={selectedReaction}
-                            supportsOnlyLikeReaction={selectedItem.network === "facebook"}
                             onHideToggle={() =>
                               void runAction(selectedItem.hidden ? "unhide" : "hide")
                             }
@@ -3063,29 +3063,31 @@ function ConversationHeader({
 
 function MessageModerationActions({
   hidden,
+  network,
   reaction,
-  supportsOnlyLikeReaction,
   onDelete,
   onHideToggle,
   onReact,
 }: {
   hidden: boolean;
+  network: Network;
   reaction: ReactionKind | null;
-  supportsOnlyLikeReaction: boolean;
   onDelete?: () => void;
   onHideToggle: () => void;
   onReact: (reaction: ReactionKind) => void;
 }) {
+  const isInstagram = network === "instagram";
+
   return (
     <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
       <SmallActionButton
         active={reaction === "like"}
-        title={reaction === "like" ? "Quitar me gusta" : "Me gusta"}
+        title={reaction === "like" ? "Quitar like" : isInstagram ? "Like" : "Me gusta"}
         onClick={() => onReact("like")}
       >
-        <ThumbsUp size={14} />
+        {isInstagram ? <Heart size={14} /> : <ThumbsUp size={14} />}
       </SmallActionButton>
-      {!supportsOnlyLikeReaction ? (
+      {!isInstagram ? (
         <>
           <SmallActionButton
             active={reaction === "love"}
