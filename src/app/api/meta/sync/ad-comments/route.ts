@@ -13,21 +13,22 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 const syncSchema = z.object({
   workspaceId: z.string().uuid(),
   mode: z.enum(["fast", "full"]).optional().default("full"),
+  trigger: z.enum(["auto", "manual"]).optional().default("manual"),
 });
 
 const adSyncLimits = {
   fast: {
-    adAccounts: 25,
-    adsPerAccount: 25,
-    targets: 40,
-    commentsPerTarget: 5,
+    adAccounts: 100,
+    adsPerAccount: 100,
+    targets: 500,
+    commentsPerTarget: 100,
     effectiveStatuses: ["ACTIVE"],
   },
   full: {
-    adAccounts: 25,
+    adAccounts: 100,
     adsPerAccount: 100,
-    targets: 80,
-    commentsPerTarget: 10,
+    targets: 500,
+    commentsPerTarget: 100,
     effectiveStatuses: ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED"],
   },
 } as const;
@@ -184,7 +185,7 @@ export async function POST(request: Request) {
           accountId: pageAccount.id,
           accountName: pageAccount.name,
           comment,
-          ingestSource: parsed.data.mode === "fast" ? "ads_auto" : "ads_manual",
+          ingestSource: parsed.data.trigger === "auto" ? "ads_auto" : "ads_manual",
           source: "ad_comment",
           providerAdId: target.adId,
         });
@@ -217,6 +218,7 @@ export async function POST(request: Request) {
       scannedAdsPerAccount: limits.adsPerAccount,
       scannedPosts: matchedTargets.length,
       mode: parsed.data.mode,
+      trigger: parsed.data.trigger,
     },
     comments: {
       found: commentsFound,

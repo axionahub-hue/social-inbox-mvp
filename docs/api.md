@@ -150,7 +150,8 @@ Payload:
 ```json
 {
   "workspaceId": "uuid-del-workspace",
-  "mode": "fast"
+  "mode": "full",
+  "trigger": "auto"
 }
 ```
 
@@ -386,8 +387,9 @@ Comportamiento:
 - exige token largo de usuario Meta en `meta_connections`;
 - exige scope `ads_read`;
 - lista cuentas publicitarias visibles con Marketing API;
-- en `mode = fast`, revisa hasta 25 cuentas publicitarias, 25 anuncios activos por cuenta, 40 posts/stories de anuncio unicos y 5 comentarios por post;
-- en `mode = full`, revisa hasta 25 cuentas publicitarias, 100 anuncios activos/pausados por cuenta, 80 posts/stories de anuncio unicos y 10 comentarios por post;
+- en `mode = fast`, legado compatible: revisa hasta 100 cuentas publicitarias, 100 anuncios activos por cuenta, 500 posts/stories de anuncio unicos y 100 comentarios por post;
+- en `mode = full`, revisa hasta 100 cuentas publicitarias, 100 anuncios activos/pausados por cuenta, 500 posts/stories de anuncio unicos y 100 comentarios por post;
+- `trigger = auto` marca `ingest_source = ads_auto`; `trigger = manual` marca `ingest_source = ads_manual`;
 - toma `effective_object_story_id` u `object_story_id` como post/story asociado al anuncio;
 - filtra solo anuncios cuyo Page ID corresponde a paginas Facebook conectadas en el workspace;
 - lee comentarios del post/story usando el page token cifrado;

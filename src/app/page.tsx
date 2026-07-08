@@ -1496,7 +1496,7 @@ export default function Home() {
       }
 
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), automatic ? 15000 : 25000);
+      const timeoutId = window.setTimeout(() => controller.abort(), 60000);
       const response = await fetch("/api/meta/sync/ad-comments", {
         method: "POST",
         signal: controller.signal,
@@ -1506,7 +1506,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           workspaceId: activeWorkspaceId,
-          mode: automatic ? "fast" : "full",
+          mode: "full",
+          trigger: automatic ? "auto" : "manual",
         }),
       });
       window.clearTimeout(timeoutId);
@@ -2305,7 +2306,7 @@ export default function Home() {
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments || canAutoSyncMetaAdComments
                   ? `Auto-sinc activa: Facebook organico${
-                      canAutoSyncMetaAdComments ? " y Ads cada 30s" : ""
+                      canAutoSyncMetaAdComments ? " y Ads completo cada 30s" : ""
                     }. Webhooks Meta se diagnostican arriba.`
                   : "Auto-sinc pendiente hasta conceder permisos de lectura de comentarios."}
               </p>

@@ -452,3 +452,10 @@
 - Areas tocadas: `src/app/api/meta/sync/ad-comments/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, ejecutar sync Ads y verificar ingreso del comentario `excelente`.
 - Pendiente: si otros formatos de anuncio no exponen `effective_object_story_id`, ampliar lectura de creative.
+
+### Ads automatico sin dependencia del boton
+
+- Resumen: el auto-sync de Ads dejo de usar el modo reducido. Ahora la UI llama `/api/meta/sync/ad-comments` con `mode = full` y `trigger = auto`; el endpoint usa limites de pagina maximos habituales de Graph (`100`) para anuncios y comentarios, y conserva `ads_auto` para trazabilidad. El boton manual queda como respaldo de diagnostico, no como requisito operativo.
+- Areas tocadas: `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y verificar que el comentario `excelente` entre sin tocar boton.
+- Pendiente: migrar esta consulta a job server-side programado para que funcione aun con la app cerrada.

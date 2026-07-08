@@ -122,7 +122,7 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - Las sincronizaciones de comentarios solo traen las ultimas 72 horas; la app no importa historicos por defecto.
 - actualizacion de bandeja por Supabase Realtime cuando entra o cambia una conversacion;
 - auto-sincronizacion de comentarios Facebook cada 5 segundos mientras la app esta abierta y los permisos esten listos.
-- auto-sincronizacion ligera de comentarios Ads cada 30 segundos mientras la app esta abierta y `ads_read` este listo.
+- auto-sincronizacion completa de comentarios Ads cada 30 segundos mientras la app esta abierta y `ads_read` este listo. El boton manual queda como respaldo de diagnostico, no como paso operativo obligatorio.
 
 El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
 Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo puede guardar las paginas recibidas por `/me/accounts`. Con permisos minimos puede aparecer solo un subconjunto.
