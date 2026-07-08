@@ -445,3 +445,10 @@
 - Areas tocadas: `src/lib/meta.ts`, `docs/api.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, probar con un autor que no administre/modere la pagina.
 - Pendiente: confirmar bloqueo real con una cuenta externa sin rol sobre la Page.
+
+### Barrido Ads activo ampliado
+
+- Resumen: el comentario `excelente` en el Ad de Academia Expertos no entraba porque el anuncio `Garantia` estaba en Marketing API como activo, pero en posicion 13 dentro de la cuenta `CP COLD Expertos de la Musica`; el sync solo revisaba 8 anuncios por cuenta. Se amplio `mode = fast` a 25 anuncios activos por cuenta y `mode = full` a 100 anuncios activos/pausados por cuenta.
+- Areas tocadas: `src/app/api/meta/sync/ad-comments/route.ts`, `src/lib/meta.ts`, `docs/api.md`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, ejecutar sync Ads y verificar ingreso del comentario `excelente`.
+- Pendiente: si otros formatos de anuncio no exponen `effective_object_story_id`, ampliar lectura de creative.

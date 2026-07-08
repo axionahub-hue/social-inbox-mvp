@@ -665,20 +665,34 @@ export async function fetchMetaAdCommentTargets({
   accessToken,
   adAccountLimit = 25,
   adsPerAccountLimit = 25,
+  effectiveStatuses,
 }: {
   accessToken: string;
   adAccountLimit?: number;
   adsPerAccountLimit?: number;
+  effectiveStatuses?: string[];
 }) {
   const adAccounts = (await fetchMetaAdAccounts(accessToken)).slice(0, adAccountLimit);
   const targets = await Promise.all(
     adAccounts.map(async (adAccount) => {
-      const ads = await requestGraph<MetaAdsResponse>(`${adAccount.id}/ads`, {
+      const params: Record<string, string> = {
         fields:
           "id,name,effective_status,updated_time,campaign{id,name},creative{id,name,effective_object_story_id,object_story_id}",
         limit: `${adsPerAccountLimit}`,
         access_token: accessToken,
-      });
+      };
+
+      if (effectiveStatuses?.length) {
+        params.filtering = JSON.stringify([
+          {
+            field: "effective_status",
+            operator: "IN",
+            value: effectiveStatuses,
+          },
+        ]);
+      }
+
+      const ads = await requestGraph<MetaAdsResponse>(`${adAccount.id}/ads`, params);
 
       if (ads.error) {
         return [];

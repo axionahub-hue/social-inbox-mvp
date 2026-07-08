@@ -386,8 +386,8 @@ Comportamiento:
 - exige token largo de usuario Meta en `meta_connections`;
 - exige scope `ads_read`;
 - lista cuentas publicitarias visibles con Marketing API;
-- en `mode = fast`, revisa hasta 5 cuentas publicitarias, 4 anuncios por cuenta, 8 posts/stories de anuncio unicos y 5 comentarios por post;
-- en `mode = full`, revisa hasta 25 cuentas publicitarias, 8 anuncios por cuenta, 20 posts/stories de anuncio unicos y 10 comentarios por post;
+- en `mode = fast`, revisa hasta 25 cuentas publicitarias, 25 anuncios activos por cuenta, 40 posts/stories de anuncio unicos y 5 comentarios por post;
+- en `mode = full`, revisa hasta 25 cuentas publicitarias, 100 anuncios activos/pausados por cuenta, 80 posts/stories de anuncio unicos y 10 comentarios por post;
 - toma `effective_object_story_id` u `object_story_id` como post/story asociado al anuncio;
 - filtra solo anuncios cuyo Page ID corresponde a paginas Facebook conectadas en el workspace;
 - lee comentarios del post/story usando el page token cifrado;

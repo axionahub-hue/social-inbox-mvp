@@ -17,16 +17,18 @@ const syncSchema = z.object({
 
 const adSyncLimits = {
   fast: {
-    adAccounts: 5,
-    adsPerAccount: 4,
-    targets: 8,
+    adAccounts: 25,
+    adsPerAccount: 25,
+    targets: 40,
     commentsPerTarget: 5,
+    effectiveStatuses: ["ACTIVE"],
   },
   full: {
     adAccounts: 25,
-    adsPerAccount: 8,
-    targets: 20,
+    adsPerAccount: 100,
+    targets: 80,
     commentsPerTarget: 10,
+    effectiveStatuses: ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED"],
   },
 } as const;
 
@@ -143,6 +145,7 @@ export async function POST(request: Request) {
     accessToken: userToken,
     adAccountLimit: limits.adAccounts,
     adsPerAccountLimit: limits.adsPerAccount,
+    effectiveStatuses: [...limits.effectiveStatuses],
   });
   const recentSince = createRecentMetaCommentSince();
   const uniqueTargetsByPost = new Map(
