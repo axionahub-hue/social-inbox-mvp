@@ -237,6 +237,7 @@ export async function persistInstagramComment({
   workspaceId,
   accountId,
   accountExternalId,
+  accountHandle,
   accountName,
   comment,
   ingestSource = "unknown",
@@ -245,11 +246,12 @@ export async function persistInstagramComment({
   workspaceId: string;
   accountId: string;
   accountExternalId: string;
+  accountHandle?: string | null;
   accountName: string;
   comment: MetaOrganicComment;
   ingestSource?: "webhook" | "polling_fast" | "polling_full" | "ads_auto" | "ads_manual" | "unknown";
 }): Promise<CommentPersistenceResult> {
-  if (isSelfAuthoredComment({ authorId: comment.fromId, accountExternalId })) {
+  if (isSelfAuthoredComment({ authorId: comment.fromId, accountExternalId, accountHandle })) {
     return "skipped_self";
   }
 
@@ -1049,11 +1051,29 @@ function isGifAttachment(url: string) {
 function isSelfAuthoredComment({
   authorId,
   accountExternalId,
+  accountHandle,
 }: {
   authorId?: string | null;
   accountExternalId: string;
+  accountHandle?: string | null;
 }) {
-  return Boolean(authorId) && authorId === accountExternalId;
+  if (!authorId) {
+    return false;
+  }
+
+  const normalizedAuthorId = authorId.toLowerCase();
+  const normalizedAccountExternalId = accountExternalId.toLowerCase();
+  const normalizedHandle = normalizeInstagramHandleForSelfCheck(accountHandle);
+
+  return (
+    normalizedAuthorId === normalizedAccountExternalId ||
+    normalizedAuthorId === `instagram:${normalizedAccountExternalId}` ||
+    Boolean(normalizedHandle && normalizedAuthorId === `instagram:${normalizedHandle}`)
+  );
+}
+
+function normalizeInstagramHandleForSelfCheck(handle?: string | null) {
+  return handle?.trim().replace(/^@/, "").toLowerCase() || null;
 }
 
 function isOptionalInboxColumnError(message: string) {

@@ -20,6 +20,7 @@ type InstagramAccountRow = {
   id: string;
   provider_account_id: string;
   name: string;
+  handle: string | null;
   access_token_encrypted: string | null;
   scopes: string[] | null;
 };
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
   const accountsResult = await supabase
     .from("connected_accounts")
-    .select("id,provider_account_id,name,access_token_encrypted,scopes")
+    .select("id,provider_account_id,name,handle,access_token_encrypted,scopes")
     .eq("workspace_id", parsed.data.workspaceId)
     .eq("network", "instagram");
 
@@ -141,6 +142,7 @@ export async function POST(request: Request) {
             workspaceId: parsed.data.workspaceId,
             accountId: account.id,
             accountExternalId: account.provider_account_id,
+            accountHandle: account.handle,
             accountName: account.name,
             comment,
             ingestSource,

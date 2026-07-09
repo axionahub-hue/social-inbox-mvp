@@ -113,6 +113,7 @@ type ConnectedFacebookAccount = {
   workspace_id: string;
   provider_account_id: string;
   name: string;
+  handle: string | null;
   access_token_encrypted: string | null;
 };
 
@@ -222,6 +223,7 @@ async function processMetaWebhookPayload({
           workspaceId: account.workspace_id,
           accountId: account.id,
           accountExternalId: account.provider_account_id,
+          accountHandle: account.handle,
           accountName: account.name,
           comment,
           ingestSource: "webhook",
@@ -381,7 +383,7 @@ async function findConnectedFacebookAccount({
 }) {
   const result = await supabase
     .from("connected_accounts")
-    .select("id,workspace_id,provider_account_id,name,access_token_encrypted")
+    .select("id,workspace_id,provider_account_id,name,handle,access_token_encrypted")
     .eq("network", "facebook")
     .eq("provider_account_id", pageId)
     .maybeSingle();
@@ -402,7 +404,7 @@ async function findConnectedInstagramAccount({
 }) {
   const result = await supabase
     .from("connected_accounts")
-    .select("id,workspace_id,provider_account_id,name,access_token_encrypted")
+    .select("id,workspace_id,provider_account_id,name,handle,access_token_encrypted")
     .eq("network", "instagram")
     .eq("provider_account_id", instagramAccountId)
     .maybeSingle();

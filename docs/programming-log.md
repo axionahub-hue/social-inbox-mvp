@@ -583,3 +583,11 @@
 - Cambio: la carga de inbox queda limitada a 120 items, se elimina `access_token_encrypted` de la relacion duplicada por item, las auto-sincronizaciones solo recargan Supabase si insertan/actualizan comentarios o si son manuales, Ads automatico vuelve a `mode = fast`, y el polling automatico se pausa con la pestana oculta.
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y monitorear `Egress` en Supabase despues del reset del ciclo.
+
+### Evitar replies propias de Instagram en Bandeja
+
+- Resumen: una respuesta publicada por la propia cuenta `@expertos.delamusica` entro como comentario Instagram nuevo/no leido porque Meta devolvio el autor como `instagram:expertos.delamusica`, mientras la regla anti-respuestas-propias solo comparaba contra el ID numerico `178414...`.
+- Cambio: `persistInstagramComment` recibe el handle de la cuenta conectada y descarta comentarios propios si el autor coincide con el Instagram Business Account ID o con `instagram:{username}`. La sincronizacion y el webhook pasan `connected_accounts.handle`.
+- Dato corregido: item erroneo detectado `27e4ca62-ce59-41e5-9c9a-184eb5165e05`, autor `@expertos.delamusica`, preview `es bienvenido su comentario...`.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y eliminar el item erroneo en Supabase.

@@ -108,7 +108,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Solo procesa cuentas con `instagram_basic` e `instagram_manage_comments`.
 - Los comentarios Instagram se normalizan como `network = instagram` y `source = post_comment`; asi reutilizan bandeja, filtros, responder, ocultar/mostrar y eliminar sin cambiar el enum de Supabase.
 - La sincronizacion intenta leer replies de comentarios Instagram via `/{ig-comment-id}/replies`; cuando Meta lo permite, esas replies se guardan con referencia, autor y texto del comentario padre para mostrarlas como hilos anidados.
-- Los comentarios Instagram escritos por la propia cuenta conectada se descartan durante la ingesta para evitar duplicar respuestas agente como items entrantes.
+- Los comentarios Instagram escritos por la propia cuenta conectada se descartan durante la ingesta para evitar duplicar respuestas agente como items entrantes. La comparacion usa tanto el Instagram Business Account ID como el handle (`instagram:{username}`), porque Meta puede devolver replies con username en vez de ID numerico.
 - La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta, visible y los permisos estan concedidos.
 - Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.
 - Ocultar/mostrar Instagram usa `/{ig-comment-id}` con `hide=true|false`.
