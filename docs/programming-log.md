@@ -590,4 +590,4 @@
 - Cambio: `persistInstagramComment` recibe el handle de la cuenta conectada y descarta comentarios propios si el autor coincide con el Instagram Business Account ID o con `instagram:{username}`. La sincronizacion y el webhook pasan `connected_accounts.handle`.
 - Dato corregido: item erroneo detectado `27e4ca62-ce59-41e5-9c9a-184eb5165e05`, autor `@expertos.delamusica`, preview `es bienvenido su comentario...`.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
-- Validacion pendiente: `npm run lint`, `npm run build`, `git diff --check`, desplegar y eliminar el item erroneo en Supabase.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`; item erroneo eliminado de Supabase y verificado `remaining unread post comments: 0`.
