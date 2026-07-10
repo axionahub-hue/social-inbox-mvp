@@ -839,7 +839,7 @@ export default function Home() {
 
     return {
       channels: accountRows.map(mapConnectedAccountRow),
-      items: ((inbox.data ?? []) as InboxItemRow[]).map(mapInboxItemRow),
+      items: dedupeInboxItems(((inbox.data ?? []) as InboxItemRow[]).map(mapInboxItemRow)),
     };
   }, [supabase]);
 
@@ -3886,6 +3886,72 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
       actionQueueId: message.action_queue_id ?? undefined,
     })),
   };
+}
+
+function dedupeInboxItems(items: InboxItem[]) {
+  const itemByKey = new Map<string, InboxItem>();
+
+  for (const item of items) {
+    const key = getInboxItemDedupeKey(item);
+
+    if (!key) {
+      itemByKey.set(item.id, item);
+      continue;
+    }
+
+    const current = itemByKey.get(key);
+
+    if (!current || shouldReplaceDedupeItem(current, item)) {
+      itemByKey.set(key, item);
+    }
+  }
+
+  return [...itemByKey.values()].sort(
+    (left, right) =>
+      new Date(right.receivedAtIso ?? right.receivedAt).getTime() -
+      new Date(left.receivedAtIso ?? left.receivedAt).getTime(),
+  );
+}
+
+function getInboxItemDedupeKey(item: InboxItem) {
+  if (!item.providerCommentId) {
+    return null;
+  }
+
+  return `${item.accountId}:${item.providerCommentId}`;
+}
+
+function shouldReplaceDedupeItem(current: InboxItem, next: InboxItem) {
+  const currentScore = getInboxItemDedupeScore(current);
+  const nextScore = getInboxItemDedupeScore(next);
+
+  if (currentScore !== nextScore) {
+    return nextScore > currentScore;
+  }
+
+  return (
+    new Date(next.receivedAtIso ?? next.receivedAt).getTime() >
+    new Date(current.receivedAtIso ?? current.receivedAt).getTime()
+  );
+}
+
+function getInboxItemDedupeScore(item: InboxItem) {
+  if (item.source === "ad_comment") {
+    return 4;
+  }
+
+  switch (item.ingestSource) {
+    case "ads_auto":
+    case "ads_manual":
+      return 3;
+    case "webhook":
+      return 2;
+    case "polling_fast":
+    case "polling_full":
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 function applyInboxActionToItem(

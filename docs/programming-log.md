@@ -606,3 +606,11 @@
 - Cambio: la UI retiene comentarios recientes `post_comment` durante 20 segundos cuando `ads_read` esta disponible, no los cuenta en Bandeja y dispara una sincronizacion Ads inmediata con throttle de 12 segundos. Si Ads los detecta, aparecen ya como `Comentario ad`; si no, vencida la ventana aparecen como organicos.
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar comentario nuevo de anuncio.
+
+### Dedupe de comentarios entre webhook y polling
+
+- Resumen: un comentario Instagram de `@stefan202663` entro dos veces porque webhook y polling rapido insertaron el mismo `provider_comment_id = 17869473825630373` en paralelo.
+- Cambio: se agrego migracion `20260710_unique_provider_comment.sql` con indice unico parcial por `workspace_id, account_id, provider_comment_id`; `persistFacebookComment` y `persistInstagramComment` reintentan como update si la base devuelve conflicto `23505`; despues de cada insert limpian duplicados por la misma clave. El frontend tambien deduplica la lista cargada como defensa visual.
+- Dato corregido: se elimino el duplicado `e5543b61-3fcf-4567-b657-28c56436cf8f`; quedo una sola fila para el comentario y Supabase verifico `duplicate groups: 0`. El indice `inbox_items_unique_provider_comment_idx` fue aplicado directo en Supabase.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/page.tsx`, `supabase/schema.sql`, `supabase/migrations/20260710_unique_provider_comment.sql`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`, indice aplicado en Supabase y `duplicate groups: 0`. Pendiente desplegar y probar nuevo comentario con webhook+polling activo.

@@ -204,6 +204,10 @@ create index if not exists inbox_items_workspace_status_idx
 create index if not exists inbox_items_provider_refs_idx
   on inbox_items (provider_thread_id, provider_comment_id, provider_post_id);
 
+create unique index if not exists inbox_items_unique_provider_comment_idx
+  on inbox_items (workspace_id, account_id, provider_comment_id)
+  where provider_comment_id is not null;
+
 create index if not exists webhook_events_unprocessed_idx
   on webhook_events (provider, created_at)
   where processed_at is null;

@@ -81,6 +81,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - Por defecto solo importa comentarios con `created_time` dentro de las ultimas 72 horas. No se importa historico salvo que se cree un flujo separado para eso.
 - Normaliza cada comentario a `contacts`, `inbox_items` e `inbox_messages`.
 - Guarda `provider_post_id` y `provider_comment_id` para que las acciones server-side puedan apuntar al recurso externo correcto.
+- `provider_comment_id` debe ser unico por `workspace_id + account_id`. Webhook y polling pueden entregar el mismo comentario en paralelo; el persistidor limpia duplicados y la base usa `inbox_items_unique_provider_comment_idx` como garantia final.
 - Guarda `inbox_items.ingest_source` para distinguir si el item entro por `webhook`, `polling_fast`, `polling_full`, `ads_manual` o quedo como `unknown`.
 - Si Meta no devuelve `from` en un comentario, el contacto queda como `Autor pendiente` en vez de inventar identidad o pisar un autor real ya guardado.
 - Si el autor del comentario coincide con el `provider_account_id` de la cuenta conectada, el persistidor lo ignora: es una respuesta publicada por la propia Page/IG y no debe volver a Bandeja como no leida.

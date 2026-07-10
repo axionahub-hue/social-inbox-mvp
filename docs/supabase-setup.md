@@ -36,6 +36,7 @@ Para que Codex aplique el schema directamente:
 2. En Supabase SQL Editor, ejecutar completo `supabase/schema.sql`.
    - Si el proyecto ya existia antes del soporte Realtime, volver a ejecutar el bloque `do $$ ... alter publication supabase_realtime add table inbox_items ... end $$;` incluido en el schema.
    - Si el proyecto ya existe y solo se necesita la cola de acciones, ejecutar `supabase/migrations/20260708_action_queue.sql`.
+   - Si el proyecto ya existe y solo se necesita evitar comentarios duplicados entre webhook/polling, ejecutar `supabase/migrations/20260710_unique_provider_comment.sql`.
 3. Copiar `.env.example` a `.env.local`.
 4. Completar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
 5. En Supabase Auth, configurar Site URL:

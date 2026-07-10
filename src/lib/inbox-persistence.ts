@@ -178,6 +178,20 @@ export async function persistFacebookComment({
       .single();
   }
 
+  if (insertResult.error && isDuplicateInboxItemError(insertResult.error)) {
+    return persistFacebookComment({
+      supabase,
+      workspaceId,
+      accountId,
+      accountExternalId,
+      accountName,
+      comment,
+      ingestSource,
+      source,
+      providerAdId,
+    });
+  }
+
   if (insertResult.error) {
     throw new Error(insertResult.error.message);
   }
@@ -187,6 +201,12 @@ export async function persistFacebookComment({
     inboxItemId: insertResult.data.id as string,
     comment,
     receivedAt,
+  });
+  await pruneDuplicateCommentItems({
+    supabase,
+    workspaceId,
+    accountId,
+    providerCommentId: comment.commentId,
   });
 
   return "inserted";
@@ -393,6 +413,19 @@ export async function persistInstagramComment({
       .single();
   }
 
+  if (insertResult.error && isDuplicateInboxItemError(insertResult.error)) {
+    return persistInstagramComment({
+      supabase,
+      workspaceId,
+      accountId,
+      accountExternalId,
+      accountHandle,
+      accountName,
+      comment,
+      ingestSource,
+    });
+  }
+
   if (insertResult.error) {
     throw new Error(insertResult.error.message);
   }
@@ -402,6 +435,12 @@ export async function persistInstagramComment({
     inboxItemId: insertResult.data.id as string,
     comment,
     receivedAt,
+  });
+  await pruneDuplicateCommentItems({
+    supabase,
+    workspaceId,
+    accountId,
+    providerCommentId: comment.commentId,
   });
 
   return "inserted";
@@ -1098,6 +1137,82 @@ function isOptionalInboxColumnError(message: string) {
     message.includes("parent_comment_author") ||
     message.includes("parent_comment_text")
   );
+}
+
+function isDuplicateInboxItemError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "23505" ||
+    Boolean(error.message?.includes("inbox_items_unique_provider_comment_idx"))
+  );
+}
+
+async function pruneDuplicateCommentItems({
+  supabase,
+  workspaceId,
+  accountId,
+  providerCommentId,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+  accountId: string;
+  providerCommentId: string;
+}) {
+  const result = await supabase
+    .from("inbox_items")
+    .select("id,ingest_source,updated_at,created_at")
+    .eq("workspace_id", workspaceId)
+    .eq("account_id", accountId)
+    .eq("provider_comment_id", providerCommentId)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (result.error || !result.data || result.data.length <= 1) {
+    return;
+  }
+
+  const sorted = [...result.data].sort((left, right) => {
+    const leftScore = getCommentItemDedupeScore(left.ingest_source as string | null);
+    const rightScore = getCommentItemDedupeScore(right.ingest_source as string | null);
+
+    if (leftScore !== rightScore) {
+      return rightScore - leftScore;
+    }
+
+    return getDedupeTimestamp(right) - getDedupeTimestamp(left);
+  });
+  const duplicateIds = sorted.slice(1).map((item) => item.id as string);
+
+  if (duplicateIds.length === 0) {
+    return;
+  }
+
+  await supabase.from("inbox_items").delete().in("id", duplicateIds);
+}
+
+function getDedupeTimestamp(item: { updated_at?: unknown; created_at?: unknown }) {
+  const value =
+    typeof item.updated_at === "string"
+      ? item.updated_at
+      : typeof item.created_at === "string"
+      ? item.created_at
+      : "";
+
+  return new Date(value).getTime();
+}
+
+function getCommentItemDedupeScore(ingestSource?: string | null) {
+  switch (ingestSource) {
+    case "ads_auto":
+    case "ads_manual":
+      return 3;
+    case "webhook":
+      return 2;
+    case "polling_fast":
+    case "polling_full":
+      return 1;
+    default:
+      return 0;
+  }
 }
 
 function resolveCommentThreadContext(
