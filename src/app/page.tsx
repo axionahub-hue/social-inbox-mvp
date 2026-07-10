@@ -122,6 +122,10 @@ const metaAdCommentSyncIntervalMs = 30000;
 const instagramCommentSyncIntervalMs = 10000;
 const inboxPageSize = 120;
 const realtimeInboxRefreshDebounceMs = 2500;
+const sourceClassificationHoldMs = 20000;
+const sourceClassificationTickMs = 2000;
+const adClassificationKickDelayMs = 1200;
+const adClassificationMinIntervalMs = 12000;
 
 function shouldRunAutomaticSync() {
   return typeof document === "undefined" || document.visibilityState === "visible";
@@ -344,6 +348,9 @@ export default function Home() {
   const adCommentSyncInFlight = useRef(false);
   const instagramCommentSyncInFlight = useRef(false);
   const realtimeRefreshTimeout = useRef<number | null>(null);
+  const adClassificationKickTimeout = useRef<number | null>(null);
+  const lastAdClassificationKickAt = useRef(0);
+  const [sourceClassificationNow, setSourceClassificationNow] = useState(() => Date.now());
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
@@ -381,9 +388,6 @@ export default function Home() {
 
   const visibleAccountSet = useMemo(() => new Set(visibleAccountIds), [visibleAccountIds]);
   const hiddenAccountCount = channelList.length - visibleAccountIds.length;
-  const inboxUnreadCount = items.filter(
-    (item) => item.status !== "archived" && item.status !== "responded" && item.unreadCount > 0,
-  ).length;
   const realMetaChannels = channelList.filter((channel) => channel.status === "connected");
   const reviewMetaChannels = channelList.filter((channel) => channel.status === "needs_review");
   const demoMetaChannels = channelList.filter((channel) => channel.status === "demo");
@@ -405,6 +409,16 @@ export default function Home() {
     grantedMetaScopes.includes("instagram_basic") &&
     grantedMetaScopes.includes("instagram_manage_comments") &&
     realMetaChannels.some((channel) => channel.network === "instagram");
+  const inboxUnreadCount = items.filter(
+    (item) =>
+      item.status !== "archived" &&
+      item.status !== "responded" &&
+      item.unreadCount > 0 &&
+      !(
+        canAutoSyncMetaAdComments &&
+        isAwaitingSourceClassification(item, sourceClassificationNow)
+      ),
+  ).length;
   const workspaceBootstrap = useRef<{
     userId: string;
     promise: Promise<string | null>;
@@ -412,6 +426,13 @@ export default function Home() {
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      if (
+        canAutoSyncMetaAdComments &&
+        isAwaitingSourceClassification(item, sourceClassificationNow)
+      ) {
+        return false;
+      }
+
       const matchesAccount = visibleAccountSet.has(item.accountId);
       const matchesNetwork = network === "all" || item.network === network;
       const matchesView = matchesInboxView(item, inboxView);
@@ -419,9 +440,17 @@ export default function Home() {
       const matchesQuery = text.toLowerCase().includes(query.toLowerCase());
       return matchesAccount && matchesNetwork && matchesQuery && matchesView;
     });
-  }, [inboxView, items, network, query, visibleAccountSet]);
+  }, [
+    canAutoSyncMetaAdComments,
+    inboxView,
+    items,
+    network,
+    query,
+    sourceClassificationNow,
+    visibleAccountSet,
+  ]);
 
-  const selectedItem = items.find((item) => item.id === selectedId) ?? filteredItems[0];
+  const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
   const selectedReaction = selectedItem
     ? itemReactions[selectedItem.id] ?? (selectedItem.liked ? "like" : null)
     : null;
@@ -1727,6 +1756,60 @@ export default function Home() {
       }
     }
   }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
+
+  useEffect(() => {
+    if (!canAutoSyncMetaAdComments || !currentUser || !activeWorkspaceId) {
+      return;
+    }
+
+    const hasPendingClassification = items.some((item) =>
+      isAwaitingSourceClassification(item, Date.now()),
+    );
+
+    if (!hasPendingClassification) {
+      return;
+    }
+
+    const elapsedSinceLastKick = Date.now() - lastAdClassificationKickAt.current;
+
+    if (elapsedSinceLastKick < adClassificationMinIntervalMs || adClassificationKickTimeout.current) {
+      return;
+    }
+
+    adClassificationKickTimeout.current = window.setTimeout(() => {
+      adClassificationKickTimeout.current = null;
+      lastAdClassificationKickAt.current = Date.now();
+
+      if (shouldRunAutomaticSync()) {
+        void syncMetaAdComments({ automatic: true });
+      }
+    }, adClassificationKickDelayMs);
+
+    return () => {
+      if (adClassificationKickTimeout.current) {
+        window.clearTimeout(adClassificationKickTimeout.current);
+        adClassificationKickTimeout.current = null;
+      }
+    };
+  }, [activeWorkspaceId, canAutoSyncMetaAdComments, currentUser, items, syncMetaAdComments]);
+
+  useEffect(() => {
+    const hasPendingClassification = items.some((item) =>
+      canAutoSyncMetaAdComments && isAwaitingSourceClassification(item, sourceClassificationNow),
+    );
+
+    if (!hasPendingClassification) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setSourceClassificationNow(Date.now());
+    }, sourceClassificationTickMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [canAutoSyncMetaAdComments, items, sourceClassificationNow]);
 
   useEffect(() => {
     if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
@@ -3615,6 +3698,24 @@ function isCommentItem(item: InboxItem) {
   return item.source === "post_comment" || item.source === "ad_comment";
 }
 
+function isAwaitingSourceClassification(item: InboxItem, nowMs: number) {
+  if (item.source !== "post_comment" || !item.providerPostId || !item.receivedAtIso) {
+    return false;
+  }
+
+  if (!["webhook", "polling_fast", "polling_full"].includes(item.ingestSource ?? "unknown")) {
+    return false;
+  }
+
+  const receivedAtMs = new Date(item.receivedAtIso).getTime();
+
+  if (Number.isNaN(receivedAtMs)) {
+    return false;
+  }
+
+  return nowMs - receivedAtMs < sourceClassificationHoldMs;
+}
+
 function hasParentCommentContext(item: InboxItem) {
   return Boolean(item.parentCommentId || item.parentCommentAuthor || item.parentCommentText);
 }
@@ -3759,6 +3860,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     title: row.title,
     preview: row.preview,
     receivedAt: formatTimestamp(row.received_at),
+    receivedAtIso: row.received_at,
     assignee: "Sin asignar",
     providerPostId: row.provider_post_id ?? undefined,
     providerCommentId: row.provider_comment_id ?? undefined,

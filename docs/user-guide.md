@@ -136,6 +136,7 @@ El boton `Conectar cuenta Meta` abre el panel de configuracion. Ahi se ve:
 - auto-sincronizacion de comentarios Facebook cada 5 segundos mientras la app esta abierta y los permisos esten listos.
 - auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta y `instagram_basic` + `instagram_manage_comments` esten listos.
 - auto-sincronizacion completa de comentarios Ads cada 30 segundos mientras la app esta abierta y `ads_read` este listo. El boton manual queda como respaldo de diagnostico, no como paso operativo obligatorio.
+- Si `ads_read` esta listo, un comentario recien recibido puede demorarse unos segundos en aparecer para evitar mostrarlo como organico antes de verificar si pertenece a un anuncio.
 
 El OAuth local pide permisos minimos por defecto para validar el retorno de Meta. Al volver desde Meta, la app muestra cuantas paginas Facebook e Instagram quedaron detectadas y guarda las cuentas reales en Supabase.
 Si se seleccionan varias paginas en Meta pero Graph devuelve menos, la app solo puede guardar las paginas recibidas por `/me/accounts`. Con permisos minimos puede aparecer solo un subconjunto.

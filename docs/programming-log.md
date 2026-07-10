@@ -599,3 +599,10 @@
 - Dato corregido: se encontraron 4 items Instagram con titulo generico en Supabase para `@expertos.delamusica`; el backfill puntual por `provider_post_id` actualizo `title` con captions de 1197, 1880, 1773 y 853 caracteres y `provider_permalink_url`.
 - Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`; Supabase verificado con `remaining generic instagram titles: 0`.
+
+### Ventana de clasificacion Ads antes de mostrar organico
+
+- Resumen: algunos comentarios entraban rapido como `post_comment` por webhook/polling y luego Marketing API los reclasificaba como `ad_comment`, generando un cambio visible de organico a Ads.
+- Cambio: la UI retiene comentarios recientes `post_comment` durante 20 segundos cuando `ads_read` esta disponible, no los cuenta en Bandeja y dispara una sincronizacion Ads inmediata con throttle de 12 segundos. Si Ads los detecta, aparecen ya como `Comentario ad`; si no, vencida la ventana aparecen como organicos.
+- Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar comentario nuevo de anuncio.

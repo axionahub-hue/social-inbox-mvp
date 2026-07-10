@@ -33,6 +33,7 @@ export type InboxItem = {
   title: string;
   preview: string;
   receivedAt: string;
+  receivedAtIso?: string;
   assignee: string;
   campaign?: string;
   postTitle?: string;
