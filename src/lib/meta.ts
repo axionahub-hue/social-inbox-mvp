@@ -197,6 +197,12 @@ type MetaInstagramMediaResponse = {
   };
 };
 
+type MetaInstagramMediaContextResponse = MetaInstagramMedia & {
+  error?: {
+    message?: string;
+  };
+};
+
 type MetaInstagramComment = {
   id: string;
   text?: string;
@@ -967,6 +973,30 @@ export async function fetchMetaInstagramComments({
   );
 
   return commentsByMedia.flat();
+}
+
+export async function fetchMetaInstagramMediaContext({
+  accessToken,
+  mediaId,
+}: {
+  accessToken: string;
+  mediaId: string;
+}) {
+  const media = await requestGraph<MetaInstagramMediaContextResponse>(mediaId, {
+    fields: "id,caption,permalink,timestamp",
+    access_token: accessToken,
+  });
+
+  if (media.error) {
+    throw new Error(media.error.message ?? "No se pudo leer la publicacion Instagram.");
+  }
+
+  return {
+    id: media.id ?? mediaId,
+    caption: media.caption ?? null,
+    permalink: media.permalink ?? null,
+    timestamp: media.timestamp ?? null,
+  };
 }
 
 export async function fetchMetaInstagramMessagingProfile({

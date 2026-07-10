@@ -272,6 +272,7 @@ export async function persistInstagramComment({
   const title = comment.postMessage
     ? `Comentario en:\n${comment.postMessage}`
     : `Comentario en ${accountName}`;
+  const providerPermalink = comment.permalink ?? comment.postPermalink ?? null;
   const preview = comment.message || "(comentario sin texto)";
   const threadContextForUpdate = resolveCommentThreadContext(comment, { preserveExisting: true });
   const threadContextForInsert = resolveCommentThreadContext(comment);
@@ -281,20 +282,28 @@ export async function persistInstagramComment({
   }
 
   if (existingItem.data?.id) {
+    const updatePayload: Record<string, unknown> = {
+      contact_id: contactId,
+      preview,
+      source: "post_comment",
+      is_hidden: comment.isHidden,
+      ingest_source: ingestSource,
+      provider_post_id: comment.postId,
+      ...threadContextForUpdate,
+      updated_at: now,
+    };
+
+    if (comment.postMessage) {
+      updatePayload.title = title;
+    }
+
+    if (providerPermalink) {
+      updatePayload.provider_permalink_url = providerPermalink;
+    }
+
     const updateResult = await supabase
       .from("inbox_items")
-      .update({
-        contact_id: contactId,
-        title,
-        preview,
-        source: "post_comment",
-        is_hidden: comment.isHidden,
-        ingest_source: ingestSource,
-        provider_post_id: comment.postId,
-        provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
-        ...threadContextForUpdate,
-        updated_at: now,
-      })
+      .update(updatePayload)
       .eq("id", existingItem.data.id);
 
     if (updateResult.error) {
@@ -302,17 +311,22 @@ export async function persistInstagramComment({
         throw new Error(updateResult.error.message);
       }
 
+      const fallbackUpdatePayload: Record<string, unknown> = {
+        contact_id: contactId,
+        preview,
+        source: "post_comment",
+        is_hidden: comment.isHidden,
+        provider_post_id: comment.postId,
+        updated_at: now,
+      };
+
+      if (comment.postMessage) {
+        fallbackUpdatePayload.title = title;
+      }
+
       const retryResult = await supabase
         .from("inbox_items")
-        .update({
-          contact_id: contactId,
-          title,
-          preview,
-          source: "post_comment",
-          is_hidden: comment.isHidden,
-          provider_post_id: comment.postId,
-          updated_at: now,
-        })
+        .update(fallbackUpdatePayload)
         .eq("id", existingItem.data.id);
 
       if (retryResult.error) {
@@ -342,7 +356,7 @@ export async function persistInstagramComment({
       provider_comment_id: comment.commentId,
       provider_post_id: comment.postId,
       provider_ad_id: null,
-      provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
+      provider_permalink_url: providerPermalink,
       ...threadContextForInsert,
       title,
       preview,

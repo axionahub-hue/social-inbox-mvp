@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   decryptMetaToken,
   fetchMetaCommentContext,
+  fetchMetaInstagramMediaContext,
   fetchMetaInstagramMessagingProfile,
   fetchMetaMessengerConversationProfile,
   verifyMetaWebhookChallenge,
@@ -212,7 +213,10 @@ async function processMetaWebhookPayload({
           continue;
         }
 
-        const comment = mapInstagramCommentChangeToComment(change.value);
+        const comment = await mapInstagramCommentChangeToComment({
+          accessToken,
+          changeValue: change.value,
+        });
 
         if (!comment) {
           continue;
@@ -468,7 +472,13 @@ async function mapPageFeedChangeToComment({
   }
 }
 
-function mapInstagramCommentChangeToComment(changeValue?: MetaPageFeedValue | MetaInstagramCommentValue) {
+async function mapInstagramCommentChangeToComment({
+  accessToken,
+  changeValue,
+}: {
+  accessToken: string;
+  changeValue?: MetaPageFeedValue | MetaInstagramCommentValue;
+}) {
   if (!changeValue) {
     return null;
   }
@@ -482,18 +492,33 @@ function mapInstagramCommentChangeToComment(changeValue?: MetaPageFeedValue | Me
   }
 
   const username = value.from?.username ?? value.user?.username ?? value.from?.name;
+  let mediaCaption = value.media?.caption ?? null;
+  let mediaPermalink = value.media?.permalink ?? null;
+
+  if (!mediaCaption || !mediaPermalink) {
+    try {
+      const mediaContext = await fetchMetaInstagramMediaContext({
+        accessToken,
+        mediaId: postId,
+      });
+      mediaCaption = mediaCaption ?? mediaContext.caption;
+      mediaPermalink = mediaPermalink ?? mediaContext.permalink;
+    } catch {
+      // Webhooks must still persist the actionable comment if Meta does not return media context.
+    }
+  }
 
   return {
     postId,
-    postMessage: value.media?.caption ?? null,
-    postPermalink: value.media?.permalink ?? null,
+    postMessage: mediaCaption,
+    postPermalink: mediaPermalink,
     commentId,
     message: value.text ?? value.message ?? "",
     fromId: username ? `instagram:${username}` : value.from?.id ?? value.user?.id ?? null,
     fromName: username ? `@${username}` : null,
     createdTime: normalizeWebhookTimestamp(value.timestamp ?? value.created_time),
     isHidden: Boolean(value.hidden),
-    permalink: value.media?.permalink ?? null,
+    permalink: mediaPermalink,
     parentCommentId: value.parent?.id ?? value.parent_id ?? null,
     parentCommentText: value.parent?.text ?? value.parent?.message ?? null,
     parentCommentAuthorName: value.parent?.username

@@ -107,7 +107,9 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `POST /api/meta/sync/instagram-comments` lee media reciente y comentarios de cada cuenta Instagram elegible.
 - Solo procesa cuentas con `instagram_basic` e `instagram_manage_comments`.
 - Los comentarios Instagram se normalizan como `network = instagram` y `source = post_comment`; asi reutilizan bandeja, filtros, responder, ocultar/mostrar y eliminar sin cambiar el enum de Supabase.
+- En webhooks Instagram, el evento puede traer solo `media_id` y texto de comentario. Antes de persistir, el backend consulta el media (`caption`, `permalink`) con el Page token para que la vista muestre el texto completo de la publicacion.
 - La sincronizacion intenta leer replies de comentarios Instagram via `/{ig-comment-id}/replies`; cuando Meta lo permite, esas replies se guardan con referencia, autor y texto del comentario padre para mostrarlas como hilos anidados.
+- Si una actualizacion posterior de Instagram llega sin `caption` o `permalink`, el persistidor no pisa el titulo/permalink ya enriquecido del item.
 - Los comentarios Instagram escritos por la propia cuenta conectada se descartan durante la ingesta para evitar duplicar respuestas agente como items entrantes. La comparacion usa tanto el Instagram Business Account ID como el handle (`instagram:{username}`), porque Meta puede devolver replies con username en vez de ID numerico.
 - La UI ejecuta auto-sincronizacion de comentarios Instagram cada 10 segundos mientras la app esta abierta, visible y los permisos estan concedidos.
 - Las respuestas publicas Instagram usan el edge `/{ig-comment-id}/replies`.

@@ -591,3 +591,11 @@
 - Dato corregido: item erroneo detectado `27e4ca62-ce59-41e5-9c9a-184eb5165e05`, autor `@expertos.delamusica`, preview `es bienvenido su comentario...`.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/webhook/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`; item erroneo eliminado de Supabase y verificado `remaining unread post comments: 0`.
+
+### Contexto completo en comentarios Instagram por webhook
+
+- Resumen: comentarios entrantes de Instagram estaban llegando con titulo generico `Comentario en Academia Expertos de la Musica` porque el webhook podia enviar solo `media_id` sin `caption`.
+- Cambio: el webhook Instagram consulta el media por `media_id` antes de persistir para completar `postMessage` y `postPermalink`. `persistInstagramComment` ya no pisa `title` ni `provider_permalink_url` en updates cuando el evento entrante viene sin esos datos.
+- Dato corregido: se encontraron 4 items Instagram con titulo generico en Supabase para `@expertos.delamusica`; el backfill puntual por `provider_post_id` actualizo `title` con captions de 1197, 1880, 1773 y 853 caracteres y `provider_permalink_url`.
+- Areas tocadas: `src/lib/meta.ts`, `src/app/api/meta/webhook/route.ts`, `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`; Supabase verificado con `remaining generic instagram titles: 0`.
