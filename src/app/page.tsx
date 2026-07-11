@@ -122,7 +122,7 @@ const metaAdCommentSyncIntervalMs = 30000;
 const instagramCommentSyncIntervalMs = 10000;
 const inboxPageSize = 120;
 const realtimeInboxRefreshDebounceMs = 2500;
-const sourceClassificationHoldMs = 20000;
+const sourceClassificationHoldMs = 45000;
 const sourceClassificationTickMs = 2000;
 const adClassificationKickDelayMs = 1200;
 const adClassificationMinIntervalMs = 12000;
@@ -224,6 +224,7 @@ type InboxItemRow = {
   action_queue_id?: string | null;
   unread_count: number;
   received_at: string;
+  created_at: string;
   connected_accounts: ConnectedAccountRow | ConnectedAccountRow[] | null;
   contacts: ContactRow | ContactRow[] | null;
   inbox_messages: InboxMessageRow[] | null;
@@ -759,6 +760,7 @@ export default function Home() {
       is_hidden,
       unread_count,
       received_at,
+      created_at,
       connected_accounts (
         id,
         network,
@@ -3699,7 +3701,7 @@ function isCommentItem(item: InboxItem) {
 }
 
 function isAwaitingSourceClassification(item: InboxItem, nowMs: number) {
-  if (item.source !== "post_comment" || !item.providerPostId || !item.receivedAtIso) {
+  if (item.source !== "post_comment" || !item.providerPostId) {
     return false;
   }
 
@@ -3707,13 +3709,19 @@ function isAwaitingSourceClassification(item: InboxItem, nowMs: number) {
     return false;
   }
 
-  const receivedAtMs = new Date(item.receivedAtIso).getTime();
+  const classificationStartedAt = item.createdAtIso ?? item.receivedAtIso;
 
-  if (Number.isNaN(receivedAtMs)) {
+  if (!classificationStartedAt) {
     return false;
   }
 
-  return nowMs - receivedAtMs < sourceClassificationHoldMs;
+  const classificationStartedAtMs = new Date(classificationStartedAt).getTime();
+
+  if (Number.isNaN(classificationStartedAtMs)) {
+    return false;
+  }
+
+  return nowMs - classificationStartedAtMs < sourceClassificationHoldMs;
 }
 
 function hasParentCommentContext(item: InboxItem) {
@@ -3861,6 +3869,7 @@ function mapInboxItemRow(row: InboxItemRow): InboxItem {
     preview: row.preview,
     receivedAt: formatTimestamp(row.received_at),
     receivedAtIso: row.received_at,
+    createdAtIso: row.created_at,
     assignee: "Sin asignar",
     providerPostId: row.provider_post_id ?? undefined,
     providerCommentId: row.provider_comment_id ?? undefined,

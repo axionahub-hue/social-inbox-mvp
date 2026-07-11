@@ -603,9 +603,16 @@
 ### Ventana de clasificacion Ads antes de mostrar organico
 
 - Resumen: algunos comentarios entraban rapido como `post_comment` por webhook/polling y luego Marketing API los reclasificaba como `ad_comment`, generando un cambio visible de organico a Ads.
-- Cambio: la UI retiene comentarios recientes `post_comment` durante 20 segundos cuando `ads_read` esta disponible, no los cuenta en Bandeja y dispara una sincronizacion Ads inmediata con throttle de 12 segundos. Si Ads los detecta, aparecen ya como `Comentario ad`; si no, vencida la ventana aparecen como organicos.
+- Cambio: la UI retiene comentarios recientes `post_comment` durante una ventana corta cuando `ads_read` esta disponible, no los cuenta en Bandeja y dispara una sincronizacion Ads inmediata con throttle de 12 segundos. Si Ads los detecta, aparecen ya como `Comentario ad`; si no, vencida la ventana aparecen como organicos.
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar comentario nuevo de anuncio.
+
+### Reloj correcto para clasificacion Ads
+
+- Resumen: la ventana anterior usaba `received_at`, que viene de Meta y representa el `created_time` del comentario. Si el comentario llegaba tarde a la app, la UI lo consideraba viejo y lo mostraba como organico antes de que Ads pudiera reclasificarlo.
+- Cambio: la carga del inbox trae `inbox_items.created_at`, lo expone como `createdAtIso` y mide la retencion desde ese momento. La ventana sube a 45 segundos para cubrir latencia normal del Marketing API y evitar el cambio visible de `Comentario organico` a `Comentario ad`.
+- Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar un comentario nuevo de Facebook Ads con la app abierta.
 
 ### Dedupe de comentarios entre webhook y polling
 

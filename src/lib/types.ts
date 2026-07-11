@@ -34,6 +34,7 @@ export type InboxItem = {
   preview: string;
   receivedAt: string;
   receivedAtIso?: string;
+  createdAtIso?: string;
   assignee: string;
   campaign?: string;
   postTitle?: string;
