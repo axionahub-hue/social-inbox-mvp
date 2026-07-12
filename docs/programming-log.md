@@ -614,6 +614,13 @@
 - Areas tocadas: `src/app/page.tsx`, `src/lib/types.ts`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar un comentario nuevo de Facebook Ads con la app abierta.
 
+### Clasificacion Ads posterior al ingreso
+
+- Resumen: el comentario de Marcos Lopez entro como `post_comment` a las 12:52:19 y `ads_auto` lo reclasifico recien a las 12:54:50. El anuncio estaba disponible rapidamente en Marketing API, por lo que el fallo estaba en la orquestacion del frontend: la ventana fija vencia antes de una pasada Ads efectiva posterior al ingreso.
+- Cambio: la UI ahora guarda `lastAdClassificationCompletedAt` y retiene comentarios `post_comment` hasta que Ads complete una pasada posterior al `createdAtIso` del item y hayan pasado al menos 15 segundos. Mientras el item siga pendiente, el kick de clasificacion se reevalua con el reloj de clasificacion para no perder el intento si habia otro sync en curso. El fallback maximo sube a 3 minutos.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario de Facebook Ads.
+
 ### Dedupe de comentarios entre webhook y polling
 
 - Resumen: un comentario Instagram de `@stefan202663` entro dos veces porque webhook y polling rapido insertaron el mismo `provider_comment_id = 17869473825630373` en paralelo.

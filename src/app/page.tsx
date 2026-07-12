@@ -122,7 +122,8 @@ const metaAdCommentSyncIntervalMs = 30000;
 const instagramCommentSyncIntervalMs = 10000;
 const inboxPageSize = 120;
 const realtimeInboxRefreshDebounceMs = 2500;
-const sourceClassificationHoldMs = 45000;
+const sourceClassificationMinimumHoldMs = 15000;
+const sourceClassificationMaxHoldMs = 180000;
 const sourceClassificationTickMs = 2000;
 const adClassificationKickDelayMs = 1200;
 const adClassificationMinIntervalMs = 12000;
@@ -352,6 +353,7 @@ export default function Home() {
   const adClassificationKickTimeout = useRef<number | null>(null);
   const lastAdClassificationKickAt = useRef(0);
   const [sourceClassificationNow, setSourceClassificationNow] = useState(() => Date.now());
+  const [lastAdClassificationCompletedAt, setLastAdClassificationCompletedAt] = useState(0);
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
@@ -417,7 +419,11 @@ export default function Home() {
       item.unreadCount > 0 &&
       !(
         canAutoSyncMetaAdComments &&
-        isAwaitingSourceClassification(item, sourceClassificationNow)
+        isAwaitingSourceClassification(
+          item,
+          sourceClassificationNow,
+          lastAdClassificationCompletedAt,
+        )
       ),
   ).length;
   const workspaceBootstrap = useRef<{
@@ -429,7 +435,11 @@ export default function Home() {
     return items.filter((item) => {
       if (
         canAutoSyncMetaAdComments &&
-        isAwaitingSourceClassification(item, sourceClassificationNow)
+        isAwaitingSourceClassification(
+          item,
+          sourceClassificationNow,
+          lastAdClassificationCompletedAt,
+        )
       ) {
         return false;
       }
@@ -445,6 +455,7 @@ export default function Home() {
     canAutoSyncMetaAdComments,
     inboxView,
     items,
+    lastAdClassificationCompletedAt,
     network,
     query,
     sourceClassificationNow,
@@ -1519,6 +1530,8 @@ export default function Home() {
         return;
       }
 
+      setLastAdClassificationCompletedAt(Date.now());
+
       if (!automatic || changedCount > 0) {
         const inboxData = await loadSupabaseInbox(activeWorkspaceId);
         setChannelList(inboxData.channels);
@@ -1765,7 +1778,7 @@ export default function Home() {
     }
 
     const hasPendingClassification = items.some((item) =>
-      isAwaitingSourceClassification(item, Date.now()),
+      isAwaitingSourceClassification(item, Date.now(), lastAdClassificationCompletedAt),
     );
 
     if (!hasPendingClassification) {
@@ -1793,11 +1806,24 @@ export default function Home() {
         adClassificationKickTimeout.current = null;
       }
     };
-  }, [activeWorkspaceId, canAutoSyncMetaAdComments, currentUser, items, syncMetaAdComments]);
+  }, [
+    activeWorkspaceId,
+    canAutoSyncMetaAdComments,
+    currentUser,
+    items,
+    lastAdClassificationCompletedAt,
+    sourceClassificationNow,
+    syncMetaAdComments,
+  ]);
 
   useEffect(() => {
     const hasPendingClassification = items.some((item) =>
-      canAutoSyncMetaAdComments && isAwaitingSourceClassification(item, sourceClassificationNow),
+      canAutoSyncMetaAdComments &&
+      isAwaitingSourceClassification(
+        item,
+        sourceClassificationNow,
+        lastAdClassificationCompletedAt,
+      ),
     );
 
     if (!hasPendingClassification) {
@@ -1811,7 +1837,7 @@ export default function Home() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [canAutoSyncMetaAdComments, items, sourceClassificationNow]);
+  }, [canAutoSyncMetaAdComments, items, lastAdClassificationCompletedAt, sourceClassificationNow]);
 
   useEffect(() => {
     if (!canAutoSyncFacebookComments || !currentUser || !activeWorkspaceId) {
@@ -3700,7 +3726,11 @@ function isCommentItem(item: InboxItem) {
   return item.source === "post_comment" || item.source === "ad_comment";
 }
 
-function isAwaitingSourceClassification(item: InboxItem, nowMs: number) {
+function isAwaitingSourceClassification(
+  item: InboxItem,
+  nowMs: number,
+  lastAdClassificationCompletedAt = 0,
+) {
   if (item.source !== "post_comment" || !item.providerPostId) {
     return false;
   }
@@ -3721,7 +3751,20 @@ function isAwaitingSourceClassification(item: InboxItem, nowMs: number) {
     return false;
   }
 
-  return nowMs - classificationStartedAtMs < sourceClassificationHoldMs;
+  const ageMs = nowMs - classificationStartedAtMs;
+
+  if (ageMs >= sourceClassificationMaxHoldMs) {
+    return false;
+  }
+
+  const hasCompletedClassificationAfterItem =
+    lastAdClassificationCompletedAt > classificationStartedAtMs;
+
+  if (hasCompletedClassificationAfterItem && ageMs >= sourceClassificationMinimumHoldMs) {
+    return false;
+  }
+
+  return true;
 }
 
 function hasParentCommentContext(item: InboxItem) {
