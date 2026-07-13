@@ -617,9 +617,16 @@
 ### Clasificacion Ads posterior al ingreso
 
 - Resumen: el comentario de Marcos Lopez entro como `post_comment` a las 12:52:19 y `ads_auto` lo reclasifico recien a las 12:54:50. El anuncio estaba disponible rapidamente en Marketing API, por lo que el fallo estaba en la orquestacion del frontend: la ventana fija vencia antes de una pasada Ads efectiva posterior al ingreso.
-- Cambio: la UI ahora guarda `lastAdClassificationCompletedAt` y retiene comentarios `post_comment` hasta que Ads complete una pasada posterior al `createdAtIso` del item y hayan pasado al menos 15 segundos. Mientras el item siga pendiente, el kick de clasificacion se reevalua con el reloj de clasificacion para no perder el intento si habia otro sync en curso. El fallback maximo sube a 3 minutos.
+- Cambio: la UI ahora guarda el inicio de la ultima pasada Ads completada y mantiene comentarios `post_comment` en clasificacion hasta que Ads complete una pasada iniciada despues del `createdAtIso` del item y hayan pasado al menos 15 segundos. Mientras el item siga pendiente, el kick de clasificacion se reevalua con el reloj de clasificacion para no perder el intento si habia otro sync en curso. El fallback maximo sube a 3 minutos.
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario de Facebook Ads.
+
+### Etiqueta neutral durante clasificacion Ads
+
+- Resumen: el comentario de Vida Discipular demostro que una pasada Ads puede terminar despues de creado el item aunque haya empezado antes, por lo que la UI aun podia liberar `Comentario organico` falsamente antes de la reclasificacion.
+- Cambio: la UI deja de esconder el item y deja de mostrar `Comentario organico` mientras esta pendiente. Para comentarios Facebook recientes con Ads disponible, muestra `Clasificando` hasta que exista una pasada Ads completada cuyo inicio haya sido posterior al `createdAtIso` del item, con minimo de 15 segundos y maximo de 3 minutos.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario Facebook Ads.
 
 ### Dedupe de comentarios entre webhook y polling
 
