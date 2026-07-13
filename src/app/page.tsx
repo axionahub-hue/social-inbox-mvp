@@ -421,7 +421,6 @@ export default function Home() {
       item.status !== "responded" &&
       item.unreadCount > 0 &&
       !(
-        canAutoSyncMetaAdComments &&
         isAwaitingSourceClassification(
           item,
           sourceClassificationNow,
@@ -437,7 +436,6 @@ export default function Home() {
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       if (
-        canAutoSyncMetaAdComments &&
         isAwaitingSourceClassification(
           item,
           sourceClassificationNow,
@@ -455,7 +453,6 @@ export default function Home() {
       return matchesAccount && matchesNetwork && matchesQuery && matchesView;
     });
   }, [
-    canAutoSyncMetaAdComments,
     inboxView,
     items,
     lastCompletedAdClassificationStartedAt,
@@ -1681,7 +1678,14 @@ export default function Home() {
     }
   }
 
-  const syncMetaAdComments = useCallback(async ({ automatic = false }: { automatic?: boolean } = {}) => {
+  const syncMetaAdComments = useCallback(
+    async ({
+      automatic = false,
+      postIds = [],
+    }: {
+      automatic?: boolean;
+      postIds?: string[];
+    } = {}) => {
     if (!supabase || !currentUser || !activeWorkspaceId) {
       if (!automatic) {
         setMetaConnectionMessage("Inicia sesion Supabase antes de sincronizar Ads.");
@@ -1713,6 +1717,7 @@ export default function Home() {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 60000);
       const adClassificationStartedAt = Date.now();
+      const uniquePostIds = [...new Set(postIds)].filter(Boolean);
       const response = await fetch("/api/meta/sync/ad-comments", {
         method: "POST",
         signal: controller.signal,
@@ -1724,6 +1729,7 @@ export default function Home() {
           workspaceId: activeWorkspaceId,
           mode: automatic ? "fast" : "full",
           trigger: automatic ? "auto" : "manual",
+          ...(uniquePostIds.length > 0 ? { postIds: uniquePostIds } : {}),
         }),
       });
       window.clearTimeout(timeoutId);
@@ -1774,18 +1780,31 @@ export default function Home() {
         setIsMetaAdCommentsSyncing(false);
       }
     }
-  }, [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase]);
+    },
+    [activeWorkspaceId, currentUser, loadSupabaseInbox, supabase],
+  );
 
   useEffect(() => {
     if (!canAutoSyncMetaAdComments || !currentUser || !activeWorkspaceId) {
       return;
     }
 
-    const hasPendingClassification = items.some((item) =>
-      isAwaitingSourceClassification(item, Date.now(), lastCompletedAdClassificationStartedAt),
-    );
+    const pendingPostIds = [
+      ...new Set(
+        items
+          .filter((item) =>
+            isAwaitingSourceClassification(
+              item,
+              Date.now(),
+              lastCompletedAdClassificationStartedAt,
+            ),
+          )
+          .map((item) => item.providerPostId)
+          .filter((postId): postId is string => Boolean(postId)),
+      ),
+    ];
 
-    if (!hasPendingClassification) {
+    if (pendingPostIds.length === 0) {
       return;
     }
 
@@ -1800,7 +1819,7 @@ export default function Home() {
     lastAdClassificationKickAt.current = Date.now();
 
       if (shouldRunAutomaticSync()) {
-        void syncMetaAdComments({ automatic: true });
+        void syncMetaAdComments({ automatic: true, postIds: pendingPostIds });
       }
     }, adClassificationKickDelayMs);
 

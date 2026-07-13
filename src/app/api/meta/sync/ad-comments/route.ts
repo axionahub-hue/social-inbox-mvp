@@ -15,6 +15,7 @@ const syncSchema = z.object({
   workspaceId: z.string().uuid(),
   mode: z.enum(["fast", "full"]).optional().default("full"),
   trigger: z.enum(["auto", "manual"]).optional().default("manual"),
+  postIds: z.array(z.string().min(1)).max(25).optional().default([]),
 });
 
 const adSyncLimits = {
@@ -141,13 +142,17 @@ export async function POST(request: Request) {
     (account) => account.access_token_encrypted,
   );
   const limits = adSyncLimits[parsed.data.mode];
+  const requestedPostIds = new Set(parsed.data.postIds);
   const pageByProviderId = new Map(pageAccounts.map((account) => [account.provider_account_id, account]));
   const userToken = decryptMetaToken(connection.user_access_token_encrypted);
   const targets = await fetchMetaAdCommentTargets({
     accessToken: userToken,
     adAccountLimit: limits.adAccounts,
     adsPerAccountLimit: limits.adsPerAccount,
-    effectiveStatuses: [...limits.effectiveStatuses],
+    effectiveStatuses:
+      requestedPostIds.size > 0
+        ? [...adSyncLimits.full.effectiveStatuses]
+        : [...limits.effectiveStatuses],
   });
   const recentSince = createRecentMetaCommentSince();
   const uniqueTargetsByPost = new Map(
@@ -155,7 +160,11 @@ export async function POST(request: Request) {
       .filter((target) => pageByProviderId.has(target.pageId))
       .map((target) => [target.postId, target]),
   );
-  const matchedTargets = Array.from(uniqueTargetsByPost.values()).slice(0, limits.targets);
+  const allMatchedTargets = Array.from(uniqueTargetsByPost.values());
+  const matchedTargets =
+    requestedPostIds.size > 0
+      ? allMatchedTargets.filter((target) => requestedPostIds.has(target.postId)).slice(0, limits.targets)
+      : allMatchedTargets.slice(0, limits.targets);
   let commentsFound = 0;
   let inserted = 0;
   let updated = 0;
@@ -239,6 +248,7 @@ export async function POST(request: Request) {
       scannedPosts: matchedTargets.length,
       mode: parsed.data.mode,
       trigger: parsed.data.trigger,
+      requestedPosts: requestedPostIds.size,
     },
     comments: {
       found: commentsFound,

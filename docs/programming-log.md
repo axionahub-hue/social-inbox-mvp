@@ -642,6 +642,13 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar comentario Facebook Ads.
 
+### Clasificacion puntual de posts Ads pendientes
+
+- Resumen: el caso de Fernando Paniagua mostro que el barrido general de Ads podia tardar varios minutos en reclasificar un comentario que ya estaba en Supabase. La UI podia liberarlo por fallback de 2 minutos antes de que Ads lo encontrara.
+- Cambio: `/api/meta/sync/ad-comments` acepta `postIds` concretos. Cuando la UI detecta comentarios Facebook pendientes, envia esos `provider_post_id` al sync Ads para clasificar exactamente esos posts, usando estados activos/pausados y leyendo solo los targets solicitados. La ocultacion visual ya no depende de `canAutoSyncMetaAdComments`; ese flag solo gobierna si se intenta la clasificacion.
+- Areas tocadas: `src/app/page.tsx`, `src/app/api/meta/sync/ad-comments/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario Facebook Ads.
+
 ### Dedupe de comentarios entre webhook y polling
 
 - Resumen: un comentario Instagram de `@stefan202663` entro dos veces porque webhook y polling rapido insertaron el mismo `provider_comment_id = 17869473825630373` en paralelo.
