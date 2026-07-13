@@ -58,8 +58,6 @@ const sourceColors: Record<InboxSource, string> = {
   post_comment: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   ad_comment: "bg-amber-50 text-amber-800 ring-amber-200",
 };
-const sourceClassificationPendingLabel = "Clasificando";
-const sourceClassificationPendingColor = "bg-slate-50 text-slate-700 ring-slate-300";
 
 const ingestSourceLabels: Record<IngestSource, string> = {
   webhook: "Webhook",
@@ -125,7 +123,6 @@ const instagramCommentSyncIntervalMs = 10000;
 const inboxPageSize = 120;
 const realtimeInboxRefreshDebounceMs = 2500;
 const sourceClassificationMinimumHoldMs = 15000;
-const sourceClassificationMaxHoldMs = 180000;
 const sourceClassificationTickMs = 2000;
 const adClassificationKickDelayMs = 1200;
 const adClassificationMinIntervalMs = 12000;
@@ -421,7 +418,15 @@ export default function Home() {
     (item) =>
       item.status !== "archived" &&
       item.status !== "responded" &&
-      item.unreadCount > 0,
+      item.unreadCount > 0 &&
+      !(
+        canAutoSyncMetaAdComments &&
+        isAwaitingSourceClassification(
+          item,
+          sourceClassificationNow,
+          lastCompletedAdClassificationStartedAt,
+        )
+      ),
   ).length;
   const workspaceBootstrap = useRef<{
     userId: string;
@@ -430,6 +435,17 @@ export default function Home() {
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      if (
+        canAutoSyncMetaAdComments &&
+        isAwaitingSourceClassification(
+          item,
+          sourceClassificationNow,
+          lastCompletedAdClassificationStartedAt,
+        )
+      ) {
+        return false;
+      }
+
       const matchesAccount = visibleAccountSet.has(item.accountId);
       const matchesNetwork = network === "all" || item.network === network;
       const matchesView = matchesInboxView(item, inboxView);
@@ -438,23 +454,17 @@ export default function Home() {
       return matchesAccount && matchesNetwork && matchesQuery && matchesView;
     });
   }, [
+    canAutoSyncMetaAdComments,
     inboxView,
     items,
+    lastCompletedAdClassificationStartedAt,
     network,
     query,
+    sourceClassificationNow,
     visibleAccountSet,
   ]);
 
   const selectedItem = filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0];
-  const selectedItemIsSourceClassifying = Boolean(
-    selectedItem &&
-      canAutoSyncMetaAdComments &&
-      isAwaitingSourceClassification(
-        selectedItem,
-        sourceClassificationNow,
-        lastCompletedAdClassificationStartedAt,
-      ),
-  );
   const selectedReaction = selectedItem
     ? itemReactions[selectedItem.id] ?? (selectedItem.liked ? "like" : null)
     : null;
@@ -2889,14 +2899,6 @@ export default function Home() {
                   key={item.id}
                   selected={item.id === selectedItem?.id}
                   checked={selectedItemSet.has(item.id)}
-                  isSourceClassifying={
-                    canAutoSyncMetaAdComments &&
-                    isAwaitingSourceClassification(
-                      item,
-                      sourceClassificationNow,
-                      lastCompletedAdClassificationStartedAt,
-                    )
-                  }
                   onClick={() => {
                     setSelectedId(item.id);
                     setMobileInboxPanel("detail");
@@ -2953,10 +2955,7 @@ export default function Home() {
                   <div className="rounded-md border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <NetworkBadge network={selectedItem.network} />
-                      <Badge
-                        source={selectedItem.source}
-                        isClassifying={selectedItemIsSourceClassifying}
-                      />
+                      <Badge source={selectedItem.source} />
                       {selectedItem.ingestSource ? (
                         <IngestSourceBadge ingestSource={selectedItem.ingestSource} />
                       ) : null}
@@ -3344,14 +3343,12 @@ function InboxRow({
   item,
   selected,
   checked,
-  isSourceClassifying,
   onClick,
   onCheckedChange,
 }: {
   item: InboxItem;
   selected: boolean;
   checked: boolean;
-  isSourceClassifying: boolean;
   onClick: () => void;
   onCheckedChange: (checked: boolean) => void;
 }) {
@@ -3385,7 +3382,7 @@ function InboxRow({
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <NetworkBadge network={item.network} />
-            <Badge source={item.source} isClassifying={isSourceClassifying} />
+            <Badge source={item.source} />
             {item.ingestSource ? <IngestSourceBadge ingestSource={item.ingestSource} /> : null}
             <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
               <Icon size={13} className="shrink-0 text-slate-500" />
@@ -3422,23 +3419,7 @@ function InboxRow({
   );
 }
 
-function Badge({
-  source,
-  isClassifying = false,
-}: {
-  source: InboxSource;
-  isClassifying?: boolean;
-}) {
-  if (isClassifying) {
-    return (
-      <span
-        className={`rounded-md px-2 py-1 text-xs font-medium ring-1 ${sourceClassificationPendingColor}`}
-      >
-        {sourceClassificationPendingLabel}
-      </span>
-    );
-  }
-
+function Badge({ source }: { source: InboxSource }) {
   return (
     <span className={`rounded-md px-2 py-1 text-xs font-medium ring-1 ${sourceColors[source]}`}>
       {sourceLabels[source]}
@@ -3779,10 +3760,6 @@ function isAwaitingSourceClassification(
   }
 
   const ageMs = nowMs - classificationStartedAtMs;
-
-  if (ageMs >= sourceClassificationMaxHoldMs) {
-    return false;
-  }
 
   const hasCompletedClassificationAfterItem =
     lastCompletedAdClassificationStartedAt > classificationStartedAtMs;

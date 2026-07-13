@@ -624,7 +624,14 @@
 ### Etiqueta neutral durante clasificacion Ads
 
 - Resumen: el comentario de Vida Discipular demostro que una pasada Ads puede terminar despues de creado el item aunque haya empezado antes, por lo que la UI aun podia liberar `Comentario organico` falsamente antes de la reclasificacion.
-- Cambio: la UI deja de esconder el item y deja de mostrar `Comentario organico` mientras esta pendiente. Para comentarios Facebook recientes con Ads disponible, muestra `Clasificando` hasta que exista una pasada Ads completada cuyo inicio haya sido posterior al `createdAtIso` del item, con minimo de 15 segundos y maximo de 3 minutos.
+- Cambio reemplazado por la regla siguiente: inicialmente se probo mostrar `Clasificando`, pero el producto requiere no mostrar el item hasta que exista decision operativa.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario Facebook Ads.
+
+### Ocultar comentarios hasta clasificacion Ads
+
+- Resumen: el producto no debe mostrar `Clasificando` ni `Comentario organico` para comentarios Facebook cuya fuente todavia puede terminar siendo Ads. La regla esperada es no mostrar nada en Bandeja hasta que exista una decision operativa.
+- Cambio: los comentarios Facebook `post_comment` recientes quedan fuera de `filteredItems` y del contador de no leidos mientras `ads_read` esta disponible y no haya una pasada Ads completada iniciada despues del `createdAtIso` del item. Cuando Ads los confirma aparecen como `Comentario ad`; si una pasada posterior no los encuentra, recien aparecen como `Comentario organico`.
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario Facebook Ads.
 
