@@ -635,6 +635,13 @@
 - Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario Facebook Ads.
 
+### Fallback visible tras 2 minutos sin decision Ads
+
+- Resumen: si Meta/Ads no completa una decision en un plazo razonable, el frontend no debe ocultar indefinidamente el comentario.
+- Cambio: la retencion de comentarios Facebook pendientes de clasificacion Ads tiene un maximo duro de 2 minutos desde `createdAtIso`. Cumplido ese tiempo, el item sale del estado pendiente y se muestra con la fuente que tenga en ese momento.
+- Areas tocadas: `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar comentario Facebook Ads.
+
 ### Dedupe de comentarios entre webhook y polling
 
 - Resumen: un comentario Instagram de `@stefan202663` entro dos veces porque webhook y polling rapido insertaron el mismo `provider_comment_id = 17869473825630373` en paralelo.

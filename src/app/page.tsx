@@ -123,6 +123,7 @@ const instagramCommentSyncIntervalMs = 10000;
 const inboxPageSize = 120;
 const realtimeInboxRefreshDebounceMs = 2500;
 const sourceClassificationMinimumHoldMs = 15000;
+const sourceClassificationMaxHoldMs = 120000;
 const sourceClassificationTickMs = 2000;
 const adClassificationKickDelayMs = 1200;
 const adClassificationMinIntervalMs = 12000;
@@ -3760,6 +3761,10 @@ function isAwaitingSourceClassification(
   }
 
   const ageMs = nowMs - classificationStartedAtMs;
+
+  if (ageMs >= sourceClassificationMaxHoldMs) {
+    return false;
+  }
 
   const hasCompletedClassificationAfterItem =
     lastCompletedAdClassificationStartedAt > classificationStartedAtMs;
