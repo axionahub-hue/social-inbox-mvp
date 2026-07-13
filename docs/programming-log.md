@@ -649,6 +649,13 @@
 - Areas tocadas: `src/app/page.tsx`, `src/app/api/meta/sync/ad-comments/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar nuevo comentario Facebook Ads.
 
+### Clasificacion Ads en backend por webhook
+
+- Resumen: la clasificacion de comentarios Ads no debe depender de que el frontend este abierto, visible o activo. Los comentarios Facebook que llegan por webhook deben poder persistirse ya clasificados desde backend.
+- Cambio: `POST /api/meta/webhook` ahora carga targets Ads del workspace con el token largo de `meta_connections` y cache por workspace durante el procesamiento del payload. Antes de persistir un comentario `Page/feed`, compara `pageId + postId`; si encuentra target Ads, guarda el item como `ad_comment`, `ingest_source = ads_auto` y `provider_ad_id`.
+- Areas tocadas: `src/app/api/meta/webhook/route.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`. Pendiente desplegar y probar comentario Facebook Ads con frontend cerrado.
+
 ### Dedupe de comentarios entre webhook y polling
 
 - Resumen: un comentario Instagram de `@stefan202663` entro dos veces porque webhook y polling rapido insertaron el mismo `provider_comment_id = 17869473825630373` en paralelo.

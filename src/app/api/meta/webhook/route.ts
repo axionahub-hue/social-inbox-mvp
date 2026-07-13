@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import {
   decryptMetaToken,
+  fetchMetaAdCommentTargets,
   fetchMetaCommentContext,
   fetchMetaInstagramMediaContext,
   fetchMetaInstagramMessagingProfile,
   fetchMetaMessengerConversationProfile,
   verifyMetaWebhookChallenge,
   verifyMetaWebhookSignature,
+  type MetaAdCommentTarget,
   type MetaOrganicComment,
 } from "@/lib/meta";
 import {
@@ -120,6 +122,11 @@ type ConnectedFacebookAccount = {
 
 type ConnectedInstagramAccount = ConnectedFacebookAccount;
 
+type MetaConnectionRow = {
+  user_access_token_encrypted: string | null;
+  scopes: string[] | null;
+};
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const challenge = verifyMetaWebhookChallenge(url.searchParams);
@@ -188,6 +195,7 @@ async function processMetaWebhookPayload({
   supabase: SupabaseServiceClient;
 }) {
   let processed = 0;
+  const adTargetsByWorkspace = new Map<string, Promise<MetaAdCommentTarget[]>>();
 
   for (const entry of payload.entry ?? []) {
     const providerAccountId = entry.id;
@@ -285,6 +293,14 @@ async function processMetaWebhookPayload({
         continue;
       }
 
+      const adTarget = await resolveFacebookAdTargetForComment({
+        adTargetsByWorkspace,
+        pageId: account.provider_account_id,
+        postId: comment.postId,
+        supabase,
+        workspaceId: account.workspace_id,
+      });
+
       await persistFacebookComment({
         supabase,
         workspaceId: account.workspace_id,
@@ -292,7 +308,9 @@ async function processMetaWebhookPayload({
         accountExternalId: account.provider_account_id,
         accountName: account.name,
         comment,
-        ingestSource: "webhook",
+        ingestSource: adTarget ? "ads_auto" : "webhook",
+        source: adTarget ? "ad_comment" : "post_comment",
+        providerAdId: adTarget?.adId ?? null,
       });
       processed += 1;
     }
@@ -418,6 +436,73 @@ async function findConnectedInstagramAccount({
   }
 
   return result.data as ConnectedInstagramAccount | null;
+}
+
+async function resolveFacebookAdTargetForComment({
+  adTargetsByWorkspace,
+  pageId,
+  postId,
+  supabase,
+  workspaceId,
+}: {
+  adTargetsByWorkspace: Map<string, Promise<MetaAdCommentTarget[]>>;
+  pageId: string;
+  postId: string;
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+}) {
+  try {
+    let targetsPromise = adTargetsByWorkspace.get(workspaceId);
+
+    if (!targetsPromise) {
+      targetsPromise = loadFacebookAdTargetsForWorkspace({ supabase, workspaceId });
+      adTargetsByWorkspace.set(workspaceId, targetsPromise);
+    }
+
+    const targets = await targetsPromise;
+    return targets.find((target) => target.pageId === pageId && target.postId === postId) ?? null;
+  } catch (error) {
+    console.warn("meta_webhook_ad_classification_skipped", {
+      message: error instanceof Error ? error.message : "Error clasificando comentario Ads.",
+      postId,
+      workspaceId,
+    });
+    return null;
+  }
+}
+
+async function loadFacebookAdTargetsForWorkspace({
+  supabase,
+  workspaceId,
+}: {
+  supabase: SupabaseServiceClient;
+  workspaceId: string;
+}) {
+  const connectionResult = await supabase
+    .from("meta_connections")
+    .select("user_access_token_encrypted,scopes")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (connectionResult.error) {
+    throw new Error(connectionResult.error.message);
+  }
+
+  const connection = connectionResult.data as MetaConnectionRow | null;
+  const scopes = connection?.scopes ?? [];
+
+  if (!connection?.user_access_token_encrypted || !scopes.includes("ads_read")) {
+    return [];
+  }
+
+  const userToken = decryptMetaToken(connection.user_access_token_encrypted);
+
+  return fetchMetaAdCommentTargets({
+    accessToken: userToken,
+    adAccountLimit: 100,
+    adsPerAccountLimit: 100,
+    effectiveStatuses: ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED"],
+  });
 }
 
 async function mapPageFeedChangeToComment({
