@@ -663,3 +663,11 @@
 - Dato corregido: se elimino el duplicado `e5543b61-3fcf-4567-b657-28c56436cf8f`; quedo una sola fila para el comentario y Supabase verifico `duplicate groups: 0`. El indice `inbox_items_unique_provider_comment_idx` fue aplicado directo en Supabase.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `src/app/page.tsx`, `supabase/schema.sql`, `supabase/migrations/20260710_unique_provider_comment.sql`, `docs/architecture.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, indice aplicado en Supabase y `duplicate groups: 0`. Pendiente desplegar y probar nuevo comentario con webhook+polling activo.
+
+### Reduccion de egress Supabase por no-op updates
+
+- Resumen: el consumo alto de egress venia de recargas completas de inbox provocadas por escrituras repetidas sobre `inbox_items`. El polling rapido volvia a encontrar comentarios ya conocidos, los persistidores actualizaban `updated_at` aunque los datos fueran iguales, Supabase Realtime notificaba el cambio y el frontend descargaba otra vez cuentas, items, contactos y mensajes.
+- Cambio: `persistFacebookComment` y `persistInstagramComment` ahora comparan los campos relevantes de un comentario existente antes de escribir. Si no hay cambios reales, aseguran el mensaje relacionado si faltara, devuelven `unchanged` y no actualizan `inbox_items`. Tambien se evitan updates de contacto Facebook cuando nombre/handle ya estan iguales.
+- Impacto: se mantiene la funcionalidad de tiempo real para inserts, cambios de autor, ocultar/mostrar, contexto de hilo, permalink, texto de publicacion y reclasificacion Ads; se eliminan recargas causadas por comentarios repetidos sin cambios. Si un comentario Facebook ya fue clasificado como Ads, una pasada organica posterior conserva `source = ad_comment`, `provider_ad_id` e `ingest_source` para no degradar la clasificacion ni generar churn.
+- Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`.

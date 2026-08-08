@@ -3,7 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 import type { InboxSource } from "@/lib/types";
 
 export type SupabaseServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
-export type CommentPersistenceResult = "inserted" | "updated" | "skipped_self";
+export type CommentPersistenceResult = "inserted" | "updated" | "unchanged" | "skipped_self";
 
 export type MetaMessengerMessage = {
   senderId: string;
@@ -51,7 +51,9 @@ export async function persistFacebookComment({
   });
   const existingItem = await supabase
     .from("inbox_items")
-    .select("id")
+    .select(
+      "id,contact_id,title,preview,source,is_hidden,ingest_source,provider_post_id,provider_ad_id,provider_permalink_url,parent_comment_id,parent_comment_author,parent_comment_text",
+    )
     .eq("workspace_id", workspaceId)
     .eq("account_id", accountId)
     .eq("provider_comment_id", comment.commentId)
@@ -76,22 +78,46 @@ export async function persistFacebookComment({
         itemId: existingItem.data.id as string,
         fallbackContactId: contactId,
       });
+    const preserveAdClassification =
+      existingItem.data.source === "ad_comment" && source === "post_comment";
+    const nextSource = preserveAdClassification ? "ad_comment" : source;
+    const nextProviderAdId = preserveAdClassification
+      ? existingItem.data.provider_ad_id ?? providerAdId
+      : providerAdId;
+    const nextIngestSource = preserveAdClassification
+      ? existingItem.data.ingest_source ?? ingestSource
+      : ingestSource;
     const updatePayload = {
       contact_id: nextContactId,
       title,
       preview,
-      source,
+      source: nextSource,
       is_hidden: comment.isHidden,
-      ingest_source: ingestSource,
+      ingest_source: nextIngestSource,
       provider_post_id: comment.postId,
-      provider_ad_id: providerAdId,
+      provider_ad_id: nextProviderAdId,
       provider_permalink_url: comment.permalink ?? comment.postPermalink ?? null,
       ...threadContextForUpdate,
+    };
+
+    if (!hasInboxItemChanges(existingItem.data, updatePayload)) {
+      await ensureFacebookMessage({
+        supabase,
+        inboxItemId: existingItem.data.id,
+        comment,
+        receivedAt,
+      });
+
+      return "unchanged";
+    }
+
+    const updatePayloadWithTimestamp = {
+      ...updatePayload,
       updated_at: now,
     };
     const updateResult = await supabase
       .from("inbox_items")
-      .update(updatePayload)
+      .update(updatePayloadWithTimestamp)
       .eq("id", existingItem.data.id);
 
     if (updateResult.error) {
@@ -105,10 +131,10 @@ export async function persistFacebookComment({
           contact_id: nextContactId,
           title,
           preview,
-          source,
+          source: nextSource,
           is_hidden: comment.isHidden,
           provider_post_id: comment.postId,
-          provider_ad_id: providerAdId,
+          provider_ad_id: nextProviderAdId,
           updated_at: now,
         })
         .eq("id", existingItem.data.id);
@@ -282,7 +308,9 @@ export async function persistInstagramComment({
   });
   const existingItem = await supabase
     .from("inbox_items")
-    .select("id")
+    .select(
+      "id,contact_id,title,preview,source,is_hidden,ingest_source,provider_post_id,provider_permalink_url,parent_comment_id,parent_comment_author,parent_comment_text",
+    )
     .eq("workspace_id", workspaceId)
     .eq("account_id", accountId)
     .eq("provider_comment_id", comment.commentId)
@@ -320,6 +348,19 @@ export async function persistInstagramComment({
     if (providerPermalink) {
       updatePayload.provider_permalink_url = providerPermalink;
     }
+
+    if (!hasInboxItemChanges(existingItem.data, updatePayload)) {
+      await ensureInstagramMessage({
+        supabase,
+        inboxItemId: existingItem.data.id,
+        comment,
+        receivedAt,
+      });
+
+      return "unchanged";
+    }
+
+    updatePayload.updated_at = now;
 
     const updateResult = await supabase
       .from("inbox_items")
@@ -686,7 +727,7 @@ async function ensureFacebookContact({
   const displayName = comment.fromName ?? "Autor pendiente";
   const existing = await supabase
     .from("contacts")
-    .select("id")
+    .select("id,display_name,handle")
     .eq("workspace_id", workspaceId)
     .eq("network", "facebook")
     .eq("provider_user_id", providerUserId)
@@ -697,12 +738,23 @@ async function ensureFacebookContact({
   }
 
   if (existing.data?.id) {
-    if (comment.fromName) {
+    const nextHandle = comment.fromId ? `facebook:${comment.fromId}` : null;
+
+    if (
+      comment.fromName &&
+      shouldUpdateContactIdentity({
+        existingDisplayName: existing.data.display_name,
+        existingHandle: existing.data.handle,
+        nextDisplayName: displayName,
+        nextHandle,
+        fallbackPrefixes: ["Autor pendiente", "comment-author:"],
+      })
+    ) {
       await supabase
         .from("contacts")
         .update({
           display_name: displayName,
-          handle: comment.fromId ? `facebook:${comment.fromId}` : null,
+          handle: nextHandle ?? existing.data.handle,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existing.data.id);
@@ -1045,6 +1097,23 @@ function normalizeDate(value: string | null) {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function hasInboxItemChanges(
+  existing: Record<string, unknown>,
+  next: Record<string, unknown>,
+) {
+  return Object.entries(next).some(([key, value]) => {
+    if (key === "updated_at") {
+      return false;
+    }
+
+    return normalizeComparable(existing[key]) !== normalizeComparable(value);
+  });
+}
+
+function normalizeComparable(value: unknown) {
+  return value ?? null;
 }
 
 function resolveMessengerMessageBody(message: MetaMessengerMessage) {
