@@ -426,6 +426,7 @@ export default function Home() {
   const [allAutomationRules, setAllAutomationRules] = useState<AutomationRule[]>([]);
   const [isAllAutomationRulesOpen, setIsAllAutomationRulesOpen] = useState(false);
   const [isAllAutomationRulesLoading, setIsAllAutomationRulesLoading] = useState(false);
+  const [allAutomationRulesError, setAllAutomationRulesError] = useState<string | null>(null);
   const [automationPostUrl, setAutomationPostUrl] = useState("");
   const [automationEditorScope, setAutomationEditorScope] =
     useState<AutomationEditorScope>("selected_post");
@@ -436,6 +437,7 @@ export default function Home() {
     useState<AutomationReplyTarget | null>(null);
   const [automationDraft, setAutomationDraft] =
     useState<AutomationDraft>(emptyAutomationDraft);
+  const lastAllAutomationRulesLoadKey = useRef("");
   const [openOriginalPostMenuItemId, setOpenOriginalPostMenuItemId] = useState<string | null>(null);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
   const [quickReplyDraft, setQuickReplyDraft] =
@@ -1459,10 +1461,10 @@ export default function Home() {
     setAutomationEditorScope("selected_post");
   }
 
-  async function getCurrentSupabaseAccessToken() {
+  const getCurrentSupabaseAccessToken = useCallback(async () => {
     const session = supabase ? await supabase.auth.getSession() : null;
     return session?.data.session?.access_token ?? null;
-  }
+  }, [supabase]);
 
   async function openAutomationPanel() {
     if (!selectedItem || !isCommentItem(selectedItem) || !selectedItem.providerPostId) {
@@ -1559,7 +1561,7 @@ export default function Home() {
     });
   }
 
-  async function toggleAllAutomationRules() {
+  function toggleAllAutomationRules() {
     const nextOpen = !isAllAutomationRulesOpen;
     setIsAllAutomationRulesOpen(nextOpen);
 
@@ -1570,24 +1572,35 @@ export default function Home() {
       setAutomationRuleContext(null);
       setAutomationPostUrl("");
       setAutomationDraft(emptyAutomationDraft);
-      await loadAllAutomationRules();
+      setAllAutomationRulesError(null);
+      setIsAllAutomationRulesLoading(true);
     }
   }
 
-  async function loadAllAutomationRules() {
+  const loadAllAutomationRules = useCallback(async () => {
+    if (!supabase || !currentUser) {
+      setAllAutomationRulesError("Inicia sesion en Supabase para cargar las automatizaciones.");
+      setIsAllAutomationRulesLoading(false);
+      return;
+    }
+
     if (!activeWorkspaceId) {
-      setAllAutomationRules([]);
+      setAllAutomationRulesError("Preparando workspace. Las automatizaciones se cargaran en unos segundos.");
+      setIsAllAutomationRulesLoading(false);
       return;
     }
 
     const accessToken = await getCurrentSupabaseAccessToken();
 
     if (!accessToken) {
+      setAllAutomationRulesError("Sesion Supabase expirada. Vuelve a iniciar sesion.");
       setNotice("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      setIsAllAutomationRulesLoading(false);
       return;
     }
 
     setIsAllAutomationRulesLoading(true);
+    setAllAutomationRulesError(null);
 
     try {
       const params = new URLSearchParams({
@@ -1601,18 +1614,38 @@ export default function Home() {
       const payload = await response.json();
 
       if (!response.ok || !payload.ok) {
-        setNotice(payload.message ?? "No se pudieron cargar todas las automatizaciones.");
-        setAllAutomationRules([]);
+        const message = payload.message ?? "No se pudieron cargar todas las automatizaciones.";
+        setAllAutomationRulesError(message);
+        setNotice(message);
         return;
       }
 
       setAllAutomationRules((payload.rules ?? []).map(mapAutomationRule));
     } catch {
+      setAllAutomationRulesError("No se pudieron cargar todas las automatizaciones.");
       setNotice("No se pudieron cargar todas las automatizaciones.");
     } finally {
       setIsAllAutomationRulesLoading(false);
     }
-  }
+  }, [activeWorkspaceId, currentUser, getCurrentSupabaseAccessToken, supabase]);
+
+  useEffect(() => {
+    if (!isAllAutomationRulesOpen) {
+      lastAllAutomationRulesLoadKey.current = "";
+      return;
+    }
+
+    const loadKey = `${currentUser?.id ?? "no-user"}:${activeWorkspaceId ?? "no-workspace"}`;
+
+    if (lastAllAutomationRulesLoadKey.current === loadKey) {
+      return;
+    }
+
+    lastAllAutomationRulesLoadKey.current = loadKey;
+    window.setTimeout(() => {
+      void loadAllAutomationRules();
+    }, 0);
+  }, [activeWorkspaceId, currentUser?.id, isAllAutomationRulesOpen, loadAllAutomationRules]);
 
   function openNewGlobalAutomationRule() {
     setAutomationEditorScope("global");
@@ -3854,14 +3887,16 @@ export default function Home() {
                 onEmojiClick={insertAutomationEmoji}
                 onEmojiTargetChange={setAutomationEmojiTarget}
                 onPostUrlChange={setAutomationPostUrl}
+                onRefreshRules={() => void loadAllAutomationRules()}
                 onSave={() => void saveAutomationRule()}
-                    onUpdateDraft={setAutomationDraft}
-                    postUrl={automationPostUrl}
-                    rules={allAutomationRules}
-                    rulesLabel="todas las automatizaciones"
-                    showPostUrlInput={!editingAutomationRuleId}
-                    variant="manager"
-                  />
+                onUpdateDraft={setAutomationDraft}
+                postUrl={automationPostUrl}
+                rules={allAutomationRules}
+                rulesError={allAutomationRulesError}
+                rulesLabel="todas las automatizaciones"
+                showPostUrlInput={!editingAutomationRuleId}
+                variant="manager"
+              />
             </div>
           </div>
         </div>
@@ -4195,10 +4230,12 @@ function AutomationPanel({
   onEmojiClick,
   onEmojiTargetChange,
   onPostUrlChange,
+  onRefreshRules,
   onSave,
   onUpdateDraft,
   postUrl,
   rules,
+  rulesError,
   rulesLabel = "regla(s) para esta publicacion",
   showPostUrlInput = false,
   variant = "inline",
@@ -4215,41 +4252,73 @@ function AutomationPanel({
   onEmojiClick: (emojiData: EmojiClickData) => void;
   onEmojiTargetChange: (target: AutomationReplyTarget | null) => void;
   onPostUrlChange?: (value: string) => void;
+  onRefreshRules?: () => void;
   onSave: () => void;
   onUpdateDraft: (updater: (current: AutomationDraft) => AutomationDraft) => void;
   postUrl?: string;
   rules: AutomationRule[];
+  rulesError?: string | null;
   rulesLabel?: string;
   showPostUrlInput?: boolean;
   variant?: "inline" | "manager";
 }) {
   const privateLabel = network === "instagram" ? "DM" : "Inbox";
   const isManager = variant === "manager";
-  const ruleCountText = isLoading ? "Cargando reglas..." : `${rules.length} ${rulesLabel}`;
+  const ruleCountText = isLoading
+    ? "Cargando reglas..."
+    : rulesError && rules.length === 0
+      ? "No se pudo cargar la lista"
+      : `${rules.length} ${rulesLabel}`;
 
   const rulesList = (
-    <div className={isManager ? "rounded-md border border-slate-200 bg-white p-4" : ""}>
+    <div
+      className={
+        isManager
+          ? "flex min-h-[180px] flex-col rounded-md border border-slate-200 bg-white p-3 sm:min-h-[260px] sm:p-4 xl:min-h-[360px] xl:max-h-[calc(100vh-260px)]"
+          : ""
+      }
+    >
       {isManager ? (
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-900">Reglas guardadas</p>
             <p className="text-xs text-slate-500">{ruleCountText}</p>
           </div>
-          {editingRuleId ? (
-            <button
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              onClick={onCancelEdit}
-              type="button"
-            >
-              <Plus size={15} />
-              Nueva
-            </button>
-          ) : null}
+          <div className="flex gap-1.5">
+            {onRefreshRules ? (
+              <button
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isLoading}
+                onClick={onRefreshRules}
+                type="button"
+              >
+                Actualizar
+              </button>
+            ) : null}
+            {editingRuleId ? (
+              <button
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={onCancelEdit}
+                type="button"
+              >
+                <Plus size={15} />
+                Nueva
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {rulesError ? (
+        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+          {rulesError}
         </div>
       ) : null}
 
       {rules.length > 0 ? (
-        <div className="grid gap-2">
+        <div
+          className={isManager ? "grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1" : "grid gap-2"}
+        >
           {rules.map((rule) => {
             const rulePrivateLabel = rule.network === "instagram" ? "dm" : "inbox";
 
@@ -4307,14 +4376,22 @@ function AutomationPanel({
         <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
           {isLoading
             ? "Consultando automatizaciones guardadas."
-            : "No hay automatizaciones guardadas para este alcance."}
+            : rulesError
+              ? "No se pudo confirmar la lista de automatizaciones."
+              : "No hay automatizaciones guardadas para este alcance."}
         </div>
       )}
     </div>
   );
 
   const ruleForm = (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+    <div
+      className={
+        isManager
+          ? "rounded-md border border-slate-200 bg-slate-50 p-3 sm:p-4 xl:min-h-[calc(100vh-260px)]"
+          : "rounded-md border border-slate-200 bg-slate-50 p-4"
+      }
+    >
       {isManager ? (
         <div className="mb-4">
           <p className="text-sm font-semibold text-slate-900">
@@ -4510,7 +4587,7 @@ function AutomationReplyTextarea({
   value: string;
 }) {
   return (
-    <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+    <div className="mt-3 rounded-md border border-slate-200 bg-white p-2 sm:p-3">
       <div className="flex items-center justify-between gap-3">
         <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800">
           <input
