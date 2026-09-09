@@ -270,6 +270,7 @@ type AutomationRule = {
   active: boolean;
   matchType: AutomationMatchType;
   keyword: string;
+  likeCommentEnabled: boolean;
   publicReplyEnabled: boolean;
   publicReplyText: string;
   privateReplyEnabled: boolean;
@@ -280,6 +281,7 @@ type AutomationDraft = {
   active: boolean;
   matchType: AutomationMatchType;
   keyword: string;
+  likeCommentEnabled: boolean;
   publicReplyEnabled: boolean;
   publicReplyText: string;
   privateReplyEnabled: boolean;
@@ -356,6 +358,7 @@ const emptyAutomationDraft: AutomationDraft = {
   active: true,
   matchType: "contains",
   keyword: "",
+  likeCommentEnabled: false,
   publicReplyEnabled: true,
   publicReplyText: "",
   privateReplyEnabled: false,
@@ -1498,6 +1501,7 @@ export default function Home() {
       active: rule.active,
       matchType: rule.matchType,
       keyword: rule.keyword,
+      likeCommentEnabled: rule.likeCommentEnabled,
       publicReplyEnabled: rule.publicReplyEnabled,
       publicReplyText: rule.publicReplyText,
       privateReplyEnabled: rule.privateReplyEnabled,
@@ -1517,10 +1521,11 @@ export default function Home() {
     }
 
     if (
+      !automationDraft.likeCommentEnabled &&
       (!automationDraft.publicReplyEnabled || !automationDraft.publicReplyText.trim()) &&
       (!automationDraft.privateReplyEnabled || !automationDraft.privateReplyText.trim())
     ) {
-      setNotice("Activa al menos una respuesta y escribe su texto.");
+      setNotice("Activa al menos una accion: like, respuesta publica o respuesta privada.");
       return;
     }
 
@@ -1548,6 +1553,7 @@ export default function Home() {
           active: automationDraft.active,
           matchType: automationDraft.matchType,
           keyword: automationDraft.keyword,
+          likeCommentEnabled: automationDraft.likeCommentEnabled,
           publicReplyEnabled: automationDraft.publicReplyEnabled,
           publicReplyText: automationDraft.publicReplyText,
           privateReplyEnabled: automationDraft.privateReplyEnabled,
@@ -4043,6 +4049,7 @@ function AutomationPanel({
                   {[
                     rule.publicReplyEnabled ? "comentario" : null,
                     rule.privateReplyEnabled ? privateLabel.toLowerCase() : null,
+                    rule.likeCommentEnabled ? "like" : null,
                   ]
                     .filter(Boolean)
                     .join(" + ")}
@@ -4096,6 +4103,23 @@ function AutomationPanel({
             Activa
           </label>
         </div>
+
+        <label className="mt-3 flex min-h-11 items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
+          <input
+            checked={draft.likeCommentEnabled}
+            onChange={(event) =>
+              onUpdateDraft((current) => ({
+                ...current,
+                likeCommentEnabled: event.target.checked,
+              }))
+            }
+            type="checkbox"
+          />
+          <span className="inline-flex items-center gap-2">
+            <ThumbsUp size={15} />
+            Dar like al comentario recibido
+          </span>
+        </label>
 
         <AutomationReplyTextarea
           checked={draft.publicReplyEnabled}
@@ -4446,6 +4470,7 @@ function mapAutomationRule(row: Record<string, unknown>): AutomationRule {
     active: Boolean(row.active),
     matchType: (row.matchType ?? row.match_type ?? "contains") as AutomationMatchType,
     keyword: String(row.keyword ?? ""),
+    likeCommentEnabled: Boolean(row.likeCommentEnabled ?? row.like_comment_enabled),
     publicReplyEnabled: Boolean(row.publicReplyEnabled ?? row.public_reply_enabled),
     publicReplyText: String(row.publicReplyText ?? row.public_reply_text ?? ""),
     privateReplyEnabled: Boolean(row.privateReplyEnabled ?? row.private_reply_enabled),

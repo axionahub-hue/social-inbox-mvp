@@ -181,13 +181,16 @@ create table if not exists automation_rules (
   match_type text not null check (match_type in ('contains', 'starts_with', 'equals')),
   keyword text not null,
   keyword_normalized text not null,
+  like_comment_enabled boolean not null default false,
   public_reply_enabled boolean not null default false,
   public_reply_text text,
   private_reply_enabled boolean not null default false,
   private_reply_text text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (
+  constraint automation_rules_has_action_check check (
+    like_comment_enabled
+    or
     (public_reply_enabled and nullif(trim(public_reply_text), '') is not null)
     or
     (private_reply_enabled and nullif(trim(private_reply_text), '') is not null)
@@ -200,7 +203,7 @@ create table if not exists automation_executions (
   rule_id uuid not null references automation_rules(id) on delete cascade,
   inbox_item_id uuid not null references inbox_items(id) on delete cascade,
   provider_comment_id text not null,
-  destination text not null check (destination in ('public_comment', 'private_message')),
+  destination text not null check (destination in ('like_comment', 'public_comment', 'private_message')),
   action_queue_id uuid references action_queue(id) on delete set null,
   status text not null default 'queued',
   error text,

@@ -686,3 +686,10 @@
 - Resumen: al procesar acciones encoladas por automatizaciones, `action_queue` quedaba en `succeeded` o `failed`, pero `automation_executions` permanecia en `queued`.
 - Cambio: el procesador de cola actualiza `automation_executions` por `action_queue_id` al terminar cada accion, copiando `succeeded` o `failed` y el error cuando exista.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`; ejecuciones pendientes de la regla `drapin` actualizadas a `succeeded`.
+
+### Like automatico por palabra clave
+
+- Resumen: las automatizaciones por publicacion ahora pueden dar like al comentario recibido cuando coincide la palabra clave.
+- Cambio: `automation_rules.like_comment_enabled`, destino `like_comment` en `automation_executions`, checkbox `Dar like al comentario recibido` en el panel de reglas y evaluacion backend que encola accion `like` junto a las respuestas configuradas.
+- Migracion: `supabase/migrations/20260909_automation_like_comments.sql` actualiza proyectos existentes sin recrear tablas.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`, revision responsive local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal. Pendiente ejecutar migracion en Supabase, activar checkbox en la regla existente y probar comentario real.

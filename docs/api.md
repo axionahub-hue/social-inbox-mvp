@@ -160,17 +160,18 @@ Campos principales:
 - `source`: `post_comment` o `ad_comment`
 - `matchType`: `contains`, `starts_with` o `equals`
 - `keyword`
+- `likeCommentEnabled`
 - `publicReplyEnabled` + `publicReplyText`
 - `privateReplyEnabled` + `privateReplyText`
 - `active`
 
-La palabra clave se guarda tambien en `keyword_normalized`, sin tildes y en minusculas. Debe estar activa al menos una respuesta con texto.
+La palabra clave se guarda tambien en `keyword_normalized`, sin tildes y en minusculas. Debe estar activa al menos una accion: like, respuesta publica o respuesta privada.
 
 ### `DELETE /api/automation-rules`
 
 Elimina una automatizacion por `id` y `workspaceId`. Requiere bearer token Supabase y validacion de propiedad del workspace.
 
-Las automatizaciones se ejecutan desde backend cuando entra o se sincroniza un comentario. El servidor consulta reglas por `account_id + provider_post_id`, reserva la ejecucion en `automation_executions` y encola una o dos acciones `reply` en `action_queue`. La clave unica `rule_id + provider_comment_id + destination` evita duplicados entre webhook y polling.
+Las automatizaciones se ejecutan desde backend cuando entra o se sincroniza un comentario. El servidor consulta reglas por `account_id + provider_post_id`, reserva la ejecucion en `automation_executions` y encola acciones `like`/`reply` en `action_queue` segun la regla. La clave unica `rule_id + provider_comment_id + destination` evita duplicados entre webhook y polling.
 
 ### `GET /api/meta/webhook`
 

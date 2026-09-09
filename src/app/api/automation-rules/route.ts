@@ -14,6 +14,7 @@ const ruleSchema = z
     active: z.boolean().default(true),
     matchType: z.enum(["contains", "starts_with", "equals"]),
     keyword: z.string().min(1),
+    likeCommentEnabled: z.boolean().default(false),
     publicReplyEnabled: z.boolean().default(false),
     publicReplyText: z.string().optional().default(""),
     privateReplyEnabled: z.boolean().default(false),
@@ -21,13 +22,17 @@ const ruleSchema = z
   })
   .refine(
     (value) =>
+      value.likeCommentEnabled ||
       (value.publicReplyEnabled && value.publicReplyText.trim()) ||
       (value.privateReplyEnabled && value.privateReplyText.trim()),
     {
-      message: "Activa al menos una respuesta y escribe su texto.",
+      message: "Activa al menos una accion: like, respuesta publica o respuesta privada.",
       path: ["publicReplyText"],
     },
   );
+
+const ruleSelect =
+  "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,like_comment_enabled,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at";
 
 const listSchema = z.object({
   workspaceId: z.string().uuid(),
@@ -70,9 +75,7 @@ export async function GET(request: Request) {
 
   const rules = await auth.supabase
     .from("automation_rules")
-    .select(
-      "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at",
-    )
+    .select(ruleSelect)
     .eq("workspace_id", parsed.data.workspaceId)
     .eq("account_id", parsed.data.accountId)
     .eq("provider_post_id", parsed.data.providerPostId)
@@ -136,6 +139,7 @@ export async function POST(request: Request) {
     account_id: parsed.data.accountId,
     keyword: parsed.data.keyword.trim(),
     keyword_normalized: normalizeAutomationKeyword(parsed.data.keyword),
+    like_comment_enabled: parsed.data.likeCommentEnabled,
     match_type: parsed.data.matchType,
     network: parsed.data.network,
     private_reply_enabled: parsed.data.privateReplyEnabled,
@@ -153,16 +157,12 @@ export async function POST(request: Request) {
         .from("automation_rules")
         .update(payload)
         .eq("id", parsed.data.id)
-        .select(
-          "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at",
-        )
+        .select(ruleSelect)
         .single()
     : auth.supabase
         .from("automation_rules")
         .insert(payload)
-        .select(
-          "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at",
-        )
+        .select(ruleSelect)
         .single();
 
   const saved = await query;
@@ -302,6 +302,7 @@ function mapRuleRow(row: Record<string, unknown>) {
     active: row.active,
     matchType: row.match_type,
     keyword: row.keyword,
+    likeCommentEnabled: row.like_comment_enabled,
     publicReplyEnabled: row.public_reply_enabled,
     publicReplyText: row.public_reply_text,
     privateReplyEnabled: row.private_reply_enabled,

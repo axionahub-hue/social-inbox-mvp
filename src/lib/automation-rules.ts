@@ -1,13 +1,14 @@
 import { enqueueInboxAction } from "@/lib/inbox-action-queue";
 import type { SupabaseServiceClient } from "@/lib/inbox-persistence";
-import type { InboxSource, Network, ReplyMode } from "@/lib/types";
+import type { InboxAction, InboxSource, Network, ReplyMode } from "@/lib/types";
 
 export type AutomationMatchType = "contains" | "starts_with" | "equals";
-export type AutomationDestination = "public_comment" | "private_message";
+export type AutomationDestination = "like_comment" | "public_comment" | "private_message";
 
 type AutomationRuleRow = {
   id: string;
   created_at: string;
+  like_comment_enabled: boolean;
   public_reply_enabled: boolean;
   public_reply_text: string | null;
   private_reply_enabled: boolean;
@@ -93,7 +94,7 @@ export async function evaluateCommentAutomations({
 
     for (const destination of destinations) {
       const execution = await reserveAutomationExecution({
-        destination: destination.replyMode,
+        destination: destination.destination,
         itemId: item.id,
         providerCommentId,
         ruleId: rule.id,
@@ -109,7 +110,7 @@ export async function evaluateCommentAutomations({
       try {
         const queueId = await enqueueInboxAction({
           input: {
-            action: "reply",
+            action: destination.action,
             externalId: providerCommentId,
             itemId: item.id,
             message: destination.message,
@@ -185,7 +186,7 @@ async function loadActiveRulesForPost({
   const result = await supabase
     .from("automation_rules")
     .select(
-      "id,created_at,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,match_type,keyword_normalized",
+      "id,created_at,like_comment_enabled,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,match_type,keyword_normalized",
     )
     .eq("workspace_id", workspaceId)
     .eq("account_id", accountId)
@@ -236,10 +237,24 @@ function doesRuleMatch(rule: AutomationRuleRow, normalizedComment: string) {
 }
 
 function resolveRuleDestinations(rule: AutomationRuleRow) {
-  const destinations: Array<{ replyMode: ReplyMode; message: string }> = [];
+  const destinations: Array<{
+    action: InboxAction;
+    destination: AutomationDestination;
+    message?: string;
+    replyMode?: ReplyMode;
+  }> = [];
+
+  if (rule.like_comment_enabled) {
+    destinations.push({
+      action: "like",
+      destination: "like_comment",
+    });
+  }
 
   if (rule.public_reply_enabled && rule.public_reply_text?.trim()) {
     destinations.push({
+      action: "reply",
+      destination: "public_comment",
       replyMode: "public_comment",
       message: rule.public_reply_text.trim(),
     });
@@ -247,6 +262,8 @@ function resolveRuleDestinations(rule: AutomationRuleRow) {
 
   if (rule.private_reply_enabled && rule.private_reply_text?.trim()) {
     destinations.push({
+      action: "reply",
+      destination: "private_message",
       replyMode: "private_message",
       message: rule.private_reply_text.trim(),
     });
@@ -263,7 +280,7 @@ async function reserveAutomationExecution({
   supabase,
   workspaceId,
 }: {
-  destination: ReplyMode;
+  destination: AutomationDestination;
   itemId: string;
   providerCommentId: string;
   ruleId: string;

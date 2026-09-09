@@ -192,8 +192,8 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `automation_rules` guarda reglas activas por `workspace_id`, `account_id` y `provider_post_id`.
 - Cada regla compara el texto del comentario contra una palabra clave normalizada sin mayusculas/minusculas ni tildes.
 - Los operadores soportados son `contains`, `starts_with` y `equals`.
-- Cada regla puede encolar respuesta publica, respuesta privada o ambas. No conversa como bot: solo ejecuta respuestas fijas cuando entra un comentario que coincide.
-- `automation_executions` registra una ejecucion por `rule_id`, `provider_comment_id` y destino. El indice unico evita enviar dos veces la misma automatizacion aunque el comentario llegue por webhook y polling.
+- Cada regla puede encolar like al comentario recibido, respuesta publica, respuesta privada o cualquier combinacion de esas acciones. No conversa como bot: solo ejecuta acciones fijas cuando entra un comentario que coincide.
+- `automation_executions` registra una ejecucion por `rule_id`, `provider_comment_id` y destino (`like_comment`, `public_comment` o `private_message`). El indice unico evita enviar dos veces la misma automatizacion aunque el comentario llegue por webhook y polling.
 - La ejecucion no depende del frontend. Los endpoints de webhook y sincronizacion llaman a `evaluateCommentAutomations` despues de persistir un comentario insertado/actualizado.
 - Las acciones automatizadas entran a `action_queue`, igual que las acciones manuales. Esto mantiene la UI rapida y deja una auditoria persistente de exito/fallo.
 - En Vercel Hobby no conviene usar cron frecuente para escuchar redes sociales. El canal principal debe ser webhook Meta; polling queda como respaldo limitado y no permanente.

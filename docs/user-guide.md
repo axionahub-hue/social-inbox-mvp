@@ -162,11 +162,12 @@ Cada regla permite elegir:
 
 - condicion: `contiene`, `empieza con` o `es igual a`;
 - palabra clave, ignorando mayusculas, minusculas y tildes;
+- dar like al comentario recibido;
 - respuesta en comentario;
 - respuesta por Inbox/DM;
 - estado activa/inactiva.
 
-El texto de respuesta acepta emojis y links. Si un comentario nuevo cumple la condicion, la app encola la respuesta en segundo plano aunque el navegador este cerrado. No es un bot conversacional: responde una vez por regla, comentario y destino.
+El texto de respuesta acepta emojis y links. Si un comentario nuevo cumple la condicion, la app encola el like y/o la respuesta en segundo plano aunque el navegador este cerrado. No es un bot conversacional: ejecuta una vez por regla, comentario y destino.
 
 Para probar con bajo consumo:
 

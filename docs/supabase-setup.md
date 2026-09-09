@@ -39,6 +39,7 @@ Para que Codex aplique el schema directamente:
    - Si el proyecto ya existe y solo se necesita la cola de acciones, ejecutar `supabase/migrations/20260708_action_queue.sql`.
    - Si el proyecto ya existe y solo se necesita evitar comentarios duplicados entre webhook/polling, ejecutar `supabase/migrations/20260710_unique_provider_comment.sql`.
    - Si el proyecto ya existe y solo se necesita activar automatizaciones por publicacion, ejecutar `supabase/migrations/20260908_automation_rules.sql`.
+   - Si el proyecto ya tiene automatizaciones y solo se necesita agregar like automatico, ejecutar `supabase/migrations/20260909_automation_like_comments.sql`.
 3. Copiar `.env.example` a `.env.local`.
 4. Completar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
 5. En Supabase Auth, configurar Site URL:
