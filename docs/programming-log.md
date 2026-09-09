@@ -712,3 +712,12 @@
 - Dato verificado: Supabase conserva 1 automatizacion real activa para `drapin`, en la publicacion Instagram `17922095607199886`.
 - Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, smoke local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal y con modal/campo de link visibles.
+
+### Gestor global en layout de trabajo
+
+- Resumen: se amplio el gestor global para que no sea solo un formulario apilado dentro de una tarjeta. En desktop ahora separa reglas guardadas y editor en dos zonas; en mobile reduce padding anidado para no achicar el formulario.
+- Cambio API: se mantiene la lectura de reglas y cuentas por separado para que el contador global refleje las reglas reales del workspace.
+- Cambio UI: el modal sube a `max-w-7xl`, la tarjeta externa desaparece en modo gestor, la lista queda a la izquierda y el editor a la derecha desde desktop ancho. En mobile ambas zonas se apilan con ancho completo.
+- Medicion local: 1440 px -> formulario 817 px; 1280 px -> 769 px; 430 px -> 360 px; 412 px -> 342 px; 390 px -> 320 px; 360 px -> 290 px. Todos sin overflow horizontal.
+- Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, smoke responsive local en 1440, 1280, 430, 412, 390 y 360 px.

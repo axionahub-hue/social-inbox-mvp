@@ -3813,8 +3813,8 @@ export default function Home() {
         </section>
       </div>
       {isAllAutomationRulesOpen ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
-          <div className="mx-auto flex h-full max-h-[calc(100vh-24px)] w-full max-w-5xl flex-col overflow-hidden rounded-md bg-white shadow-2xl sm:max-h-[calc(100vh-48px)]">
+        <div className="fixed inset-0 z-50 bg-slate-950/55 p-2 backdrop-blur-sm sm:p-6">
+          <div className="mx-auto flex h-full max-h-[calc(100vh-16px)] w-full max-w-7xl flex-col overflow-hidden rounded-md bg-white shadow-2xl sm:max-h-[calc(100vh-48px)]">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -3836,7 +3836,7 @@ export default function Home() {
                 <X size={18} />
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6">
               <AutomationPanel
                 contextLabel={
                   editingAutomationRuleId && automationRuleContext
@@ -3855,12 +3855,13 @@ export default function Home() {
                 onEmojiTargetChange={setAutomationEmojiTarget}
                 onPostUrlChange={setAutomationPostUrl}
                 onSave={() => void saveAutomationRule()}
-                onUpdateDraft={setAutomationDraft}
-                postUrl={automationPostUrl}
-                rules={allAutomationRules}
-                rulesLabel="todas las automatizaciones"
-                showPostUrlInput={!editingAutomationRuleId}
-              />
+                    onUpdateDraft={setAutomationDraft}
+                    postUrl={automationPostUrl}
+                    rules={allAutomationRules}
+                    rulesLabel="todas las automatizaciones"
+                    showPostUrlInput={!editingAutomationRuleId}
+                    variant="manager"
+                  />
             </div>
           </div>
         </div>
@@ -4200,6 +4201,7 @@ function AutomationPanel({
   rules,
   rulesLabel = "regla(s) para esta publicacion",
   showPostUrlInput = false,
+  variant = "inline",
 }: {
   contextLabel?: string;
   draft: AutomationDraft;
@@ -4219,16 +4221,250 @@ function AutomationPanel({
   rules: AutomationRule[];
   rulesLabel?: string;
   showPostUrlInput?: boolean;
+  variant?: "inline" | "manager";
 }) {
   const privateLabel = network === "instagram" ? "DM" : "Inbox";
+  const isManager = variant === "manager";
+  const ruleCountText = isLoading ? "Cargando reglas..." : `${rules.length} ${rulesLabel}`;
+
+  const rulesList = (
+    <div className={isManager ? "rounded-md border border-slate-200 bg-white p-4" : ""}>
+      {isManager ? (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Reglas guardadas</p>
+            <p className="text-xs text-slate-500">{ruleCountText}</p>
+          </div>
+          {editingRuleId ? (
+            <button
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              onClick={onCancelEdit}
+              type="button"
+            >
+              <Plus size={15} />
+              Nueva
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {rules.length > 0 ? (
+        <div className="grid gap-2">
+          {rules.map((rule) => {
+            const rulePrivateLabel = rule.network === "instagram" ? "dm" : "inbox";
+
+            return (
+              <div
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+                key={rule.id}
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NetworkBadge network={rule.network} />
+                    <span
+                      className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                        rule.active
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      {rule.active ? "Activa" : "Inactiva"}
+                    </span>
+                    <span className="text-xs font-medium text-slate-500">
+                      {automationMatchLabels[rule.matchType]}
+                    </span>
+                    <span className="max-w-60 truncate text-sm font-semibold text-slate-900">
+                      {rule.keyword}
+                    </span>
+                  </div>
+                  <p className="mt-1 break-words text-xs text-slate-500">
+                    {rule.accountName ? `${rule.accountName} · ` : ""}
+                    {rule.providerPostId}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {[
+                      rule.publicReplyEnabled ? "comentario" : null,
+                      rule.privateReplyEnabled ? rulePrivateLabel : null,
+                      rule.likeCommentEnabled ? "like" : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" + ")}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <SmallActionButton title="Editar automatizacion" onClick={() => onEdit(rule)}>
+                    <Pencil size={14} />
+                  </SmallActionButton>
+                  <SmallActionButton title="Eliminar automatizacion" onClick={() => onDelete(rule.id)}>
+                    <Trash2 size={14} />
+                  </SmallActionButton>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
+          {isLoading
+            ? "Consultando automatizaciones guardadas."
+            : "No hay automatizaciones guardadas para este alcance."}
+        </div>
+      )}
+    </div>
+  );
+
+  const ruleForm = (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+      {isManager ? (
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-slate-900">
+            {editingRuleId ? "Editar regla" : "Crear regla"}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {editingRuleId
+              ? "Solo se modifican condicion, acciones y textos. La publicacion no cambia."
+              : "Pega el link de una publicacion ya registrada y define la condicion."}
+          </p>
+        </div>
+      ) : null}
+
+      {showPostUrlInput ? (
+        <label className="mb-4 block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            Link de publicacion
+          </span>
+          <input
+            className="h-11 w-full min-w-0 rounded-md border border-slate-200 bg-white px-3 text-base outline-none focus:border-slate-400 sm:text-sm"
+            onChange={(event) => onPostUrlChange?.(event.target.value)}
+            placeholder="https://www.instagram.com/p/... o https://www.facebook.com/..."
+            value={postUrl ?? ""}
+          />
+          <span className="mt-1 block text-xs leading-4 text-slate-500">
+            Debe ser una publicacion que ya tenga al menos un comentario registrado en el inbox.
+          </span>
+        </label>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-[160px_1fr_auto]">
+        <select
+          className="h-11 rounded-md border border-slate-200 bg-white px-3 text-base outline-none focus:border-slate-400 sm:text-sm"
+          onChange={(event) =>
+            onUpdateDraft((current) => ({
+              ...current,
+              matchType: event.target.value as AutomationMatchType,
+            }))
+          }
+          value={draft.matchType}
+        >
+          <option value="contains">contiene</option>
+          <option value="starts_with">empieza con</option>
+          <option value="equals">es igual a</option>
+        </select>
+        <input
+          className="h-11 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-base outline-none focus:border-slate-400 sm:text-sm"
+          onChange={(event) =>
+            onUpdateDraft((current) => ({ ...current, keyword: event.target.value }))
+          }
+          placeholder="Palabra clave"
+          value={draft.keyword}
+        />
+        <label className="inline-flex h-11 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
+          <input
+            checked={draft.active}
+            onChange={(event) =>
+              onUpdateDraft((current) => ({ ...current, active: event.target.checked }))
+            }
+            type="checkbox"
+          />
+          Activa
+        </label>
+      </div>
+
+      <label className="mt-4 flex min-h-11 items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
+        <input
+          checked={draft.likeCommentEnabled}
+          onChange={(event) =>
+            onUpdateDraft((current) => ({
+              ...current,
+              likeCommentEnabled: event.target.checked,
+            }))
+          }
+          type="checkbox"
+        />
+        <span className="inline-flex items-center gap-2">
+          <ThumbsUp size={15} />
+          Dar like al comentario recibido
+        </span>
+      </label>
+
+      <AutomationReplyTextarea
+        checked={draft.publicReplyEnabled}
+        isEmojiOpen={emojiTarget === "public"}
+        label="Responder en comentario"
+        onChange={(value) =>
+          onUpdateDraft((current) => ({ ...current, publicReplyText: value }))
+        }
+        onCheckedChange={(checked) =>
+          onUpdateDraft((current) => ({ ...current, publicReplyEnabled: checked }))
+        }
+        onEmojiClick={onEmojiClick}
+        onEmojiToggle={() =>
+          onEmojiTargetChange(emojiTarget === "public" ? null : "public")
+        }
+        value={draft.publicReplyText}
+      />
+
+      <AutomationReplyTextarea
+        checked={draft.privateReplyEnabled}
+        isEmojiOpen={emojiTarget === "private"}
+        label={`Responder por ${privateLabel}`}
+        onChange={(value) =>
+          onUpdateDraft((current) => ({ ...current, privateReplyText: value }))
+        }
+        onCheckedChange={(checked) =>
+          onUpdateDraft((current) => ({ ...current, privateReplyEnabled: checked }))
+        }
+        onEmojiClick={onEmojiClick}
+        onEmojiToggle={() =>
+          onEmojiTargetChange(emojiTarget === "private" ? null : "private")
+        }
+        value={draft.privateReplyText}
+      />
+
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        {editingRuleId ? (
+          <button
+            className="h-10 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+            onClick={onCancelEdit}
+            type="button"
+          >
+            Cancelar
+          </button>
+        ) : null}
+        <button
+          className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
+          onClick={onSave}
+          type="button"
+        >
+          {editingRuleId ? "Actualizar regla" : "Guardar regla"}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
+    <div
+      className={
+        isManager
+          ? "rounded-md bg-transparent"
+          : "rounded-md border border-slate-200 bg-white p-4 sm:p-5"
+      }
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">Automatizaciones</p>
           <p className="text-xs text-slate-500">
-            {isLoading ? "Cargando..." : `${rules.length} ${rulesLabel}`}
+            {ruleCountText}
           </p>
           {contextLabel ? (
             <p className="mt-1 text-xs leading-4 text-slate-500">{contextLabel}</p>
@@ -4246,178 +4482,9 @@ function AutomationPanel({
         ) : null}
       </div>
 
-      {rules.length > 0 ? (
-        <div className="mt-3 grid gap-2">
-          {rules.map((rule) => (
-            <div
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-              key={rule.id}
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <NetworkBadge network={rule.network} />
-                  <span
-                    className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                      rule.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-600"
-                    }`}
-                  >
-                    {rule.active ? "Activa" : "Inactiva"}
-                  </span>
-                  <span className="text-xs font-medium text-slate-500">
-                    {automationMatchLabels[rule.matchType]}
-                  </span>
-                  <span className="max-w-60 truncate text-sm font-semibold text-slate-900">
-                    {rule.keyword}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {rule.accountName ? `${rule.accountName} · ` : ""}
-                  {rule.providerPostId}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {[
-                    rule.publicReplyEnabled ? "comentario" : null,
-                    rule.privateReplyEnabled ? privateLabel.toLowerCase() : null,
-                    rule.likeCommentEnabled ? "like" : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" + ")}
-                </p>
-              </div>
-              <div className="flex gap-1">
-                <SmallActionButton title="Editar automatizacion" onClick={() => onEdit(rule)}>
-                  <Pencil size={14} />
-                </SmallActionButton>
-                <SmallActionButton title="Eliminar automatizacion" onClick={() => onDelete(rule.id)}>
-                  <Trash2 size={14} />
-                </SmallActionButton>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-        {showPostUrlInput ? (
-          <label className="mb-3 block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-              Link de publicacion
-            </span>
-            <input
-              className="h-10 w-full min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-              onChange={(event) => onPostUrlChange?.(event.target.value)}
-              placeholder="https://www.instagram.com/p/... o https://www.facebook.com/..."
-              value={postUrl ?? ""}
-            />
-            <span className="mt-1 block text-xs leading-4 text-slate-500">
-              Debe ser una publicacion que ya tenga al menos un comentario registrado en el inbox.
-            </span>
-          </label>
-        ) : null}
-        <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
-          <select
-            className="h-10 rounded-md border border-slate-200 bg-white px-2 text-sm outline-none focus:border-slate-400"
-            onChange={(event) =>
-              onUpdateDraft((current) => ({
-                ...current,
-                matchType: event.target.value as AutomationMatchType,
-              }))
-            }
-            value={draft.matchType}
-          >
-            <option value="contains">contiene</option>
-            <option value="starts_with">empieza con</option>
-            <option value="equals">es igual a</option>
-          </select>
-          <input
-            className="h-10 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-            onChange={(event) =>
-              onUpdateDraft((current) => ({ ...current, keyword: event.target.value }))
-            }
-            placeholder="Palabra clave"
-            value={draft.keyword}
-          />
-          <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
-            <input
-              checked={draft.active}
-              onChange={(event) =>
-                onUpdateDraft((current) => ({ ...current, active: event.target.checked }))
-              }
-              type="checkbox"
-            />
-            Activa
-          </label>
-        </div>
-
-        <label className="mt-3 flex min-h-11 items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
-          <input
-            checked={draft.likeCommentEnabled}
-            onChange={(event) =>
-              onUpdateDraft((current) => ({
-                ...current,
-                likeCommentEnabled: event.target.checked,
-              }))
-            }
-            type="checkbox"
-          />
-          <span className="inline-flex items-center gap-2">
-            <ThumbsUp size={15} />
-            Dar like al comentario recibido
-          </span>
-        </label>
-
-        <AutomationReplyTextarea
-          checked={draft.publicReplyEnabled}
-          isEmojiOpen={emojiTarget === "public"}
-          label="Responder en comentario"
-          onChange={(value) =>
-            onUpdateDraft((current) => ({ ...current, publicReplyText: value }))
-          }
-          onCheckedChange={(checked) =>
-            onUpdateDraft((current) => ({ ...current, publicReplyEnabled: checked }))
-          }
-          onEmojiClick={onEmojiClick}
-          onEmojiToggle={() =>
-            onEmojiTargetChange(emojiTarget === "public" ? null : "public")
-          }
-          value={draft.publicReplyText}
-        />
-
-        <AutomationReplyTextarea
-          checked={draft.privateReplyEnabled}
-          isEmojiOpen={emojiTarget === "private"}
-          label={`Responder por ${privateLabel}`}
-          onChange={(value) =>
-            onUpdateDraft((current) => ({ ...current, privateReplyText: value }))
-          }
-          onCheckedChange={(checked) =>
-            onUpdateDraft((current) => ({ ...current, privateReplyEnabled: checked }))
-          }
-          onEmojiClick={onEmojiClick}
-          onEmojiToggle={() =>
-            onEmojiTargetChange(emojiTarget === "private" ? null : "private")
-          }
-          value={draft.privateReplyText}
-        />
-
-        <div className="mt-3 flex justify-end gap-2">
-          {editingRuleId ? (
-            <button
-              className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
-              onClick={onCancelEdit}
-              type="button"
-            >
-              Cancelar
-            </button>
-          ) : null}
-          <button
-            className="h-9 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
-            onClick={onSave}
-            type="button"
-          >
-            {editingRuleId ? "Actualizar regla" : "Guardar regla"}
-          </button>
-        </div>
+      <div className={isManager ? "mt-5 grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]" : "mt-4 space-y-4"}>
+        {rulesList}
+        {ruleForm}
       </div>
     </div>
   );
