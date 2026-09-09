@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { evaluateCommentAutomations } from "@/lib/automation-rules";
+import { processQueuedInboxActions } from "@/lib/inbox-action-queue";
 import {
   decryptMetaToken,
   fetchMetaAdCommentTargets,
@@ -167,7 +169,14 @@ export async function POST(request: Request) {
     webhookEventId = inserted.data?.id ?? null;
 
     try {
-      processedCount = await processMetaWebhookPayload({ payload, supabase });
+      const result = await processMetaWebhookPayload({ payload, supabase });
+      processedCount = result.processed;
+
+      if (result.automationsQueued > 0) {
+        after(async () => {
+          await processQueuedInboxActions({ limit: Math.min(10, result.automationsQueued) });
+        });
+      }
     } catch (error) {
       errors.push(error instanceof Error ? error.message : "Error procesando webhook Meta.");
     }
@@ -195,6 +204,7 @@ async function processMetaWebhookPayload({
   supabase: SupabaseServiceClient;
 }) {
   let processed = 0;
+  let automationsQueued = 0;
   const adTargetsByWorkspace = new Map<string, Promise<MetaAdCommentTarget[]>>();
 
   for (const entry of payload.entry ?? []) {
@@ -230,7 +240,7 @@ async function processMetaWebhookPayload({
           continue;
         }
 
-        await persistInstagramComment({
+        const persistenceResult = await persistInstagramComment({
           supabase,
           workspaceId: account.workspace_id,
           accountId: account.id,
@@ -240,6 +250,21 @@ async function processMetaWebhookPayload({
           comment,
           ingestSource: "webhook",
         });
+
+        if (persistenceResult === "inserted" || persistenceResult === "updated") {
+          const automationResult = await evaluateCommentAutomations({
+            supabase,
+            workspaceId: account.workspace_id,
+            accountId: account.id,
+            network: "instagram",
+            providerPostId: comment.postId,
+            providerCommentId: comment.commentId,
+            commentText: comment.message,
+            source: "post_comment",
+          });
+
+          automationsQueued += automationResult.queued;
+        }
         processed += 1;
       }
 
@@ -301,7 +326,7 @@ async function processMetaWebhookPayload({
         workspaceId: account.workspace_id,
       });
 
-      await persistFacebookComment({
+      const persistenceResult = await persistFacebookComment({
         supabase,
         workspaceId: account.workspace_id,
         accountId: account.id,
@@ -312,6 +337,21 @@ async function processMetaWebhookPayload({
         source: adTarget ? "ad_comment" : "post_comment",
         providerAdId: adTarget?.adId ?? null,
       });
+
+      if (persistenceResult === "inserted" || persistenceResult === "updated") {
+        const automationResult = await evaluateCommentAutomations({
+          supabase,
+          workspaceId: account.workspace_id,
+          accountId: account.id,
+          network: "facebook",
+          providerPostId: comment.postId,
+          providerCommentId: comment.commentId,
+          commentText: comment.message,
+          source: adTarget ? "ad_comment" : "post_comment",
+        });
+
+        automationsQueued += automationResult.queued;
+      }
       processed += 1;
     }
 
@@ -342,7 +382,7 @@ async function processMetaWebhookPayload({
     }
   }
 
-  return processed;
+  return { processed, automationsQueued };
 }
 
 async function enrichFacebookMessengerMessage({

@@ -135,6 +135,43 @@ Nota: Graph acepto `message_tags` al crear replies de Page, pero lo ignoro silen
 
 Nota private replies: aunque `pages_messaging` este concedido, Meta puede rechazar comentarios especificos con `(#100, subcode 1893060)` cuando no acepta ese `comment_id` como private reply. En ese caso la app no persiste respuesta privada y debe mostrar el motivo especifico.
 
+### `GET /api/automation-rules`
+
+Lista automatizaciones configuradas para una publicacion concreta.
+
+Query:
+
+- `workspaceId`
+- `accountId`
+- `providerPostId`
+
+Requiere `Authorization: Bearer SUPABASE_ACCESS_TOKEN`. El endpoint valida que el workspace pertenezca al usuario y que la cuenta conectada pertenezca al workspace.
+
+### `POST /api/automation-rules`
+
+Crea o actualiza una automatizacion por publicacion.
+
+Campos principales:
+
+- `workspaceId`
+- `accountId`
+- `providerPostId`
+- `network`: `facebook` o `instagram`
+- `source`: `post_comment` o `ad_comment`
+- `matchType`: `contains`, `starts_with` o `equals`
+- `keyword`
+- `publicReplyEnabled` + `publicReplyText`
+- `privateReplyEnabled` + `privateReplyText`
+- `active`
+
+La palabra clave se guarda tambien en `keyword_normalized`, sin tildes y en minusculas. Debe estar activa al menos una respuesta con texto.
+
+### `DELETE /api/automation-rules`
+
+Elimina una automatizacion por `id` y `workspaceId`. Requiere bearer token Supabase y validacion de propiedad del workspace.
+
+Las automatizaciones se ejecutan desde backend cuando entra o se sincroniza un comentario. El servidor consulta reglas por `account_id + provider_post_id`, reserva la ejecucion en `automation_executions` y encola una o dos acciones `reply` en `action_queue`. La clave unica `rule_id + provider_comment_id + destination` evita duplicados entre webhook y polling.
+
 ### `GET /api/meta/webhook`
 
 Endpoint de verificacion de webhook Meta.

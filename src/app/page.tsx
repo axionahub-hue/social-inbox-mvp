@@ -77,6 +77,12 @@ const ingestSourceColors: Record<IngestSource, string> = {
   unknown: "bg-slate-50 text-slate-500 ring-slate-200",
 };
 
+const automationMatchLabels: Record<AutomationMatchType, string> = {
+  contains: "contiene",
+  starts_with: "empieza con",
+  equals: "es igual a",
+};
+
 const networkIcon = {
   facebook: MessagesSquare,
   instagram: Camera,
@@ -251,6 +257,35 @@ type BlockedAuthor = {
   item: InboxItem;
 };
 
+type AutomationMatchType = "contains" | "starts_with" | "equals";
+type AutomationReplyTarget = "public" | "private";
+
+type AutomationRule = {
+  id: string;
+  workspaceId: string;
+  accountId: string;
+  providerPostId: string;
+  network: Network;
+  source?: InboxSource | null;
+  active: boolean;
+  matchType: AutomationMatchType;
+  keyword: string;
+  publicReplyEnabled: boolean;
+  publicReplyText: string;
+  privateReplyEnabled: boolean;
+  privateReplyText: string;
+};
+
+type AutomationDraft = {
+  active: boolean;
+  matchType: AutomationMatchType;
+  keyword: string;
+  publicReplyEnabled: boolean;
+  publicReplyText: string;
+  privateReplyEnabled: boolean;
+  privateReplyText: string;
+};
+
 type MetaWebhookDiagnostics = {
   app?: {
     pageFeedActive: boolean;
@@ -317,6 +352,16 @@ const emptyQuickReplyDraft: QuickReplyDraft = {
   tagsText: "",
 };
 
+const emptyAutomationDraft: AutomationDraft = {
+  active: true,
+  matchType: "contains",
+  keyword: "",
+  publicReplyEnabled: true,
+  publicReplyText: "",
+  privateReplyEnabled: false,
+  privateReplyText: "",
+};
+
 export default function Home() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [items, setItems] = useState(inboxItems);
@@ -360,6 +405,14 @@ export default function Home() {
   const [isQuickReplyPanelOpen, setIsQuickReplyPanelOpen] = useState(false);
   const [isQuickReplyEditorOpen, setIsQuickReplyEditorOpen] = useState(false);
   const [isEmojiPanelOpen, setIsEmojiPanelOpen] = useState(false);
+  const [isAutomationPanelOpen, setIsAutomationPanelOpen] = useState(false);
+  const [isAutomationLoading, setIsAutomationLoading] = useState(false);
+  const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
+  const [editingAutomationRuleId, setEditingAutomationRuleId] = useState<string | null>(null);
+  const [automationEmojiTarget, setAutomationEmojiTarget] =
+    useState<AutomationReplyTarget | null>(null);
+  const [automationDraft, setAutomationDraft] =
+    useState<AutomationDraft>(emptyAutomationDraft);
   const [openOriginalPostMenuItemId, setOpenOriginalPostMenuItemId] = useState<string | null>(null);
   const [editingQuickReplyId, setEditingQuickReplyId] = useState<string | null>(null);
   const [quickReplyDraft, setQuickReplyDraft] =
@@ -1352,6 +1405,209 @@ export default function Home() {
   function insertEmoji(emojiData: EmojiClickData) {
     setComposer((current) => `${current}${emojiData.emoji}`);
     setIsEmojiPanelOpen(false);
+  }
+
+  function insertAutomationEmoji(emojiData: EmojiClickData) {
+    if (!automationEmojiTarget) return;
+
+    const field =
+      automationEmojiTarget === "public" ? "publicReplyText" : "privateReplyText";
+    setAutomationDraft((current) => ({
+      ...current,
+      [field]: `${current[field]}${emojiData.emoji}`,
+    }));
+    setAutomationEmojiTarget(null);
+  }
+
+  function resetAutomationPanel() {
+    setIsAutomationPanelOpen(false);
+    setEditingAutomationRuleId(null);
+    setAutomationDraft(emptyAutomationDraft);
+    setAutomationEmojiTarget(null);
+  }
+
+  async function getCurrentSupabaseAccessToken() {
+    const session = supabase ? await supabase.auth.getSession() : null;
+    return session?.data.session?.access_token ?? null;
+  }
+
+  async function openAutomationPanel() {
+    if (!selectedItem || !isCommentItem(selectedItem) || !selectedItem.providerPostId) {
+      setNotice("Esta conversacion no tiene publicacion para automatizar.");
+      return;
+    }
+
+    setIsAutomationPanelOpen((current) => !current);
+    setAutomationEmojiTarget(null);
+
+    if (!isAutomationPanelOpen) {
+      await loadAutomationRulesForItem(selectedItem);
+    }
+  }
+
+  async function loadAutomationRulesForItem(item: InboxItem) {
+    if (!supabase || !currentUser || !activeWorkspaceId || !item.providerPostId) {
+      setAutomationRules([]);
+      return;
+    }
+
+    const accessToken = await getCurrentSupabaseAccessToken();
+
+    if (!accessToken) {
+      setNotice("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    setIsAutomationLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        accountId: item.accountId,
+        providerPostId: item.providerPostId,
+        workspaceId: activeWorkspaceId,
+      });
+      const response = await fetch(`/api/automation-rules?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setNotice(payload.message ?? "No se pudieron cargar automatizaciones.");
+        setAutomationRules([]);
+        return;
+      }
+
+      setAutomationRules((payload.rules ?? []).map(mapAutomationRule));
+    } catch {
+      setNotice("No se pudieron cargar automatizaciones.");
+    } finally {
+      setIsAutomationLoading(false);
+    }
+  }
+
+  function openNewAutomationRule() {
+    setEditingAutomationRuleId(null);
+    setAutomationDraft(emptyAutomationDraft);
+  }
+
+  function openEditAutomationRule(rule: AutomationRule) {
+    setEditingAutomationRuleId(rule.id);
+    setAutomationDraft({
+      active: rule.active,
+      matchType: rule.matchType,
+      keyword: rule.keyword,
+      publicReplyEnabled: rule.publicReplyEnabled,
+      publicReplyText: rule.publicReplyText,
+      privateReplyEnabled: rule.privateReplyEnabled,
+      privateReplyText: rule.privateReplyText,
+    });
+  }
+
+  async function saveAutomationRule() {
+    if (!selectedItem || !activeWorkspaceId || !selectedItem.providerPostId) {
+      setNotice("Selecciona un comentario con publicacion para guardar automatizacion.");
+      return;
+    }
+
+    if (!automationDraft.keyword.trim()) {
+      setNotice("La palabra clave es obligatoria.");
+      return;
+    }
+
+    if (
+      (!automationDraft.publicReplyEnabled || !automationDraft.publicReplyText.trim()) &&
+      (!automationDraft.privateReplyEnabled || !automationDraft.privateReplyText.trim())
+    ) {
+      setNotice("Activa al menos una respuesta y escribe su texto.");
+      return;
+    }
+
+    const accessToken = await getCurrentSupabaseAccessToken();
+
+    if (!accessToken) {
+      setNotice("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/automation-rules", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: editingAutomationRuleId ?? undefined,
+          workspaceId: activeWorkspaceId,
+          accountId: selectedItem.accountId,
+          providerPostId: selectedItem.providerPostId,
+          network: selectedItem.network,
+          source: selectedItem.source,
+          active: automationDraft.active,
+          matchType: automationDraft.matchType,
+          keyword: automationDraft.keyword,
+          publicReplyEnabled: automationDraft.publicReplyEnabled,
+          publicReplyText: automationDraft.publicReplyText,
+          privateReplyEnabled: automationDraft.privateReplyEnabled,
+          privateReplyText: automationDraft.privateReplyText,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setNotice(payload.message ?? "No se pudo guardar la automatizacion.");
+        return;
+      }
+
+      const savedRule = mapAutomationRule(payload.rule);
+      setAutomationRules((current) =>
+        editingAutomationRuleId
+          ? current.map((rule) => (rule.id === savedRule.id ? savedRule : rule))
+          : [savedRule, ...current],
+      );
+      setEditingAutomationRuleId(null);
+      setAutomationDraft(emptyAutomationDraft);
+      setNotice("Automatizacion guardada para esta publicacion.");
+    } catch {
+      setNotice("No se pudo guardar la automatizacion.");
+    }
+  }
+
+  async function deleteAutomationRule(ruleId: string) {
+    if (!activeWorkspaceId) return;
+
+    setAutomationRules((current) => current.filter((rule) => rule.id !== ruleId));
+
+    const accessToken = await getCurrentSupabaseAccessToken();
+
+    if (!accessToken) {
+      setNotice("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        id: ruleId,
+        workspaceId: activeWorkspaceId,
+      });
+      const response = await fetch(`/api/automation-rules?${params.toString()}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setNotice(payload.message ?? "No se pudo eliminar la automatizacion.");
+      } else {
+        setNotice("Automatizacion eliminada.");
+      }
+    } catch {
+      setNotice("No se pudo eliminar la automatizacion.");
+    }
   }
 
   async function startMetaOAuth() {
@@ -2920,6 +3176,9 @@ export default function Home() {
                   selected={item.id === selectedItem?.id}
                   checked={selectedItemSet.has(item.id)}
                   onClick={() => {
+                    if (item.id !== selectedItem?.id) {
+                      resetAutomationPanel();
+                    }
                     setSelectedId(item.id);
                     setMobileInboxPanel("detail");
                     setIsMobileAccountsOpen(false);
@@ -3019,7 +3278,22 @@ export default function Home() {
                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                           Publicacion / contexto
                         </p>
-                        <div className="relative">
+                        <div className="flex items-center gap-2">
+                          <button
+                            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold ${
+                              isAutomationPanelOpen
+                                ? "border-slate-950 bg-slate-950 text-white"
+                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
+                            disabled={!selectedItem.providerPostId || !isCommentItem(selectedItem)}
+                            onClick={() => void openAutomationPanel()}
+                            title="Automatizar esta publicacion"
+                            type="button"
+                          >
+                            <Sparkles size={14} />
+                            Automatizar
+                          </button>
+                          <div className="relative">
                           <button
                             className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                             onClick={() =>
@@ -3048,6 +3322,7 @@ export default function Home() {
                               ) : null}
                             </div>
                           ) : null}
+                          </div>
                         </div>
                       </div>
                       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
@@ -3055,6 +3330,24 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
+
+                  {isAutomationPanelOpen ? (
+                    <AutomationPanel
+                      draft={automationDraft}
+                      editingRuleId={editingAutomationRuleId}
+                      emojiTarget={automationEmojiTarget}
+                      isLoading={isAutomationLoading}
+                      network={selectedItem.network}
+                      onCancelEdit={openNewAutomationRule}
+                      onDelete={(ruleId) => void deleteAutomationRule(ruleId)}
+                      onEdit={openEditAutomationRule}
+                      onEmojiClick={insertAutomationEmoji}
+                      onEmojiTargetChange={setAutomationEmojiTarget}
+                      onSave={() => void saveAutomationRule()}
+                      onUpdateDraft={setAutomationDraft}
+                      rules={automationRules}
+                    />
+                  ) : null}
 
                   {hasParentCommentContext(selectedItem) ? (
                     <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
@@ -3671,6 +3964,256 @@ function ReplyModeButton({
   );
 }
 
+function AutomationPanel({
+  draft,
+  editingRuleId,
+  emojiTarget,
+  isLoading,
+  network,
+  onCancelEdit,
+  onDelete,
+  onEdit,
+  onEmojiClick,
+  onEmojiTargetChange,
+  onSave,
+  onUpdateDraft,
+  rules,
+}: {
+  draft: AutomationDraft;
+  editingRuleId: string | null;
+  emojiTarget: AutomationReplyTarget | null;
+  isLoading: boolean;
+  network: Network;
+  onCancelEdit: () => void;
+  onDelete: (ruleId: string) => void;
+  onEdit: (rule: AutomationRule) => void;
+  onEmojiClick: (emojiData: EmojiClickData) => void;
+  onEmojiTargetChange: (target: AutomationReplyTarget | null) => void;
+  onSave: () => void;
+  onUpdateDraft: (updater: (current: AutomationDraft) => AutomationDraft) => void;
+  rules: AutomationRule[];
+}) {
+  const privateLabel = network === "instagram" ? "DM" : "Inbox";
+
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Automatizaciones</p>
+          <p className="text-xs text-slate-500">
+            {isLoading ? "Cargando..." : `${rules.length} regla(s) para esta publicacion`}
+          </p>
+        </div>
+        {editingRuleId ? (
+          <button
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            onClick={onCancelEdit}
+            type="button"
+          >
+            <Plus size={14} />
+            Nueva
+          </button>
+        ) : null}
+      </div>
+
+      {rules.length > 0 ? (
+        <div className="mt-3 grid gap-2">
+          {rules.map((rule) => (
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
+              key={rule.id}
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                      rule.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {rule.active ? "Activa" : "Inactiva"}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500">
+                    {automationMatchLabels[rule.matchType]}
+                  </span>
+                  <span className="max-w-60 truncate text-sm font-semibold text-slate-900">
+                    {rule.keyword}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {[
+                    rule.publicReplyEnabled ? "comentario" : null,
+                    rule.privateReplyEnabled ? privateLabel.toLowerCase() : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" + ")}
+                </p>
+              </div>
+              <div className="flex gap-1">
+                <SmallActionButton title="Editar automatizacion" onClick={() => onEdit(rule)}>
+                  <Pencil size={14} />
+                </SmallActionButton>
+                <SmallActionButton title="Eliminar automatizacion" onClick={() => onDelete(rule.id)}>
+                  <Trash2 size={14} />
+                </SmallActionButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+        <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
+          <select
+            className="h-10 rounded-md border border-slate-200 bg-white px-2 text-sm outline-none focus:border-slate-400"
+            onChange={(event) =>
+              onUpdateDraft((current) => ({
+                ...current,
+                matchType: event.target.value as AutomationMatchType,
+              }))
+            }
+            value={draft.matchType}
+          >
+            <option value="contains">contiene</option>
+            <option value="starts_with">empieza con</option>
+            <option value="equals">es igual a</option>
+          </select>
+          <input
+            className="h-10 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+            onChange={(event) =>
+              onUpdateDraft((current) => ({ ...current, keyword: event.target.value }))
+            }
+            placeholder="Palabra clave"
+            value={draft.keyword}
+          />
+          <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
+            <input
+              checked={draft.active}
+              onChange={(event) =>
+                onUpdateDraft((current) => ({ ...current, active: event.target.checked }))
+              }
+              type="checkbox"
+            />
+            Activa
+          </label>
+        </div>
+
+        <AutomationReplyTextarea
+          checked={draft.publicReplyEnabled}
+          isEmojiOpen={emojiTarget === "public"}
+          label="Responder en comentario"
+          onChange={(value) =>
+            onUpdateDraft((current) => ({ ...current, publicReplyText: value }))
+          }
+          onCheckedChange={(checked) =>
+            onUpdateDraft((current) => ({ ...current, publicReplyEnabled: checked }))
+          }
+          onEmojiClick={onEmojiClick}
+          onEmojiToggle={() =>
+            onEmojiTargetChange(emojiTarget === "public" ? null : "public")
+          }
+          value={draft.publicReplyText}
+        />
+
+        <AutomationReplyTextarea
+          checked={draft.privateReplyEnabled}
+          isEmojiOpen={emojiTarget === "private"}
+          label={`Responder por ${privateLabel}`}
+          onChange={(value) =>
+            onUpdateDraft((current) => ({ ...current, privateReplyText: value }))
+          }
+          onCheckedChange={(checked) =>
+            onUpdateDraft((current) => ({ ...current, privateReplyEnabled: checked }))
+          }
+          onEmojiClick={onEmojiClick}
+          onEmojiToggle={() =>
+            onEmojiTargetChange(emojiTarget === "private" ? null : "private")
+          }
+          value={draft.privateReplyText}
+        />
+
+        <div className="mt-3 flex justify-end gap-2">
+          {editingRuleId ? (
+            <button
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
+              onClick={onCancelEdit}
+              type="button"
+            >
+              Cancelar
+            </button>
+          ) : null}
+          <button
+            className="h-9 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white"
+            onClick={onSave}
+            type="button"
+          >
+            {editingRuleId ? "Actualizar regla" : "Guardar regla"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AutomationReplyTextarea({
+  checked,
+  isEmojiOpen,
+  label,
+  onChange,
+  onCheckedChange,
+  onEmojiClick,
+  onEmojiToggle,
+  value,
+}: {
+  checked: boolean;
+  isEmojiOpen: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  onCheckedChange: (checked: boolean) => void;
+  onEmojiClick: (emojiData: EmojiClickData) => void;
+  onEmojiToggle: () => void;
+  value: string;
+}) {
+  return (
+    <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+      <div className="flex items-center justify-between gap-3">
+        <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <input
+            checked={checked}
+            onChange={(event) => onCheckedChange(event.target.checked)}
+            type="checkbox"
+          />
+          {label}
+        </label>
+        <div className="relative">
+          <SmallActionButton title="Insertar emoji" onClick={onEmojiToggle}>
+            <Smile size={14} />
+          </SmallActionButton>
+          {isEmojiOpen ? (
+            <div className="absolute right-0 top-9 z-20 rounded-md border border-slate-200 bg-white p-1 shadow-lg">
+              <EmojiPicker
+                height={320}
+                lazyLoadEmojis
+                onEmojiClick={onEmojiClick}
+                previewConfig={{ showPreview: false }}
+                searchPlaceholder="Buscar emoji"
+                theme={Theme.LIGHT}
+                width={300}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <textarea
+        className="mt-2 min-h-20 w-full resize-none rounded-md border border-slate-200 bg-slate-50 p-3 text-sm outline-none focus:border-slate-400 disabled:cursor-not-allowed disabled:text-slate-400"
+        disabled={!checked}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Texto con emojis y links"
+        value={value}
+      />
+    </div>
+  );
+}
+
 function ActionButton({
   active,
   title,
@@ -3889,6 +4432,24 @@ function mapQuickReplyRow(row: {
     category: row.category,
     body: row.body,
     tags: row.tags ?? [],
+  };
+}
+
+function mapAutomationRule(row: Record<string, unknown>): AutomationRule {
+  return {
+    id: String(row.id),
+    workspaceId: String(row.workspaceId ?? row.workspace_id),
+    accountId: String(row.accountId ?? row.account_id),
+    providerPostId: String(row.providerPostId ?? row.provider_post_id),
+    network: (row.network === "instagram" ? "instagram" : "facebook") as Network,
+    source: (row.source as InboxSource | null | undefined) ?? null,
+    active: Boolean(row.active),
+    matchType: (row.matchType ?? row.match_type ?? "contains") as AutomationMatchType,
+    keyword: String(row.keyword ?? ""),
+    publicReplyEnabled: Boolean(row.publicReplyEnabled ?? row.public_reply_enabled),
+    publicReplyText: String(row.publicReplyText ?? row.public_reply_text ?? ""),
+    privateReplyEnabled: Boolean(row.privateReplyEnabled ?? row.private_reply_enabled),
+    privateReplyText: String(row.privateReplyText ?? row.private_reply_text ?? ""),
   };
 }
 

@@ -154,6 +154,27 @@ En comentarios, las acciones junto al mensaje recibido permiten dar like, oculta
 En DM Instagram, la app intenta resolver el nombre del autor con el IGSID recibido por webhook. En comentarios de Ads, si Meta no devuelve `from` en la lectura del post ni en la consulta directa del comentario, la app muestra `Autor pendiente` y mantiene el comentario accionable hasta que exista una ruta soportada para enriquecer esa identidad.
 En Instagram, responder sobre comentario publica una respuesta publica. Responder por DM usa Instagram Messaging y puede requerir una capacidad adicional habilitada por Meta, aunque el scope `instagram_manage_messages` ya este concedido.
 
+## Automatizaciones por publicacion
+
+Desde cualquier comentario con publicacion/contexto disponible, el boton `Automatizar` abre reglas para esa publicacion.
+
+Cada regla permite elegir:
+
+- condicion: `contiene`, `empieza con` o `es igual a`;
+- palabra clave, ignorando mayusculas, minusculas y tildes;
+- respuesta en comentario;
+- respuesta por Inbox/DM;
+- estado activa/inactiva.
+
+El texto de respuesta acepta emojis y links. Si un comentario nuevo cumple la condicion, la app encola la respuesta en segundo plano aunque el navegador este cerrado. No es un bot conversacional: responde una vez por regla, comentario y destino.
+
+Para probar con bajo consumo:
+
+- crear una regla sobre una publicacion concreta;
+- comentar una sola vez con la palabra clave;
+- esperar el webhook o el polling de respaldo;
+- revisar que el comentario pase a `Respondidos` cuando la cola confirme la accion.
+
 ## Limitaciones actuales
 
 - Con `pages_show_list`, Meta puede detectar paginas, pero no garantiza comentarios, ads ni DMs hasta ampliar permisos.

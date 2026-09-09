@@ -671,3 +671,12 @@
 - Impacto: se mantiene la funcionalidad de tiempo real para inserts, cambios de autor, ocultar/mostrar, contexto de hilo, permalink, texto de publicacion y reclasificacion Ads; se eliminan recargas causadas por comentarios repetidos sin cambios. Si un comentario Facebook ya fue clasificado como Ads, una pasada organica posterior conserva `source = ad_comment`, `provider_ad_id` e `ingest_source` para no degradar la clasificacion ni generar churn.
 - Areas tocadas: `src/lib/inbox-persistence.ts`, `docs/architecture.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`.
+
+### Automatizaciones por publicacion
+
+- Resumen: se agregan reglas simples por publicacion para responder automaticamente cuando un comentario contiene, empieza con o es igual a una palabra clave.
+- Cambio: nueva tabla `automation_rules`, tabla `automation_executions` con idempotencia por regla/comentario/destino, endpoint autenticado `/api/automation-rules`, panel `Automatizar` en la vista de comentario y evaluacion backend desde webhooks y sincronizaciones.
+- Detalle operativo: las comparaciones ignoran mayusculas/minusculas y tildes; cada regla puede encolar respuesta publica, respuesta privada o ambas. La ejecucion usa `action_queue`, por lo que no depende de que el frontend este abierto y no bloquea la UI. Las reglas solo aplican a comentarios ingresados despues de creada la regla, evitando responder historicos de 72h durante sincronizaciones.
+- Control de egress: el frontend solo carga reglas de la publicacion seleccionada; el backend solo busca reglas activas por `account_id + provider_post_id` y no hace escuchas permanentes.
+- Areas tocadas: `supabase/schema.sql`, `supabase/migrations/20260908_automation_rules.sql`, `src/lib/automation-rules.ts`, `src/app/api/automation-rules/route.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`, revision responsive local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal. Pendiente ejecutar migracion en Supabase y probar con un comentario nuevo que coincida.

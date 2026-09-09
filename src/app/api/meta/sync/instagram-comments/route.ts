@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
+import { evaluateCommentAutomations } from "@/lib/automation-rules";
+import { processQueuedInboxActions } from "@/lib/inbox-action-queue";
 import {
   createRecentMetaCommentSince,
   decryptMetaToken,
@@ -115,6 +117,7 @@ export async function POST(request: Request) {
   let commentsFound = 0;
   let inserted = 0;
   let updated = 0;
+  let automationsQueued = 0;
   const errors: Array<{ account: string; message: string }> = [];
   const accountSummaries: Array<{
     account: string;
@@ -153,6 +156,21 @@ export async function POST(request: Request) {
           }
           if (result === "updated") {
             accountUpdated += 1;
+          }
+
+          if (result === "inserted" || result === "updated") {
+            const automationResult = await evaluateCommentAutomations({
+              supabase,
+              workspaceId: parsed.data.workspaceId,
+              accountId: account.id,
+              network: "instagram",
+              providerPostId: comment.postId,
+              providerCommentId: comment.commentId,
+              commentText: comment.message,
+              source: "post_comment",
+            });
+
+            automationsQueued += automationResult.queued;
           }
         }
 
@@ -210,7 +228,14 @@ export async function POST(request: Request) {
     updated,
     recentSince,
     errors,
+    automationsQueued,
   });
+
+  if (automationsQueued > 0) {
+    after(async () => {
+      await processQueuedInboxActions({ limit: Math.min(10, automationsQueued) });
+    });
+  }
 
   return NextResponse.json({
     ok: errors.length === 0,
@@ -225,6 +250,9 @@ export async function POST(request: Request) {
       inserted,
       updated,
       since: recentSince,
+    },
+    automations: {
+      queued: automationsQueued,
     },
     accountSummaries,
     errors,

@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
+import { evaluateCommentAutomations } from "@/lib/automation-rules";
+import { processQueuedInboxActions } from "@/lib/inbox-action-queue";
 import {
   createRecentMetaCommentSince,
   decryptMetaToken,
@@ -168,6 +170,7 @@ export async function POST(request: Request) {
   let commentsFound = 0;
   let inserted = 0;
   let updated = 0;
+  let automationsQueued = 0;
   const errors: Array<{ target: string; message: string }> = [];
 
   for (const target of matchedTargets) {
@@ -225,6 +228,21 @@ export async function POST(request: Request) {
         if (result === "updated") {
           updated += 1;
         }
+
+        if (result === "inserted" || result === "updated") {
+          const automationResult = await evaluateCommentAutomations({
+            supabase,
+            workspaceId: parsed.data.workspaceId,
+            accountId: pageAccount.id,
+            network: "facebook",
+            providerPostId: enrichedComment.postId,
+            providerCommentId: enrichedComment.commentId,
+            commentText: enrichedComment.message,
+            source: "ad_comment",
+          });
+
+          automationsQueued += automationResult.queued;
+        }
       }
     } catch (error) {
       errors.push({
@@ -232,6 +250,12 @@ export async function POST(request: Request) {
         message: error instanceof Error ? error.message : "Error leyendo comentarios de Ad.",
       });
     }
+  }
+
+  if (automationsQueued > 0) {
+    after(async () => {
+      await processQueuedInboxActions({ limit: Math.min(10, automationsQueued) });
+    });
   }
 
   return NextResponse.json({
@@ -255,6 +279,9 @@ export async function POST(request: Request) {
       inserted,
       updated,
       since: recentSince,
+    },
+    automations: {
+      queued: automationsQueued,
     },
     errors,
   });

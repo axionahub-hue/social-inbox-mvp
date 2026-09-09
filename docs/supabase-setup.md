@@ -13,6 +13,7 @@ Pasar de modo demo a modo autenticado sin cambiar la arquitectura de la app. Sup
 - `inbox_items.ingest_source` registra si una conversacion entro por webhook, polling rapido, sync manual u origen pendiente.
 - `meta_connections` guarda el user token largo de Meta cifrado para diagnostico e integraciones Marketing API/Ads.
 - `action_queue` guarda acciones reales contra Meta para liberar la UI rapido y resolver exito/fallo de forma persistente.
+- `automation_rules` y `automation_executions` guardan automatizaciones por publicacion y sus ejecuciones idempotentes.
 - El repo incluye `npm run check:supabase` para validar que `.env.local` tiene variables y que el proyecto responde por REST/Auth.
 - No hay `.env.local` en el repo y no se deben comitear secretos.
 
@@ -37,6 +38,7 @@ Para que Codex aplique el schema directamente:
    - Si el proyecto ya existia antes del soporte Realtime, volver a ejecutar el bloque `do $$ ... alter publication supabase_realtime add table inbox_items ... end $$;` incluido en el schema.
    - Si el proyecto ya existe y solo se necesita la cola de acciones, ejecutar `supabase/migrations/20260708_action_queue.sql`.
    - Si el proyecto ya existe y solo se necesita evitar comentarios duplicados entre webhook/polling, ejecutar `supabase/migrations/20260710_unique_provider_comment.sql`.
+   - Si el proyecto ya existe y solo se necesita activar automatizaciones por publicacion, ejecutar `supabase/migrations/20260908_automation_rules.sql`.
 3. Copiar `.env.example` a `.env.local`.
 4. Completar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
 5. En Supabase Auth, configurar Site URL:
