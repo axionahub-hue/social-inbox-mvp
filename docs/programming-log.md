@@ -680,3 +680,9 @@
 - Control de egress: el frontend solo carga reglas de la publicacion seleccionada; el backend solo busca reglas activas por `account_id + provider_post_id` y no hace escuchas permanentes.
 - Areas tocadas: `supabase/schema.sql`, `supabase/migrations/20260908_automation_rules.sql`, `src/lib/automation-rules.ts`, `src/app/api/automation-rules/route.ts`, `src/app/api/meta/webhook/route.ts`, `src/app/api/meta/sync/comments/route.ts`, `src/app/api/meta/sync/instagram-comments/route.ts`, `src/app/api/meta/sync/ad-comments/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/supabase-setup.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, revision responsive local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal. Pendiente ejecutar migracion en Supabase y probar con un comentario nuevo que coincida.
+
+### Estado final de ejecuciones automaticas
+
+- Resumen: al procesar acciones encoladas por automatizaciones, `action_queue` quedaba en `succeeded` o `failed`, pero `automation_executions` permanecia en `queued`.
+- Cambio: el procesador de cola actualiza `automation_executions` por `action_queue_id` al terminar cada accion, copiando `succeeded` o `failed` y el error cuando exista.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`; ejecuciones pendientes de la regla `drapin` actualizadas a `succeeded`.

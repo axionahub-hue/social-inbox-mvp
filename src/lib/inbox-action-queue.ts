@@ -250,6 +250,12 @@ export async function processQueuedInboxActions({
         })
         .eq("id", row.id);
 
+      await updateAutomationExecutionForQueue({
+        queueId: row.id,
+        status: "succeeded",
+        supabase,
+      });
+
       await insertActionLog({
         actionInput: resolved.input,
         input: row.payload,
@@ -733,6 +739,13 @@ async function markQueuedActionFailed({
     })
     .eq("id", queue.id);
 
+  await updateAutomationExecutionForQueue({
+    error: message,
+    queueId: queue.id,
+    status: "failed",
+    supabase,
+  });
+
   await restoreFailedItem({
     input,
     message,
@@ -749,6 +762,39 @@ async function markQueuedActionFailed({
     result,
     supabase,
   });
+}
+
+async function updateAutomationExecutionForQueue({
+  error = null,
+  queueId,
+  status,
+  supabase,
+}: {
+  error?: string | null;
+  queueId: string;
+  status: "succeeded" | "failed";
+  supabase: SupabaseServiceClient;
+}) {
+  const result = await supabase
+    .from("automation_executions")
+    .update({
+      error,
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("action_queue_id", queueId);
+
+  if (
+    result.error &&
+    !result.error.message.includes("automation_executions") &&
+    !result.error.message.includes("schema cache")
+  ) {
+    console.warn("automation_execution_status_update_failed", {
+      message: result.error.message,
+      queueId,
+      status,
+    });
+  }
 }
 
 async function restoreFailedItem({
