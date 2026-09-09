@@ -693,3 +693,13 @@
 - Cambio: `automation_rules.like_comment_enabled`, destino `like_comment` en `automation_executions`, checkbox `Dar like al comentario recibido` en el panel de reglas y evaluacion backend que encola accion `like` junto a las respuestas configuradas.
 - Migracion: `supabase/migrations/20260909_automation_like_comments.sql` actualiza proyectos existentes sin recrear tablas.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, revision responsive local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal. Pendiente ejecutar migracion en Supabase, activar checkbox en la regla existente y probar comentario real.
+
+### Contexto fijo y gestor global de automatizaciones
+
+- Resumen: se corrigio el caso donde una regla podia parecer editable sobre otra publicacion si el usuario cambiaba de conversacion con el editor abierto.
+- Correccion operativa: se devolvio la regla `drapin` a la publicacion Instagram original y se procesó el comentario pendiente de `@candles.eventos`; quedaron exitosas las acciones automaticas `like_comment`, `public_comment` y `private_message`.
+- Cambio backend: `POST /api/automation-rules` conserva `account_id`, `provider_post_id`, `network` y `source` al editar una regla existente, por lo que una edicion ya no puede mover accidentalmente la automatizacion a otra publicacion.
+- Cambio UI: el editor contextual se cierra si cambia la conversacion seleccionada; ademas se agrego `Ver automatizaciones` en Configuracion Meta para listar, editar y eliminar todas las reglas del workspace.
+- Creacion por link: el apartado global permite crear una regla pegando una URL de publicacion siempre que esa publicacion ya exista en `inbox_items`; la resolucion usa datos locales y no hace llamadas exploratorias a Meta.
+- Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`, revision responsive local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal, con gestor global y campo de link visibles. Pendiente despliegue Vercel.

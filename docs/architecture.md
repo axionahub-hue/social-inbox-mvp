@@ -197,7 +197,11 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - La ejecucion no depende del frontend. Los endpoints de webhook y sincronizacion llaman a `evaluateCommentAutomations` despues de persistir un comentario insertado/actualizado.
 - Las acciones automatizadas entran a `action_queue`, igual que las acciones manuales. Esto mantiene la UI rapida y deja una auditoria persistente de exito/fallo.
 - En Vercel Hobby no conviene usar cron frecuente para escuchar redes sociales. El canal principal debe ser webhook Meta; polling queda como respaldo limitado y no permanente.
-- Para cuidar Supabase Free, la UI solo carga las reglas de la publicacion seleccionada y el backend solo consulta reglas por `account_id + provider_post_id`, no por toda la bandeja.
+- Para cuidar Supabase Free, la UI contextual solo carga las reglas de la publicacion seleccionada y el backend de ejecucion solo consulta reglas por `account_id + provider_post_id`, no por toda la bandeja.
+- El apartado global de automatizaciones usa `GET /api/automation-rules?workspaceId=...` para administracion humana, no para ejecucion. Cada fila trae metadatos minimos de la cuenta conectada para que el usuario entienda donde vive la regla.
+- Al actualizar una regla existente, el backend trata `account_id`, `provider_post_id`, `network` y `source` como contexto inmutable. Aunque el cliente mande otros valores por error, la actualizacion solo modifica campos editables: palabra clave, operador, estado y acciones/respuestas.
+- El frontend mantiene el editor contextual atado a la publicacion seleccionada. Si el usuario cambia de conversacion con ese editor abierto, lo cierra para evitar ediciones ambiguas. El editor global queda separado y no depende de la conversacion seleccionada.
+- La creacion global por link resuelve la publicacion usando solo datos locales de `inbox_items` (`provider_permalink_url` y `provider_post_id`). No llama a Meta ni hace busquedas amplias, por lo que no agrega consumo continuo. Si el link no corresponde a una publicacion ya vista por el inbox, la API devuelve error controlado.
 
 ## Reglas de infraestructura
 

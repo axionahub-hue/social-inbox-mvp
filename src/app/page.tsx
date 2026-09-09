@@ -264,6 +264,9 @@ type AutomationRule = {
   id: string;
   workspaceId: string;
   accountId: string;
+  accountName?: string;
+  accountHandle?: string;
+  providerAccountId?: string;
   providerPostId: string;
   network: Network;
   source?: InboxSource | null;
@@ -287,6 +290,15 @@ type AutomationDraft = {
   privateReplyEnabled: boolean;
   privateReplyText: string;
 };
+
+type AutomationRuleContext = {
+  accountId: string;
+  providerPostId: string;
+  network: Network;
+  source?: InboxSource | null;
+};
+
+type AutomationEditorScope = "selected_post" | "global";
 
 type MetaWebhookDiagnostics = {
   app?: {
@@ -411,6 +423,14 @@ export default function Home() {
   const [isAutomationPanelOpen, setIsAutomationPanelOpen] = useState(false);
   const [isAutomationLoading, setIsAutomationLoading] = useState(false);
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
+  const [allAutomationRules, setAllAutomationRules] = useState<AutomationRule[]>([]);
+  const [isAllAutomationRulesOpen, setIsAllAutomationRulesOpen] = useState(false);
+  const [isAllAutomationRulesLoading, setIsAllAutomationRulesLoading] = useState(false);
+  const [automationPostUrl, setAutomationPostUrl] = useState("");
+  const [automationEditorScope, setAutomationEditorScope] =
+    useState<AutomationEditorScope>("selected_post");
+  const [automationRuleContext, setAutomationRuleContext] =
+    useState<AutomationRuleContext | null>(null);
   const [editingAutomationRuleId, setEditingAutomationRuleId] = useState<string | null>(null);
   const [automationEmojiTarget, setAutomationEmojiTarget] =
     useState<AutomationReplyTarget | null>(null);
@@ -531,6 +551,13 @@ export default function Home() {
     ? resolveRecipientExternalId(selectedItem)
     : undefined;
   const shouldShowReplyModeSelector = selectedItem ? isCommentItem(selectedItem) : false;
+  const selectedAutomationContext = selectedItem
+    ? createAutomationContextFromItem(selectedItem)
+    : null;
+  const isContextualAutomationPanelOpen =
+    isAutomationPanelOpen &&
+    automationEditorScope === "selected_post" &&
+    isSameAutomationContext(automationRuleContext, selectedAutomationContext);
   const blockedAuthors = useMemo(() => {
     const blockedByAuthor = new Map<string, BlockedAuthor>();
 
@@ -1427,6 +1454,9 @@ export default function Home() {
     setEditingAutomationRuleId(null);
     setAutomationDraft(emptyAutomationDraft);
     setAutomationEmojiTarget(null);
+    setAutomationPostUrl("");
+    setAutomationRuleContext(null);
+    setAutomationEditorScope("selected_post");
   }
 
   async function getCurrentSupabaseAccessToken() {
@@ -1440,12 +1470,25 @@ export default function Home() {
       return;
     }
 
-    setIsAutomationPanelOpen((current) => !current);
-    setAutomationEmojiTarget(null);
+    const nextContext = createAutomationContextFromItem(selectedItem);
 
-    if (!isAutomationPanelOpen) {
-      await loadAutomationRulesForItem(selectedItem);
+    if (
+      isAutomationPanelOpen &&
+      automationEditorScope === "selected_post" &&
+      isSameAutomationContext(automationRuleContext, nextContext)
+    ) {
+      resetAutomationPanel();
+      return;
     }
+
+    setIsAutomationPanelOpen(true);
+    setAutomationEmojiTarget(null);
+    setEditingAutomationRuleId(null);
+    setAutomationDraft(emptyAutomationDraft);
+    setAutomationEditorScope("selected_post");
+    setAutomationRuleContext(nextContext);
+    setAutomationPostUrl("");
+    await loadAutomationRulesForItem(selectedItem);
   }
 
   async function loadAutomationRulesForItem(item: InboxItem) {
@@ -1493,10 +1536,17 @@ export default function Home() {
   function openNewAutomationRule() {
     setEditingAutomationRuleId(null);
     setAutomationDraft(emptyAutomationDraft);
+    setAutomationEmojiTarget(null);
+    if (automationEditorScope === "selected_post" && selectedItem) {
+      setAutomationRuleContext(createAutomationContextFromItem(selectedItem));
+    }
   }
 
   function openEditAutomationRule(rule: AutomationRule) {
     setEditingAutomationRuleId(rule.id);
+    setAutomationRuleContext(createAutomationContextFromRule(rule));
+    setAutomationEditorScope(isAllAutomationRulesOpen ? "global" : "selected_post");
+    setAutomationPostUrl("");
     setAutomationDraft({
       active: rule.active,
       matchType: rule.matchType,
@@ -1509,8 +1559,90 @@ export default function Home() {
     });
   }
 
+  async function toggleAllAutomationRules() {
+    const nextOpen = !isAllAutomationRulesOpen;
+    setIsAllAutomationRulesOpen(nextOpen);
+
+    if (nextOpen) {
+      setAutomationEditorScope("global");
+      setEditingAutomationRuleId(null);
+      setAutomationRuleContext(null);
+      setAutomationPostUrl("");
+      setAutomationDraft(emptyAutomationDraft);
+      await loadAllAutomationRules();
+    }
+  }
+
+  async function loadAllAutomationRules() {
+    if (!activeWorkspaceId) {
+      setAllAutomationRules([]);
+      return;
+    }
+
+    const accessToken = await getCurrentSupabaseAccessToken();
+
+    if (!accessToken) {
+      setNotice("Sesion Supabase expirada. Vuelve a iniciar sesion.");
+      return;
+    }
+
+    setIsAllAutomationRulesLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        workspaceId: activeWorkspaceId,
+      });
+      const response = await fetch(`/api/automation-rules?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setNotice(payload.message ?? "No se pudieron cargar todas las automatizaciones.");
+        setAllAutomationRules([]);
+        return;
+      }
+
+      setAllAutomationRules((payload.rules ?? []).map(mapAutomationRule));
+    } catch {
+      setNotice("No se pudieron cargar todas las automatizaciones.");
+    } finally {
+      setIsAllAutomationRulesLoading(false);
+    }
+  }
+
+  function openNewGlobalAutomationRule() {
+    setAutomationEditorScope("global");
+    setEditingAutomationRuleId(null);
+    setAutomationRuleContext(null);
+    setAutomationPostUrl("");
+    setAutomationDraft(emptyAutomationDraft);
+    setAutomationEmojiTarget(null);
+  }
+
   async function saveAutomationRule() {
-    if (!selectedItem || !activeWorkspaceId || !selectedItem.providerPostId) {
+    if (!activeWorkspaceId) {
+      setNotice("Workspace no disponible para guardar automatizacion.");
+      return;
+    }
+
+    const selectedContext =
+      selectedItem && selectedItem.providerPostId && isCommentItem(selectedItem)
+        ? createAutomationContextFromItem(selectedItem)
+        : null;
+    const context =
+      editingAutomationRuleId && automationRuleContext
+        ? automationRuleContext
+        : automationEditorScope === "selected_post"
+          ? selectedContext
+          : null;
+    const postUrl = automationEditorScope === "global" && !editingAutomationRuleId
+      ? automationPostUrl.trim()
+      : "";
+
+    if (!context && !postUrl) {
       setNotice("Selecciona un comentario con publicacion para guardar automatizacion.");
       return;
     }
@@ -1546,10 +1678,11 @@ export default function Home() {
         body: JSON.stringify({
           id: editingAutomationRuleId ?? undefined,
           workspaceId: activeWorkspaceId,
-          accountId: selectedItem.accountId,
-          providerPostId: selectedItem.providerPostId,
-          network: selectedItem.network,
-          source: selectedItem.source,
+          accountId: context?.accountId,
+          providerPostId: context?.providerPostId,
+          postUrl: postUrl || undefined,
+          network: context?.network,
+          source: context?.source ?? undefined,
           active: automationDraft.active,
           matchType: automationDraft.matchType,
           keyword: automationDraft.keyword,
@@ -1573,8 +1706,21 @@ export default function Home() {
           ? current.map((rule) => (rule.id === savedRule.id ? savedRule : rule))
           : [savedRule, ...current],
       );
+      setAllAutomationRules((current) => {
+        if (editingAutomationRuleId) {
+          return current.map((rule) => (rule.id === savedRule.id ? savedRule : rule));
+        }
+
+        return [savedRule, ...current];
+      });
       setEditingAutomationRuleId(null);
+      setAutomationRuleContext(
+        automationEditorScope === "selected_post" && selectedItem
+          ? createAutomationContextFromItem(selectedItem)
+          : null,
+      );
       setAutomationDraft(emptyAutomationDraft);
+      setAutomationPostUrl("");
       setNotice("Automatizacion guardada para esta publicacion.");
     } catch {
       setNotice("No se pudo guardar la automatizacion.");
@@ -1585,6 +1731,7 @@ export default function Home() {
     if (!activeWorkspaceId) return;
 
     setAutomationRules((current) => current.filter((rule) => rule.id !== ruleId));
+    setAllAutomationRules((current) => current.filter((rule) => rule.id !== ruleId));
 
     const accessToken = await getCurrentSupabaseAccessToken();
 
@@ -3054,6 +3201,42 @@ export default function Home() {
                 <MessageCircle size={16} />
                 {isMetaAdCommentsSyncing ? "Sincronizando Ads..." : "Sincronizar comentarios Ads"}
               </button>
+              <button
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900"
+                onClick={() => void toggleAllAutomationRules()}
+                type="button"
+              >
+                <Sparkles size={16} />
+                {isAllAutomationRulesOpen ? "Ocultar automatizaciones" : "Ver automatizaciones"}
+              </button>
+              {isAllAutomationRulesOpen ? (
+                <div className="mt-3">
+                  <AutomationPanel
+                    contextLabel={
+                      editingAutomationRuleId && automationRuleContext
+                        ? "Editando regla existente. La cuenta y publicacion quedan fijas."
+                        : "Nueva regla desde link de publicacion ya registrada en el inbox."
+                    }
+                    draft={automationDraft}
+                    editingRuleId={editingAutomationRuleId}
+                    emojiTarget={automationEmojiTarget}
+                    isLoading={isAllAutomationRulesLoading}
+                    network={automationRuleContext?.network ?? "instagram"}
+                    onCancelEdit={openNewGlobalAutomationRule}
+                    onDelete={(ruleId) => void deleteAutomationRule(ruleId)}
+                    onEdit={openEditAutomationRule}
+                    onEmojiClick={insertAutomationEmoji}
+                    onEmojiTargetChange={setAutomationEmojiTarget}
+                    onPostUrlChange={setAutomationPostUrl}
+                    onSave={() => void saveAutomationRule()}
+                    onUpdateDraft={setAutomationDraft}
+                    postUrl={automationPostUrl}
+                    rules={allAutomationRules}
+                    rulesLabel="todas las automatizaciones"
+                    showPostUrlInput={!editingAutomationRuleId}
+                  />
+                </div>
+              ) : null}
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments || canAutoSyncMetaAdComments
                 || canAutoSyncInstagramComments
@@ -3287,7 +3470,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <button
                             className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs font-semibold ${
-                              isAutomationPanelOpen
+                              isContextualAutomationPanelOpen
                                 ? "border-slate-950 bg-slate-950 text-white"
                                 : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                             } disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400`}
@@ -3337,8 +3520,9 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {isAutomationPanelOpen ? (
+                  {isContextualAutomationPanelOpen ? (
                     <AutomationPanel
+                      contextLabel="Reglas de la publicacion seleccionada."
                       draft={automationDraft}
                       editingRuleId={editingAutomationRuleId}
                       emojiTarget={automationEmojiTarget}
@@ -3352,6 +3536,7 @@ export default function Home() {
                       onSave={() => void saveAutomationRule()}
                       onUpdateDraft={setAutomationDraft}
                       rules={automationRules}
+                      rulesLabel="regla(s) para esta publicacion"
                     />
                   ) : null}
 
@@ -3971,6 +4156,7 @@ function ReplyModeButton({
 }
 
 function AutomationPanel({
+  contextLabel,
   draft,
   editingRuleId,
   emojiTarget,
@@ -3981,10 +4167,15 @@ function AutomationPanel({
   onEdit,
   onEmojiClick,
   onEmojiTargetChange,
+  onPostUrlChange,
   onSave,
   onUpdateDraft,
+  postUrl,
   rules,
+  rulesLabel = "regla(s) para esta publicacion",
+  showPostUrlInput = false,
 }: {
+  contextLabel?: string;
   draft: AutomationDraft;
   editingRuleId: string | null;
   emojiTarget: AutomationReplyTarget | null;
@@ -3995,9 +4186,13 @@ function AutomationPanel({
   onEdit: (rule: AutomationRule) => void;
   onEmojiClick: (emojiData: EmojiClickData) => void;
   onEmojiTargetChange: (target: AutomationReplyTarget | null) => void;
+  onPostUrlChange?: (value: string) => void;
   onSave: () => void;
   onUpdateDraft: (updater: (current: AutomationDraft) => AutomationDraft) => void;
+  postUrl?: string;
   rules: AutomationRule[];
+  rulesLabel?: string;
+  showPostUrlInput?: boolean;
 }) {
   const privateLabel = network === "instagram" ? "DM" : "Inbox";
 
@@ -4007,8 +4202,11 @@ function AutomationPanel({
         <div>
           <p className="text-sm font-semibold text-slate-900">Automatizaciones</p>
           <p className="text-xs text-slate-500">
-            {isLoading ? "Cargando..." : `${rules.length} regla(s) para esta publicacion`}
+            {isLoading ? "Cargando..." : `${rules.length} ${rulesLabel}`}
           </p>
+          {contextLabel ? (
+            <p className="mt-1 text-xs leading-4 text-slate-500">{contextLabel}</p>
+          ) : null}
         </div>
         {editingRuleId ? (
           <button
@@ -4031,6 +4229,7 @@ function AutomationPanel({
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
+                  <NetworkBadge network={rule.network} />
                   <span
                     className={`rounded-md px-2 py-1 text-xs font-semibold ${
                       rule.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-600"
@@ -4045,6 +4244,10 @@ function AutomationPanel({
                     {rule.keyword}
                   </span>
                 </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {rule.accountName ? `${rule.accountName} · ` : ""}
+                  {rule.providerPostId}
+                </p>
                 <p className="mt-1 text-xs text-slate-500">
                   {[
                     rule.publicReplyEnabled ? "comentario" : null,
@@ -4069,6 +4272,22 @@ function AutomationPanel({
       ) : null}
 
       <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+        {showPostUrlInput ? (
+          <label className="mb-3 block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Link de publicacion
+            </span>
+            <input
+              className="h-10 w-full min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+              onChange={(event) => onPostUrlChange?.(event.target.value)}
+              placeholder="https://www.instagram.com/p/... o https://www.facebook.com/..."
+              value={postUrl ?? ""}
+            />
+            <span className="mt-1 block text-xs leading-4 text-slate-500">
+              Debe ser una publicacion que ya tenga al menos un comentario registrado en el inbox.
+            </span>
+          </label>
+        ) : null}
         <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
           <select
             className="h-10 rounded-md border border-slate-200 bg-white px-2 text-sm outline-none focus:border-slate-400"
@@ -4464,6 +4683,12 @@ function mapAutomationRule(row: Record<string, unknown>): AutomationRule {
     id: String(row.id),
     workspaceId: String(row.workspaceId ?? row.workspace_id),
     accountId: String(row.accountId ?? row.account_id),
+    accountName: row.accountName || row.account_name ? String(row.accountName ?? row.account_name) : undefined,
+    accountHandle: row.accountHandle || row.account_handle ? String(row.accountHandle ?? row.account_handle) : undefined,
+    providerAccountId:
+      row.providerAccountId || row.provider_account_id
+        ? String(row.providerAccountId ?? row.provider_account_id)
+        : undefined,
     providerPostId: String(row.providerPostId ?? row.provider_post_id),
     network: (row.network === "instagram" ? "instagram" : "facebook") as Network,
     source: (row.source as InboxSource | null | undefined) ?? null,
@@ -4476,6 +4701,41 @@ function mapAutomationRule(row: Record<string, unknown>): AutomationRule {
     privateReplyEnabled: Boolean(row.privateReplyEnabled ?? row.private_reply_enabled),
     privateReplyText: String(row.privateReplyText ?? row.private_reply_text ?? ""),
   };
+}
+
+function createAutomationContextFromRule(rule: AutomationRule): AutomationRuleContext {
+  return {
+    accountId: rule.accountId,
+    providerPostId: rule.providerPostId,
+    network: rule.network,
+    source: rule.source,
+  };
+}
+
+function createAutomationContextFromItem(item: InboxItem): AutomationRuleContext | null {
+  if (!item.providerPostId || !isCommentItem(item)) {
+    return null;
+  }
+
+  return {
+    accountId: item.accountId,
+    providerPostId: item.providerPostId,
+    network: item.network,
+    source: item.source,
+  };
+}
+
+function isSameAutomationContext(
+  first: AutomationRuleContext | null,
+  second: AutomationRuleContext | null,
+) {
+  return Boolean(
+    first &&
+      second &&
+      first.accountId === second.accountId &&
+      first.providerPostId === second.providerPostId &&
+      first.network === second.network,
+  );
 }
 
 function mapConnectedAccountRow(row: ConnectedAccountRow): ChannelConnection {

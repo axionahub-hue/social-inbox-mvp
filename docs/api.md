@@ -137,25 +137,25 @@ Nota private replies: aunque `pages_messaging` este concedido, Meta puede rechaz
 
 ### `GET /api/automation-rules`
 
-Lista automatizaciones configuradas para una publicacion concreta.
+Lista automatizaciones configuradas. Si se envia `accountId` y `providerPostId`, devuelve solo las reglas de una publicacion concreta. Si se envia solo `workspaceId`, devuelve todas las automatizaciones del workspace para el apartado global de gestion.
 
 Query:
 
 - `workspaceId`
-- `accountId`
-- `providerPostId`
+- `accountId` opcional
+- `providerPostId` opcional
 
-Requiere `Authorization: Bearer SUPABASE_ACCESS_TOKEN`. El endpoint valida que el workspace pertenezca al usuario y que la cuenta conectada pertenezca al workspace.
+Requiere `Authorization: Bearer SUPABASE_ACCESS_TOKEN`. El endpoint valida que el workspace pertenezca al usuario y, si se filtra por cuenta, que la cuenta conectada pertenezca al workspace.
 
 ### `POST /api/automation-rules`
 
-Crea o actualiza una automatizacion por publicacion.
+Crea o actualiza una automatizacion por publicacion. Al actualizar una regla existente, el backend conserva `account_id`, `provider_post_id`, `network` y `source` de la regla original; esos campos no se toman de la publicacion actualmente seleccionada en el frontend. Esto impide mover una automatizacion por accidente si el usuario cambia de conversacion con el editor abierto.
 
 Campos principales:
 
 - `workspaceId`
-- `accountId`
-- `providerPostId`
+- `accountId`, `providerPostId` y `network`: requeridos para crear desde una publicacion seleccionada
+- `postUrl`: alternativa para crear desde el apartado global si la publicacion ya existe en `inbox_items`
 - `network`: `facebook` o `instagram`
 - `source`: `post_comment` o `ad_comment`
 - `matchType`: `contains`, `starts_with` o `equals`
@@ -166,6 +166,8 @@ Campos principales:
 - `active`
 
 La palabra clave se guarda tambien en `keyword_normalized`, sin tildes y en minusculas. Debe estar activa al menos una accion: like, respuesta publica o respuesta privada.
+
+La creacion por `postUrl` no consulta Meta. El servidor busca coincidencias locales en `provider_permalink_url` y `provider_post_id` dentro de las publicaciones ya registradas en el inbox. Si la URL pertenece a una publicacion que aun no tiene ningun comentario guardado, responde `404` y pide usar una publicacion ya recibida. Esta restriccion evita llamadas exploratorias costosas y ayuda a mantener Supabase Free bajo control.
 
 ### `DELETE /api/automation-rules`
 
