@@ -8,10 +8,12 @@ import {
   Camera,
   ChevronDown,
   ChevronLeft,
+  Copy,
   Eye,
   EyeOff,
   ExternalLink,
   Heart,
+  MoveRight,
   MoreVertical,
   Pencil,
   Plus,
@@ -259,6 +261,7 @@ type BlockedAuthor = {
 
 type AutomationMatchType = "contains" | "starts_with" | "equals";
 type AutomationReplyTarget = "public" | "private";
+type AutomationPostAction = "save" | "duplicate" | "move";
 
 type AutomationRule = {
   id: string;
@@ -428,6 +431,8 @@ export default function Home() {
   const [isAllAutomationRulesLoading, setIsAllAutomationRulesLoading] = useState(false);
   const [allAutomationRulesError, setAllAutomationRulesError] = useState<string | null>(null);
   const [automationPostUrl, setAutomationPostUrl] = useState("");
+  const [automationPostAction, setAutomationPostAction] =
+    useState<AutomationPostAction>("save");
   const [automationEditorScope, setAutomationEditorScope] =
     useState<AutomationEditorScope>("selected_post");
   const [automationRuleContext, setAutomationRuleContext] =
@@ -1457,6 +1462,7 @@ export default function Home() {
     setAutomationDraft(emptyAutomationDraft);
     setAutomationEmojiTarget(null);
     setAutomationPostUrl("");
+    setAutomationPostAction("save");
     setAutomationRuleContext(null);
     setAutomationEditorScope("selected_post");
   }
@@ -1490,6 +1496,7 @@ export default function Home() {
     setAutomationEditorScope("selected_post");
     setAutomationRuleContext(nextContext);
     setAutomationPostUrl("");
+    setAutomationPostAction("save");
     await loadAutomationRulesForItem(selectedItem);
   }
 
@@ -1539,6 +1546,7 @@ export default function Home() {
     setEditingAutomationRuleId(null);
     setAutomationDraft(emptyAutomationDraft);
     setAutomationEmojiTarget(null);
+    setAutomationPostAction("save");
     if (automationEditorScope === "selected_post" && selectedItem) {
       setAutomationRuleContext(createAutomationContextFromItem(selectedItem));
     }
@@ -1549,6 +1557,7 @@ export default function Home() {
     setAutomationRuleContext(createAutomationContextFromRule(rule));
     setAutomationEditorScope(isAllAutomationRulesOpen ? "global" : "selected_post");
     setAutomationPostUrl("");
+    setAutomationPostAction("save");
     setAutomationDraft({
       active: rule.active,
       matchType: rule.matchType,
@@ -1571,6 +1580,7 @@ export default function Home() {
       setEditingAutomationRuleId(null);
       setAutomationRuleContext(null);
       setAutomationPostUrl("");
+      setAutomationPostAction("save");
       setAutomationDraft(emptyAutomationDraft);
       setAllAutomationRulesError(null);
       setIsAllAutomationRulesLoading(true);
@@ -1652,6 +1662,7 @@ export default function Home() {
     setEditingAutomationRuleId(null);
     setAutomationRuleContext(null);
     setAutomationPostUrl("");
+    setAutomationPostAction("save");
     setAutomationDraft(emptyAutomationDraft);
     setAutomationEmojiTarget(null);
   }
@@ -1667,17 +1678,21 @@ export default function Home() {
         ? createAutomationContextFromItem(selectedItem)
         : null;
     const context =
-      editingAutomationRuleId && automationRuleContext
+      editingAutomationRuleId && automationRuleContext && automationPostAction === "save"
         ? automationRuleContext
         : automationEditorScope === "selected_post"
           ? selectedContext
           : null;
-    const postUrl = automationEditorScope === "global" && !editingAutomationRuleId
+    const postUrl = automationEditorScope === "global" && (!editingAutomationRuleId || automationPostAction !== "save")
       ? automationPostUrl.trim()
       : "";
 
     if (!context && !postUrl) {
-      setNotice("Selecciona un comentario con publicacion para guardar automatizacion.");
+      setNotice(
+        editingAutomationRuleId && automationPostAction !== "save"
+          ? "Pega el link de la publicacion destino."
+          : "Selecciona un comentario con publicacion para guardar automatizacion.",
+      );
       return;
     }
 
@@ -1715,6 +1730,7 @@ export default function Home() {
           accountId: context?.accountId,
           providerPostId: context?.providerPostId,
           postUrl: postUrl || undefined,
+          operation: editingAutomationRuleId ? automationPostAction : "save",
           network: context?.network,
           source: context?.source ?? undefined,
           active: automationDraft.active,
@@ -1736,18 +1752,19 @@ export default function Home() {
 
       const savedRule = mapAutomationRule(payload.rule);
       setAutomationRules((current) =>
-        editingAutomationRuleId
+        editingAutomationRuleId && automationPostAction !== "duplicate"
           ? current.map((rule) => (rule.id === savedRule.id ? savedRule : rule))
           : [savedRule, ...current],
       );
       setAllAutomationRules((current) => {
-        if (editingAutomationRuleId) {
+        if (editingAutomationRuleId && automationPostAction !== "duplicate") {
           return current.map((rule) => (rule.id === savedRule.id ? savedRule : rule));
         }
 
         return [savedRule, ...current];
       });
       setEditingAutomationRuleId(null);
+      setAutomationPostAction("save");
       setAutomationRuleContext(
         automationEditorScope === "selected_post" && selectedItem
           ? createAutomationContextFromItem(selectedItem)
@@ -1755,7 +1772,13 @@ export default function Home() {
       );
       setAutomationDraft(emptyAutomationDraft);
       setAutomationPostUrl("");
-      setNotice("Automatizacion guardada para esta publicacion.");
+      setNotice(
+        automationPostAction === "duplicate"
+          ? "Automatizacion duplicada en la publicacion destino."
+          : automationPostAction === "move"
+            ? "Automatizacion movida a la publicacion destino."
+            : "Automatizacion guardada para esta publicacion.",
+      );
     } catch {
       setNotice("No se pudo guardar la automatizacion.");
     }
@@ -3886,15 +3909,17 @@ export default function Home() {
                 onEdit={openEditAutomationRule}
                 onEmojiClick={insertAutomationEmoji}
                 onEmojiTargetChange={setAutomationEmojiTarget}
+                onPostActionChange={setAutomationPostAction}
                 onPostUrlChange={setAutomationPostUrl}
                 onRefreshRules={() => void loadAllAutomationRules()}
                 onSave={() => void saveAutomationRule()}
                 onUpdateDraft={setAutomationDraft}
+                postAction={automationPostAction}
                 postUrl={automationPostUrl}
                 rules={allAutomationRules}
                 rulesError={allAutomationRulesError}
                 rulesLabel="todas las automatizaciones"
-                showPostUrlInput={!editingAutomationRuleId}
+                showPostUrlInput={!editingAutomationRuleId || automationPostAction !== "save"}
                 variant="manager"
               />
             </div>
@@ -4229,10 +4254,12 @@ function AutomationPanel({
   onEdit,
   onEmojiClick,
   onEmojiTargetChange,
+  onPostActionChange,
   onPostUrlChange,
   onRefreshRules,
   onSave,
   onUpdateDraft,
+  postAction = "save",
   postUrl,
   rules,
   rulesError,
@@ -4251,10 +4278,12 @@ function AutomationPanel({
   onEdit: (rule: AutomationRule) => void;
   onEmojiClick: (emojiData: EmojiClickData) => void;
   onEmojiTargetChange: (target: AutomationReplyTarget | null) => void;
+  onPostActionChange?: (action: AutomationPostAction) => void;
   onPostUrlChange?: (value: string) => void;
   onRefreshRules?: () => void;
   onSave: () => void;
   onUpdateDraft: (updater: (current: AutomationDraft) => AutomationDraft) => void;
+  postAction?: AutomationPostAction;
   postUrl?: string;
   rules: AutomationRule[];
   rulesError?: string | null;
@@ -4360,10 +4389,34 @@ function AutomationPanel({
                       .join(" + ")}
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap justify-end gap-1">
                   <SmallActionButton title="Editar automatizacion" onClick={() => onEdit(rule)}>
                     <Pencil size={14} />
                   </SmallActionButton>
+                  {isManager ? (
+                    <>
+                      <SmallActionButton
+                        title="Duplicar en otra publicacion"
+                        onClick={() => {
+                          onEdit(rule);
+                          onPostActionChange?.("duplicate");
+                          onPostUrlChange?.("");
+                        }}
+                      >
+                        <Copy size={14} />
+                      </SmallActionButton>
+                      <SmallActionButton
+                        title="Cambiar publicacion"
+                        onClick={() => {
+                          onEdit(rule);
+                          onPostActionChange?.("move");
+                          onPostUrlChange?.("");
+                        }}
+                      >
+                        <MoveRight size={14} />
+                      </SmallActionButton>
+                    </>
+                  ) : null}
                   <SmallActionButton title="Eliminar automatizacion" onClick={() => onDelete(rule.id)}>
                     <Trash2 size={14} />
                   </SmallActionButton>
@@ -4405,10 +4458,62 @@ function AutomationPanel({
         </div>
       ) : null}
 
+      {isManager && editingRuleId ? (
+        <div className="mb-4 rounded-md border border-slate-200 bg-white p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            Publicacion de destino
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <button
+              className={`flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold ${
+                postAction === "save"
+                  ? "border-slate-950 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              onClick={() => {
+                onPostActionChange?.("save");
+                onPostUrlChange?.("");
+              }}
+              type="button"
+            >
+              <Save size={15} />
+              Mantener
+            </button>
+            <button
+              className={`flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold ${
+                postAction === "duplicate"
+                  ? "border-slate-950 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              onClick={() => onPostActionChange?.("duplicate")}
+              type="button"
+            >
+              <Copy size={15} />
+              Duplicar
+            </button>
+            <button
+              className={`flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold ${
+                postAction === "move"
+                  ? "border-slate-950 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              onClick={() => onPostActionChange?.("move")}
+              type="button"
+            >
+              <MoveRight size={15} />
+              Cambiar
+            </button>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            Mantener edita solo textos y acciones. Duplicar crea otra regla. Cambiar mueve esta regla a otro post.
+          </p>
+        </div>
+      ) : null}
+
       {showPostUrlInput ? (
         <label className="mb-4 block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            Link de publicacion
+            {editingRuleId ? "Link de la nueva publicacion" : "Link de publicacion"}
           </span>
           <input
             className="h-11 w-full min-w-0 rounded-md border border-slate-200 bg-white px-3 text-base outline-none focus:border-slate-400 sm:text-sm"
@@ -4417,7 +4522,9 @@ function AutomationPanel({
             value={postUrl ?? ""}
           />
           <span className="mt-1 block text-xs leading-4 text-slate-500">
-            Debe ser una publicacion que ya tenga al menos un comentario registrado en el inbox.
+            {editingRuleId
+              ? "Debe ser una publicacion ya registrada en el inbox. No se cambia nada hasta guardar."
+              : "Debe ser una publicacion que ya tenga al menos un comentario registrado en el inbox."}
           </span>
         </label>
       ) : null}
@@ -4523,7 +4630,13 @@ function AutomationPanel({
           onClick={onSave}
           type="button"
         >
-          {editingRuleId ? "Actualizar regla" : "Guardar regla"}
+          {editingRuleId && postAction === "duplicate"
+            ? "Duplicar regla"
+            : editingRuleId && postAction === "move"
+              ? "Cambiar publicacion"
+              : editingRuleId
+                ? "Actualizar regla"
+                : "Guardar regla"}
         </button>
       </div>
     </div>

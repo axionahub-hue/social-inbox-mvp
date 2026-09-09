@@ -10,6 +10,7 @@ const ruleSchema = z
     accountId: z.string().uuid().optional(),
     providerPostId: z.string().min(1).optional(),
     postUrl: z.string().trim().optional(),
+    operation: z.enum(["save", "duplicate", "move"]).default("save"),
     network: z.enum(["facebook", "instagram"]).optional(),
     source: z.enum(["post_comment", "ad_comment"]).optional(),
     active: z.boolean().default(true),
@@ -171,9 +172,18 @@ export async function POST(request: Request) {
     existingContext = ownership.data as RuleContext;
   }
 
-  const resolvedContext = parsed.data.id
-    ? existingContext
-    : await resolveNewRuleContext({
+  if (parsed.data.id && parsed.data.operation !== "save" && !parsed.data.postUrl?.trim()) {
+    return NextResponse.json(
+      { ok: false, message: "Pega el link de la nueva publicacion para duplicar o mover la regla." },
+      { status: 400 },
+    );
+  }
+
+  const shouldResolveTargetContext =
+    !parsed.data.id || parsed.data.operation === "duplicate" || parsed.data.operation === "move";
+
+  const resolvedContext = shouldResolveTargetContext
+    ? await resolveNewRuleContext({
         accountId: parsed.data.accountId,
         network: parsed.data.network,
         postUrl: parsed.data.postUrl,
@@ -181,7 +191,8 @@ export async function POST(request: Request) {
         source: parsed.data.source,
         supabase: auth.supabase,
         workspaceId: parsed.data.workspaceId,
-      });
+      })
+    : existingContext;
 
   if (!resolvedContext) {
     return NextResponse.json(
@@ -226,14 +237,21 @@ export async function POST(request: Request) {
     workspace_id: parsed.data.workspaceId,
   };
 
-  const query = parsed.data.id
+  const query = parsed.data.id && parsed.data.operation === "save"
     ? auth.supabase
         .from("automation_rules")
         .update(payload)
         .eq("id", parsed.data.id)
         .select(ruleSelect)
         .single()
-    : auth.supabase
+    : parsed.data.id && parsed.data.operation === "move"
+      ? auth.supabase
+          .from("automation_rules")
+          .update(insertPayload)
+          .eq("id", parsed.data.id)
+          .select(ruleSelect)
+          .single()
+      : auth.supabase
         .from("automation_rules")
         .insert(insertPayload)
         .select(ruleSelect)
@@ -256,6 +274,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
+    operation: parsed.data.operation,
     rule: mapRuleRow(saved.data, accountMeta.get(String(saved.data.account_id))),
   });
 }
