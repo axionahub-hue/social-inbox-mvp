@@ -35,10 +35,20 @@ const ruleSchema = z
 const ruleSelect =
   "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,like_comment_enabled,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at";
 
+const optionalUuidParam = z.preprocess(
+  (value) => (value === null || value === "" ? undefined : value),
+  z.string().uuid().optional(),
+);
+
+const optionalTextParam = z.preprocess(
+  (value) => (value === null || value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const listSchema = z.object({
   workspaceId: z.string().uuid(),
-  accountId: z.string().uuid().optional(),
-  providerPostId: z.string().min(1).optional(),
+  accountId: optionalUuidParam,
+  providerPostId: optionalTextParam,
 });
 
 const deleteSchema = z.object({
