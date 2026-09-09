@@ -169,7 +169,7 @@ Cada regla permite elegir:
 
 El texto de respuesta acepta emojis y links. Si un comentario nuevo cumple la condicion, la app encola el like y/o la respuesta en segundo plano aunque el navegador este cerrado. No es un bot conversacional: ejecuta una vez por regla, comentario y destino.
 
-En `Configuracion Meta`, el boton `Ver automatizaciones` abre un apartado global para revisar todas las reglas configuradas. Desde ahi se pueden editar o eliminar reglas sin tener que encontrar primero un comentario de esa publicacion.
+En `Configuracion Meta`, el boton `Ver automatizaciones` abre un modal amplio para revisar todas las reglas configuradas. Desde ahi se pueden editar o eliminar reglas sin tener que encontrar primero un comentario de esa publicacion.
 
 Tambien se puede crear una regla nueva pegando el link de la publicacion. Para cuidar recursos, ese link debe pertenecer a una publicacion que ya tenga al menos un comentario registrado en la bandeja; si la publicacion nunca entro al inbox, la app no puede resolverla localmente y pedira crear la regla desde un comentario recibido.
 

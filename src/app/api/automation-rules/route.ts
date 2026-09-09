@@ -33,7 +33,7 @@ const ruleSchema = z
   );
 
 const ruleSelect =
-  "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,like_comment_enabled,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at,connected_accounts(name,handle,provider_account_id)";
+  "id,workspace_id,account_id,provider_post_id,network,source,active,match_type,keyword,like_comment_enabled,public_reply_enabled,public_reply_text,private_reply_enabled,private_reply_text,created_at,updated_at";
 
 const listSchema = z.object({
   workspaceId: z.string().uuid(),
@@ -51,6 +51,12 @@ type RuleContext = {
   provider_post_id: string;
   network: "facebook" | "instagram";
   source: "post_comment" | "ad_comment" | null;
+};
+
+type AccountMeta = {
+  handle?: string | null;
+  name?: string | null;
+  provider_account_id?: string | null;
 };
 
 export async function GET(request: Request) {
@@ -104,7 +110,18 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, rules: (rules.data ?? []).map(mapRuleRow) });
+  const accountMeta = await loadAccountMeta({
+    accountIds: (rules.data ?? []).map((rule) => String(rule.account_id)),
+    supabase: auth.supabase,
+    workspaceId: parsed.data.workspaceId,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    rules: (rules.data ?? []).map((rule) =>
+      mapRuleRow(rule, accountMeta.get(String(rule.account_id))),
+    ),
+  });
 }
 
 export async function POST(request: Request) {
@@ -221,7 +238,16 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, rule: mapRuleRow(saved.data) });
+  const accountMeta = await loadAccountMeta({
+    accountIds: [String(saved.data.account_id)],
+    supabase: auth.supabase,
+    workspaceId: parsed.data.workspaceId,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    rule: mapRuleRow(saved.data, accountMeta.get(String(saved.data.account_id))),
+  });
 }
 
 async function resolveNewRuleContext({
@@ -257,7 +283,7 @@ async function resolveNewRuleContext({
   const knownPosts = await supabase
     .from("inbox_items")
     .select(
-      "account_id,provider_post_id,provider_permalink_url,source,connected_accounts(network)",
+      "account_id,provider_post_id,provider_permalink_url,source",
     )
     .eq("workspace_id", workspaceId)
     .not("provider_post_id", "is", null)
@@ -274,14 +300,21 @@ async function resolveNewRuleContext({
     return null;
   }
 
-  const account = firstOrNull(
-    match.connected_accounts as { network?: string } | Array<{ network?: string }> | null,
-  );
+  const account = await supabase
+    .from("connected_accounts")
+    .select("network")
+    .eq("id", String(match.account_id))
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (account.error || !account.data?.network) {
+    return null;
+  }
 
   return {
     account_id: String(match.account_id),
     provider_post_id: String(match.provider_post_id),
-    network: account?.network === "instagram" ? "instagram" : "facebook",
+    network: account.data.network === "instagram" ? "instagram" : "facebook",
     source: match.source === "ad_comment" ? "ad_comment" : "post_comment",
   };
 }
@@ -419,14 +452,44 @@ async function assertAccountBelongsToWorkspace({
   return { ok: true, status: 200, message: null };
 }
 
-function mapRuleRow(row: Record<string, unknown>) {
-  const account = firstOrNull(
-    row.connected_accounts as
-      | { name?: string; handle?: string | null; provider_account_id?: string }
-      | Array<{ name?: string; handle?: string | null; provider_account_id?: string }>
-      | null,
-  );
+async function loadAccountMeta({
+  accountIds,
+  supabase,
+  workspaceId,
+}: {
+  accountIds: string[];
+  supabase: NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
+  workspaceId: string;
+}) {
+  const uniqueAccountIds = [...new Set(accountIds.filter(Boolean))];
+  const accountMeta = new Map<string, AccountMeta>();
 
+  if (uniqueAccountIds.length === 0) {
+    return accountMeta;
+  }
+
+  const accounts = await supabase
+    .from("connected_accounts")
+    .select("id,name,handle,provider_account_id")
+    .eq("workspace_id", workspaceId)
+    .in("id", uniqueAccountIds);
+
+  if (accounts.error) {
+    return accountMeta;
+  }
+
+  for (const account of accounts.data ?? []) {
+    accountMeta.set(String(account.id), {
+      handle: account.handle,
+      name: account.name,
+      provider_account_id: account.provider_account_id,
+    });
+  }
+
+  return accountMeta;
+}
+
+function mapRuleRow(row: Record<string, unknown>, account?: AccountMeta) {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
@@ -448,14 +511,6 @@ function mapRuleRow(row: Record<string, unknown>) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-}
-
-function firstOrNull<T>(value: T | T[] | null | undefined): T | null {
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
-
-  return value ?? null;
 }
 
 function resolveAutomationSchemaMessage(message: string) {

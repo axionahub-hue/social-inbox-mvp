@@ -703,3 +703,12 @@
 - Creacion por link: el apartado global permite crear una regla pegando una URL de publicacion siempre que esa publicacion ya exista en `inbox_items`; la resolucion usa datos locales y no hace llamadas exploratorias a Meta.
 - Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/api.md`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, revision responsive local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal, con gestor global y campo de link visibles. Pendiente despliegue Vercel.
+
+### Gestor global de automatizaciones usable
+
+- Resumen: el gestor global habia quedado dentro del panel angosto de Configuracion Meta, provocando una experiencia demasiado comprimida. Ademas, el listado global podia depender de una relacion embebida con `connected_accounts`.
+- Cambio UI: `Ver automatizaciones` ahora abre un modal amplio fuera del sidebar, con alto util y scroll propio. En desktop usa hasta 1024 px de ancho; en mobile ocupa el ancho disponible sin overflow horizontal.
+- Cambio API: `GET /api/automation-rules` carga reglas y metadata de cuentas en consultas separadas, evitando que una relacion embebida pueda dejar la lista vacia o fragil.
+- Dato verificado: Supabase conserva 1 automatizacion real activa para `drapin`, en la publicacion Instagram `17922095607199886`.
+- Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
+- Validacion: `npm run lint`, `npm run build`, `git diff --check`, smoke local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal y con modal/campo de link visibles.

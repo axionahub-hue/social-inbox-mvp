@@ -1564,6 +1564,7 @@ export default function Home() {
     setIsAllAutomationRulesOpen(nextOpen);
 
     if (nextOpen) {
+      setIsMetaSettingsOpen(false);
       setAutomationEditorScope("global");
       setEditingAutomationRuleId(null);
       setAutomationRuleContext(null);
@@ -3207,36 +3208,8 @@ export default function Home() {
                 type="button"
               >
                 <Sparkles size={16} />
-                {isAllAutomationRulesOpen ? "Ocultar automatizaciones" : "Ver automatizaciones"}
+                {isAllAutomationRulesOpen ? "Automatizaciones abiertas" : "Ver automatizaciones"}
               </button>
-              {isAllAutomationRulesOpen ? (
-                <div className="mt-3">
-                  <AutomationPanel
-                    contextLabel={
-                      editingAutomationRuleId && automationRuleContext
-                        ? "Editando regla existente. La cuenta y publicacion quedan fijas."
-                        : "Nueva regla desde link de publicacion ya registrada en el inbox."
-                    }
-                    draft={automationDraft}
-                    editingRuleId={editingAutomationRuleId}
-                    emojiTarget={automationEmojiTarget}
-                    isLoading={isAllAutomationRulesLoading}
-                    network={automationRuleContext?.network ?? "instagram"}
-                    onCancelEdit={openNewGlobalAutomationRule}
-                    onDelete={(ruleId) => void deleteAutomationRule(ruleId)}
-                    onEdit={openEditAutomationRule}
-                    onEmojiClick={insertAutomationEmoji}
-                    onEmojiTargetChange={setAutomationEmojiTarget}
-                    onPostUrlChange={setAutomationPostUrl}
-                    onSave={() => void saveAutomationRule()}
-                    onUpdateDraft={setAutomationDraft}
-                    postUrl={automationPostUrl}
-                    rules={allAutomationRules}
-                    rulesLabel="todas las automatizaciones"
-                    showPostUrlInput={!editingAutomationRuleId}
-                  />
-                </div>
-              ) : null}
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 {canAutoSyncFacebookComments || canAutoSyncMetaAdComments
                 || canAutoSyncInstagramComments
@@ -3839,6 +3812,59 @@ export default function Home() {
           )}
         </section>
       </div>
+      {isAllAutomationRulesOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6">
+          <div className="mx-auto flex h-full max-h-[calc(100vh-24px)] w-full max-w-5xl flex-col overflow-hidden rounded-md bg-white shadow-2xl sm:max-h-[calc(100vh-48px)]">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Social Inbox
+                </p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
+                  Automatizaciones
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                  Administra reglas por publicacion. Al editar, la cuenta y la publicacion quedan fijas.
+                </p>
+              </div>
+              <button
+                className="grid size-10 shrink-0 place-items-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
+                onClick={() => setIsAllAutomationRulesOpen(false)}
+                title="Cerrar automatizaciones"
+                type="button"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <AutomationPanel
+                contextLabel={
+                  editingAutomationRuleId && automationRuleContext
+                    ? "Editando regla existente. La cuenta y publicacion quedan fijas."
+                    : "Nueva regla desde link de publicacion ya registrada en el inbox."
+                }
+                draft={automationDraft}
+                editingRuleId={editingAutomationRuleId}
+                emojiTarget={automationEmojiTarget}
+                isLoading={isAllAutomationRulesLoading}
+                network={automationRuleContext?.network ?? "instagram"}
+                onCancelEdit={openNewGlobalAutomationRule}
+                onDelete={(ruleId) => void deleteAutomationRule(ruleId)}
+                onEdit={openEditAutomationRule}
+                onEmojiClick={insertAutomationEmoji}
+                onEmojiTargetChange={setAutomationEmojiTarget}
+                onPostUrlChange={setAutomationPostUrl}
+                onSave={() => void saveAutomationRule()}
+                onUpdateDraft={setAutomationDraft}
+                postUrl={automationPostUrl}
+                rules={allAutomationRules}
+                rulesLabel="todas las automatizaciones"
+                showPostUrlInput={!editingAutomationRuleId}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
