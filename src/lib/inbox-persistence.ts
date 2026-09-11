@@ -548,6 +548,7 @@ export async function persistFacebookMessengerMessage({
       .update({
         contact_id: contactId,
         status: "new",
+        title,
         preview,
         unread_count: Number(existingItem.data.unread_count ?? 0) + 1,
         received_at: receivedAt,
@@ -662,6 +663,7 @@ export async function persistInstagramDirectMessage({
       .from("inbox_items")
       .update({
         status: "new",
+        title,
         preview,
         unread_count: Number(existingItem.data.unread_count ?? 0) + 1,
         received_at: receivedAt,
