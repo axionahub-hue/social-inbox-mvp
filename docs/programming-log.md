@@ -721,3 +721,11 @@
 - Medicion local: 1440 px -> formulario 817 px; 1280 px -> 769 px; 430 px -> 360 px; 412 px -> 342 px; 390 px -> 320 px; 360 px -> 290 px. Todos sin overflow horizontal.
 - Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, smoke responsive local en 1440, 1280, 430, 412, 390 y 360 px.
+
+### Respuestas a stories por mensajeria
+
+- Diagnostico: se revisaron 898 `webhook_events` Meta de las ultimas 48 horas; hubo 654 `page:feed`, 39 `page:messaging` y 205 `instagram:comments`, sin ningun payload con `story`, `reply_to`, `referral` o `mention`.
+- Cambio backend: `POST /api/meta/webhook` ahora lee `message.reply_to.story` en eventos `entry.messaging[]` y lo conserva al persistir Messenger/Instagram DM.
+- Cambio persistencia: si un mensaje privado llega como respuesta a story, el hilo se titula `Respuesta a story en ...` y el mensaje se muestra con prefijo `Respuesta a story: ...`.
+- Cambio diagnostico: `/api/meta/webhook/diagnostics` marca `storyReply: true` en mensajes recientes cuando Meta envia `reply_to.story`.
+- Conclusion operativa: si no aparece un evento crudo `messaging` con `reply_to.story` en Supabase, el ajuste pendiente esta en entrega/configuracion Meta o en permisos/ajustes de la cuenta social, no en el frontend.

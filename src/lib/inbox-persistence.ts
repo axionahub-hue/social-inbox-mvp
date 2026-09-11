@@ -17,6 +17,10 @@ export type MetaMessengerMessage = {
   senderName?: string | null;
   senderUsername?: string | null;
   senderProfilePic?: string | null;
+  storyReply?: {
+    storyId?: string | null;
+    storyUrl?: string | null;
+  } | null;
 };
 
 export async function persistFacebookComment({
@@ -517,6 +521,7 @@ export async function persistFacebookMessengerMessage({
   const now = new Date().toISOString();
   const receivedAt = normalizeDate(message.timestamp) ?? now;
   const preview = resolveMessengerMessageBody(message);
+  const title = message.storyReply ? `Respuesta a story en ${accountName}` : `Messenger en ${accountName}`;
 
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
@@ -576,7 +581,7 @@ export async function persistFacebookMessengerMessage({
       provider_comment_id: null,
       provider_post_id: null,
       provider_ad_id: null,
-      title: `Messenger en ${accountName}`,
+      title,
       preview,
       is_hidden: false,
       ingest_source: "webhook",
@@ -631,6 +636,7 @@ export async function persistInstagramDirectMessage({
   const now = new Date().toISOString();
   const receivedAt = normalizeDate(message.timestamp) ?? now;
   const preview = resolveMessengerMessageBody(message);
+  const title = message.storyReply ? `Respuesta a story en ${accountName}` : `Instagram DM en ${accountName}`;
 
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
@@ -689,7 +695,7 @@ export async function persistInstagramDirectMessage({
       provider_comment_id: null,
       provider_post_id: null,
       provider_ad_id: null,
-      title: `Instagram DM en ${accountName}`,
+      title,
       preview,
       is_hidden: false,
       ingest_source: "webhook",
@@ -1117,6 +1123,16 @@ function normalizeComparable(value: unknown) {
 }
 
 function resolveMessengerMessageBody(message: MetaMessengerMessage) {
+  const baseBody = resolveBaseMessengerMessageBody(message);
+
+  if (message.storyReply) {
+    return `Respuesta a story: ${baseBody}`;
+  }
+
+  return baseBody;
+}
+
+function resolveBaseMessengerMessageBody(message: MetaMessengerMessage) {
   const text = message.text.trim();
 
   if (text) {

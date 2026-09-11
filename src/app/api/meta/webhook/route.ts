@@ -102,6 +102,13 @@ type MetaMessagingEvent = {
     mid?: string;
     text?: string;
     is_echo?: boolean;
+    reply_to?: {
+      mid?: string;
+      story?: {
+        id?: string;
+        url?: string;
+      };
+    };
     attachments?: Array<{
       type?: string;
       payload?: {
@@ -697,6 +704,12 @@ function mapMessagingEventToMessage({
     attachmentStickerId:
       attachment?.payload?.sticker_id != null ? String(attachment.payload.sticker_id) : null,
     timestamp: event.timestamp ? new Date(event.timestamp).toISOString() : null,
+    storyReply: event.message.reply_to?.story
+      ? {
+          storyId: event.message.reply_to.story.id ?? null,
+          storyUrl: event.message.reply_to.story.url ?? null,
+        }
+      : null,
   };
 }
 

@@ -226,10 +226,16 @@ export async function POST(request: Request) {
           })),
       ),
       messaging: (event.payload?.entry ?? []).flatMap(
-        (entry: { messaging?: Array<{ sender?: { id?: string }; message?: { mid?: string } }> }) =>
+        (entry: {
+          messaging?: Array<{
+            sender?: { id?: string };
+            message?: { mid?: string; reply_to?: { story?: { id?: string } } };
+          }>;
+        }) =>
           (entry.messaging ?? []).map((message) => ({
             senderId: message.sender?.id,
             messageId: message.message?.mid,
+            storyReply: Boolean(message.message?.reply_to?.story),
           })),
       ),
     })),

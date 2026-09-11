@@ -201,6 +201,7 @@ Si Supabase esta configurado:
 - guarda el evento crudo en `webhook_events`;
 - procesa cambios `Page/feed` con `item = comment` y `verb = add|edited`;
 - procesa eventos `entry.messaging[]` de Messenger como hilos privados `source = messenger`;
+- si un evento privado trae `message.reply_to.story`, lo conserva como respuesta a story y lo muestra como hilo privado de Messenger/Instagram DM;
 - busca la pagina en `connected_accounts` por `provider_account_id`;
 - usa el page token cifrado para enriquecer comentario/publicacion;
 - persiste el comentario en `contacts`, `inbox_items` e `inbox_messages`;
