@@ -51,6 +51,42 @@ export async function DELETE(request: Request, context: RouteContext) {
     );
   }
 
+  const automationRulesResult = await supabase
+    .from("automation_rules")
+    .select("id", { count: "exact", head: true })
+    .eq("account_id", accountResult.data.id);
+
+  if (automationRulesResult.error) {
+    return NextResponse.json(
+      { ok: false, message: automationRulesResult.error.message },
+      { status: 500 },
+    );
+  }
+
+  if ((automationRulesResult.count ?? 0) > 0) {
+    const disconnectResult = await supabase
+      .from("connected_accounts")
+      .update({
+        access_token_encrypted: null,
+        scopes: [],
+        token_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", accountResult.data.id);
+
+    if (disconnectResult.error) {
+      return NextResponse.json(
+        { ok: false, message: disconnectResult.error.message },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: `Cuenta desconectada: ${accountResult.data.name}. Automatizaciones preservadas para reconexion.`,
+    });
+  }
+
   const deleteResult = await supabase
     .from("connected_accounts")
     .delete()

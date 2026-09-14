@@ -57,7 +57,7 @@ Mantener un MVP simple sin crear deuda estructural. La app puede operar en modo 
 - `ChannelConnection.id` representa el ID real de `connected_accounts` cuando hay sesion Supabase; en modo demo representa el ID local del fixture.
 - Las cuentas con `access_token_encrypted` se muestran como reales; las cuentas sin token cifrado quedan marcadas como demo.
 - Las cuentas descubiertas por Meta sin token cifrado quedan como `needs_review`; los fixtures locales quedan como `demo`.
-- El usuario puede desconectar cuentas no deseadas del workspace; la eliminacion borra la fila de `connected_accounts` y sus inbox relacionados por cascada.
+- El usuario puede desconectar cuentas no deseadas del workspace. Si la cuenta tiene automatizaciones, la app preserva la fila de `connected_accounts` y sus reglas, limpia token/scopes y permite que un OAuth posterior reactive la misma cuenta sin perder configuracion. Solo las cuentas sin automatizaciones se eliminan fisicamente junto con sus inbox relacionados por cascada.
 - Cada item del inbox muestra metadatos operativos de plataforma, cuenta conectada y tipo de origen para evitar ambiguedad cuando haya Facebook, Instagram y futuras redes.
 - La seleccion por checkbox opera sobre los items visibles y reutiliza `/api/inbox/action` para marcar leido/no leido, archivar y desarchivar.
 - En desktop, el shell opera como tres paneles de altura fija: cuentas con scroll propio, bandeja con scroll propio y conversacion con footer fijo para composer/respuestas/acciones.

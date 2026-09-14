@@ -285,6 +285,8 @@ Redirecciones relevantes:
 
 Desconecta una cuenta del workspace autenticado.
 
+Si la cuenta tiene automatizaciones, no se elimina la fila de `connected_accounts`: se limpian token/scopes y las reglas quedan preservadas para que una reconexion OAuth de la misma cuenta las reactive. Si no tiene automatizaciones, se elimina fisicamente.
+
 Headers:
 
 ```text
@@ -300,7 +302,7 @@ Respuesta:
 }
 ```
 
-Valida que la cuenta pertenezca a un workspace del usuario actual antes de eliminarla.
+Valida que la cuenta pertenezca a un workspace del usuario actual antes de desconectarla o eliminarla.
 
 ### `POST /api/meta/sync/comments`
 

@@ -713,6 +713,12 @@
 - Areas tocadas: `src/app/api/automation-rules/route.ts`, `src/app/page.tsx`, `docs/architecture.md`, `docs/user-guide.md`, `docs/programming-log.md`.
 - Validacion: `npm run lint`, `npm run build`, `git diff --check`, smoke local en 1440, 1280, 430, 412, 390 y 360 px sin overflow horizontal y con modal/campo de link visibles.
 
+### Preservacion de automatizaciones al desconectar cuentas
+
+- Resumen: desconectar una cuenta con automatizaciones eliminaba la fila de `connected_accounts`; como `automation_rules.account_id` tenia `on delete cascade`, las reglas desaparecian al reautorizar permisos.
+- Cambio: `DELETE /api/meta/accounts/[accountId]` ahora revisa si existen reglas para la cuenta. Si existen, no borra la fila: limpia `access_token_encrypted`, `scopes` y `token_expires_at`, preservando automatizaciones para que OAuth vuelva a poblar el token de la misma cuenta. Si no existen reglas, conserva el comportamiento anterior de borrado fisico.
+- Correccion de datos: se restauraron 6 reglas activas en Supabase: 2 para Facebook `Academia Expertos de la Musica` y 4 para Instagram `@akashacursos`, todas con like automatico habilitado y respuestas segun la configuracion previa.
+
 ### Gestor global en layout de trabajo
 
 - Resumen: se amplio el gestor global para que no sea solo un formulario apilado dentro de una tarjeta. En desktop ahora separa reglas guardadas y editor en dos zonas; en mobile reduce padding anidado para no achicar el formulario.

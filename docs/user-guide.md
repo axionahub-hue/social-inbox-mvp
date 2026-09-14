@@ -114,7 +114,7 @@ Las cuentas pueden aparecer como:
 - `Pendiente`: Meta devolvio la pagina, pero no devolvio page token.
 - `Demo`: fixture local usado para probar la experiencia.
 
-Desde el panel de cuentas se puede desconectar una cuenta no deseada con el icono de eliminar. Esto la quita del workspace y de la bandeja.
+Desde el panel de cuentas se puede desconectar una cuenta no deseada con el icono de eliminar. Si esa cuenta tiene automatizaciones, la app conserva la configuracion y solo limpia el token para que al volver a conectar la misma cuenta se reactiven las reglas. Si no tiene automatizaciones, la cuenta se quita del workspace y de la bandeja.
 
 El mismo panel muestra `Autores bloqueados`. Desde ahi se puede ver cada autor bloqueado por cuenta y desbloquearlo sin buscar la conversacion original. En Facebook, la app intenta bloquear/desbloquear primero en Meta y solo actualiza el estado local si Meta confirma la accion.
 
@@ -172,6 +172,8 @@ El texto de respuesta acepta emojis y links. Si un comentario nuevo cumple la co
 En `Configuracion Meta`, el boton `Ver automatizaciones` abre un modal amplio para revisar todas las reglas configuradas. Desde ahi se pueden editar o eliminar reglas sin tener que encontrar primero un comentario de esa publicacion.
 
 Tambien se puede crear una regla nueva pegando el link de la publicacion. Para cuidar recursos, ese link debe pertenecer a una publicacion que ya tenga al menos un comentario registrado en la bandeja; si la publicacion nunca entro al inbox, la app no puede resolverla localmente y pedira crear la regla desde un comentario recibido.
+
+Si necesitas reautorizar permisos de Meta, puedes desconectar y volver a conectar cuentas. Las automatizaciones de cuentas con reglas guardadas no se borran; al reconectar la misma Page/Instagram, vuelven a quedar vinculadas al token nuevo.
 
 Cuando se edita una regla existente, la cuenta y la publicacion quedan fijas. Cambiar de conversacion mientras el editor contextual esta abierto cierra ese editor para evitar que parezca que se esta editando una publicacion distinta.
 
