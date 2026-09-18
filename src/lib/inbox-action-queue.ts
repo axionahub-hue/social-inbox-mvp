@@ -31,7 +31,11 @@ type QueueRow = {
   action: InboxAction;
   payload: InboxActionPayload;
   previous_state: Record<string, unknown>;
+  attempt_count: number;
 };
+
+const maxQueueAttempts = 4;
+const retryBackoffSeconds = [60, 300, 900];
 
 const internalActions = new Set<InboxAction>([
   "archive",
@@ -171,10 +175,12 @@ export async function processQueuedInboxActions({
     return { processed: 0, failed: 0 };
   }
 
+  const now = new Date().toISOString();
   const queued = await supabase
     .from("action_queue")
-    .select("id,workspace_id,inbox_item_id,action,payload,previous_state")
+    .select("id,workspace_id,inbox_item_id,action,payload,previous_state,attempt_count")
     .eq("status", "queued")
+    .or(`locked_at.is.null,locked_at.lte.${now}`)
     .order("created_at", { ascending: true })
     .limit(limit);
 
@@ -184,13 +190,15 @@ export async function processQueuedInboxActions({
 
   let processed = 0;
   let failed = 0;
+  let retried = 0;
 
   for (const row of (queued.data ?? []) as QueueRow[]) {
+    const attemptCount = (row.attempt_count ?? 0) + 1;
     const locked = await supabase
       .from("action_queue")
       .update({
         status: "processing",
-        attempt_count: 1,
+        attempt_count: attemptCount,
         locked_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -217,9 +225,22 @@ export async function processQueuedInboxActions({
       const result = await executeMetaAction(resolved.input);
 
       if (!result.ok) {
+        if (shouldRetryQueuedAction({ attemptCount, result })) {
+          await markQueuedActionForRetry({
+            attemptCount,
+            input: row.payload,
+            queue: row,
+            result,
+            supabase,
+          });
+          retried += 1;
+          continue;
+        }
+
         await markQueuedActionFailed({
           actionInput: resolved.input,
           input: row.payload,
+          attemptCount,
           queue: row,
           result,
           supabase,
@@ -267,21 +288,36 @@ export async function processQueuedInboxActions({
 
       processed += 1;
     } catch (error) {
+      const result = {
+        ok: false,
+        mode: "real",
+        message: error instanceof Error ? error.message : "Fallo desconocido en accion encolada.",
+      };
+
+      if (shouldRetryQueuedAction({ attemptCount, result })) {
+        await markQueuedActionForRetry({
+          attemptCount,
+          input: row.payload,
+          queue: row,
+          result,
+          supabase,
+        });
+        retried += 1;
+        continue;
+      }
+
       await markQueuedActionFailed({
+        attemptCount,
         input: row.payload,
         queue: row,
-        result: {
-          ok: false,
-          mode: "real",
-          message: error instanceof Error ? error.message : "Fallo desconocido en accion encolada.",
-        },
+        result,
         supabase,
       });
       failed += 1;
     }
   }
 
-  return { processed, failed };
+  return { processed, failed, retried };
 }
 
 async function resolveActionInputFromItem({
@@ -712,12 +748,14 @@ async function applyOptimisticQueuedAction({
 
 async function markQueuedActionFailed({
   actionInput,
+  attemptCount,
   input,
   queue,
   result,
   supabase,
 }: {
   actionInput?: MetaActionInput;
+  attemptCount: number;
   input: InboxActionPayload;
   queue: QueueRow;
   result: { ok: boolean; mode: string; message?: string; payload?: unknown };
@@ -734,6 +772,7 @@ async function markQueuedActionFailed({
       provider_ok: false,
       provider_payload: result,
       last_error: message,
+      attempt_count: attemptCount,
       processed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -764,6 +803,63 @@ async function markQueuedActionFailed({
   });
 }
 
+async function markQueuedActionForRetry({
+  attemptCount,
+  input,
+  queue,
+  result,
+  supabase,
+}: {
+  attemptCount: number;
+  input: InboxActionPayload;
+  queue: QueueRow;
+  result: { ok: boolean; mode: string; message?: string; payload?: unknown };
+  supabase: SupabaseServiceClient;
+}) {
+  const message = result.message ?? "Meta no pudo ejecutar la accion.";
+  const retryAt = new Date(Date.now() + resolveRetryDelayMs(attemptCount)).toISOString();
+
+  await supabase
+    .from("action_queue")
+    .update({
+      status: "queued",
+      provider_mode: result.mode,
+      provider_ok: false,
+      provider_payload: result,
+      last_error: message,
+      locked_at: retryAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", queue.id);
+
+  await updateAutomationExecutionForQueue({
+    error: message,
+    queueId: queue.id,
+    status: "queued",
+    supabase,
+  });
+
+  await keepItemPendingForRetry({
+    input,
+    message,
+    queueId: queue.id,
+    retryAt,
+    supabase,
+  });
+
+  await insertActionLog({
+    input,
+    persisted: false,
+    queueId: queue.id,
+    result: {
+      ...result,
+      retry_at: retryAt,
+      retry_attempt: attemptCount,
+    },
+    supabase,
+  });
+}
+
 async function updateAutomationExecutionForQueue({
   error = null,
   queueId,
@@ -772,7 +868,7 @@ async function updateAutomationExecutionForQueue({
 }: {
   error?: string | null;
   queueId: string;
-  status: "succeeded" | "failed";
+  status: "queued" | "succeeded" | "failed";
   supabase: SupabaseServiceClient;
 }) {
   const result = await supabase
@@ -795,6 +891,91 @@ async function updateAutomationExecutionForQueue({
       status,
     });
   }
+}
+
+async function keepItemPendingForRetry({
+  input,
+  message,
+  queueId,
+  retryAt,
+  supabase,
+}: {
+  input: InboxActionPayload;
+  message: string;
+  queueId: string;
+  retryAt: string;
+  supabase: SupabaseServiceClient;
+}) {
+  await supabase
+    .from("inbox_items")
+    .update({
+      action_state: "pending",
+      action_error: `Reintentando despues de error temporal de Meta: ${message}`,
+      action_queue_id: queueId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.itemId);
+
+  if (input.action === "reply") {
+    await supabase
+      .from("inbox_messages")
+      .update({
+        delivery_status: "pending",
+      })
+      .eq("action_queue_id", queueId)
+      .eq("author_type", "agent");
+  }
+
+  console.warn("queued_action_retry_scheduled", {
+    action: input.action,
+    itemId: input.itemId,
+    queueId,
+    retryAt,
+  });
+}
+
+function shouldRetryQueuedAction({
+  attemptCount,
+  result,
+}: {
+  attemptCount: number;
+  result: { ok: boolean; message?: string; payload?: unknown };
+}) {
+  if (result.ok || attemptCount >= maxQueueAttempts) {
+    return false;
+  }
+
+  const code = readProviderErrorCode(result.payload);
+  if (code && [1, 2, 4, 17, 32, 613].includes(code)) {
+    return true;
+  }
+
+  const message = result.message?.toLowerCase() ?? "";
+  return [
+    "please reduce the amount of data",
+    "temporarily",
+    "try again",
+    "timeout",
+    "timed out",
+    "unexpected end of json input",
+    "fetch failed",
+    "network",
+    "rate limit",
+  ].some((fragment) => message.includes(fragment));
+}
+
+function resolveRetryDelayMs(attemptCount: number) {
+  const index = Math.max(0, Math.min(attemptCount - 1, retryBackoffSeconds.length - 1));
+  return retryBackoffSeconds[index] * 1000;
+}
+
+function readProviderErrorCode(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) {
+    return null;
+  }
+
+  const error = (payload as { error?: { code?: unknown } }).error;
+  return typeof error?.code === "number" ? error.code : null;
 }
 
 async function restoreFailedItem({
@@ -1059,7 +1240,7 @@ async function insertActionLog({
   input: InboxActionPayload;
   persisted: boolean;
   queueId?: string | null;
-  result: { ok: boolean; mode: string; message?: string; payload?: unknown };
+  result: { ok: boolean; mode: string; message?: string; payload?: unknown } & Record<string, unknown>;
   supabase: SupabaseServiceClient;
 }) {
   await supabase.from("action_log").insert({

@@ -719,6 +719,12 @@
 - Cambio: `DELETE /api/meta/accounts/[accountId]` ahora revisa si existen reglas para la cuenta. Si existen, no borra la fila: limpia `access_token_encrypted`, `scopes` y `token_expires_at`, preservando automatizaciones para que OAuth vuelva a poblar el token de la misma cuenta. Si no existen reglas, conserva el comportamiento anterior de borrado fisico.
 - Correccion de datos: se restauraron 6 reglas activas en Supabase: 2 para Facebook `Academia Expertos de la Musica` y 4 para Instagram `@akashacursos`, todas con like automatico habilitado y respuestas segun la configuracion previa.
 
+### Reintentos para errores transitorios de Meta
+
+- Resumen: Meta puede devolver errores transitorios en acciones reales, por ejemplo `Please reduce the amount of data you're asking for, then retry your request` con `code = 1` al intentar enviar una private reply de Instagram desde comentario. Antes, la cola marcaba fallo definitivo al primer intento y devolvia el item a Bandeja con warning.
+- Cambio: `processQueuedInboxActions` ahora incrementa `attempt_count`, procesa solo filas `queued` listas segun `locked_at`, y reencola errores transitorios hasta 4 intentos con backoff de 1, 5 y 15 minutos. Durante el reintento el item queda `pending`; solo se restaura a Bandeja como `failed` si se agotan los intentos o si el error no es transitorio.
+- Areas tocadas: `src/lib/inbox-action-queue.ts`, `docs/architecture.md`, `docs/programming-log.md`.
+
 ### Gestor global en layout de trabajo
 
 - Resumen: se amplio el gestor global para que no sea solo un formulario apilado dentro de una tarjeta. En desktop ahora separa reglas guardadas y editor en dos zonas; en mobile reduce padding anidado para no achicar el formulario.
