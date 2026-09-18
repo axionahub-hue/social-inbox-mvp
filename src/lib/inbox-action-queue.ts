@@ -1288,10 +1288,15 @@ function readContactProviderUserId(contact: unknown) {
 }
 
 function readPrimaryProviderMessageId(payload: unknown) {
-  if (!payload || typeof payload !== "object" || !("id" in payload)) {
+  if (!payload || typeof payload !== "object") {
     return null;
   }
 
-  const id = (payload as { id?: unknown }).id;
-  return typeof id === "string" ? id : null;
+  const row = payload as { id?: unknown; message_id?: unknown };
+
+  if (typeof row.id === "string") {
+    return row.id;
+  }
+
+  return typeof row.message_id === "string" ? row.message_id : null;
 }
