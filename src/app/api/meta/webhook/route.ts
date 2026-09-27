@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { evaluateCommentAutomations } from "@/lib/automation-rules";
+import { recordDeletedComment } from "@/lib/deleted-comments";
 import { processQueuedInboxActions } from "@/lib/inbox-action-queue";
 import {
   decryptMetaToken,
@@ -313,6 +314,16 @@ async function processMetaWebhookPayload({
 
     for (const change of entry.changes ?? []) {
       if (change.field !== "feed") {
+        continue;
+      }
+
+      const value = change.value as MetaPageFeedValue | undefined;
+      if (value?.item === "comment" && value.verb === "remove" && value.comment_id) {
+        await recordDeletedComment({
+          supabase, workspaceId: account.workspace_id, accountId: account.id,
+          commentId: value.comment_id, postId: value.post_id,
+        });
+        processed += 1;
         continue;
       }
 

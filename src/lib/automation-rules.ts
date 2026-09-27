@@ -1,4 +1,5 @@
 import { enqueueInboxAction } from "@/lib/inbox-action-queue";
+import { liveInboxItemFilter } from "@/lib/deleted-comments";
 import type { SupabaseServiceClient } from "@/lib/inbox-persistence";
 import type { InboxAction, InboxSource, Network, ReplyMode } from "@/lib/types";
 
@@ -160,6 +161,7 @@ async function resolveCommentInboxItem({
   const result = await supabase
     .from("inbox_items")
     .select("id,created_at,source")
+    .or(liveInboxItemFilter)
     .eq("workspace_id", workspaceId)
     .eq("account_id", accountId)
     .eq("provider_comment_id", providerCommentId)

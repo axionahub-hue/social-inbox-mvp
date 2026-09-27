@@ -3,7 +3,7 @@ import { createServiceSupabaseClient } from "@/lib/supabase";
 import type { InboxSource } from "@/lib/types";
 
 export type SupabaseServiceClient = NonNullable<ReturnType<typeof createServiceSupabaseClient>>;
-export type CommentPersistenceResult = "inserted" | "updated" | "unchanged" | "skipped_self";
+export type CommentPersistenceResult = "inserted" | "updated" | "unchanged" | "skipped_self" | "skipped_deleted";
 
 export type MetaMessengerMessage = {
   senderId: string;
@@ -56,7 +56,7 @@ export async function persistFacebookComment({
   const existingItem = await supabase
     .from("inbox_items")
     .select(
-      "id,contact_id,title,preview,source,is_hidden,ingest_source,provider_post_id,provider_ad_id,provider_permalink_url,parent_comment_id,parent_comment_author,parent_comment_text",
+      "id,action_state,contact_id,title,preview,source,is_hidden,ingest_source,provider_post_id,provider_ad_id,provider_permalink_url,parent_comment_id,parent_comment_author,parent_comment_text",
     )
     .eq("workspace_id", workspaceId)
     .eq("account_id", accountId)
@@ -74,6 +74,8 @@ export async function persistFacebookComment({
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
   }
+
+  if (existingItem.data?.action_state === "deleted") return "skipped_deleted";
 
   if (existingItem.data?.id) {
     const nextContactId =
@@ -313,7 +315,7 @@ export async function persistInstagramComment({
   const existingItem = await supabase
     .from("inbox_items")
     .select(
-      "id,contact_id,title,preview,source,is_hidden,ingest_source,provider_post_id,provider_permalink_url,parent_comment_id,parent_comment_author,parent_comment_text",
+      "id,action_state,contact_id,title,preview,source,is_hidden,ingest_source,provider_post_id,provider_permalink_url,parent_comment_id,parent_comment_author,parent_comment_text",
     )
     .eq("workspace_id", workspaceId)
     .eq("account_id", accountId)
@@ -332,6 +334,8 @@ export async function persistInstagramComment({
   if (existingItem.error) {
     throw new Error(existingItem.error.message);
   }
+
+  if (existingItem.data?.action_state === "deleted") return "skipped_deleted";
 
   if (existingItem.data?.id) {
     const updatePayload: Record<string, unknown> = {

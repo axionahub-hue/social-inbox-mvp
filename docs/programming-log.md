@@ -741,3 +741,11 @@
 - Cambio persistencia: si un mensaje privado llega como respuesta a story, el hilo se titula `Respuesta a story en ...` y el mensaje se muestra con prefijo `Respuesta a story: ...`.
 - Cambio diagnostico: `/api/meta/webhook/diagnostics` marca `storyReply: true` en mensajes recientes cuando Meta envia `reply_to.story`.
 - Conclusion operativa: si no aparece un evento crudo `messaging` con `reply_to.story` en Supabase, el ajuste pendiente esta en entrega/configuracion Meta o en permisos/ajustes de la cuenta social, no en el frontend.
+
+### 2026-09-27: comentarios eliminados en Facebook
+
+- Causa confirmada: Ciara Flores comento `Canto` y Meta envio `feed/comment/remove` 13 segundos despues. El receptor ignoraba `remove`; posteriores likes devolvian 1705 y las respuestas 100/33.
+- El receptor conserva una marca terminal `inbox_items.action_state = deleted`, archiva sin no leidos y cancela acciones en cola. Conserva mensajes y registros; no requiere migracion ni consultas periodicas adicionales.
+- El inbox excluye estos registros antes de paginar. La API rechaza acciones con 410 y la cola no vuelve a enviarlas a Meta. Las escrituras optimistas, exitosas y fallidas no pueden sobrescribir la marca.
+- La marca tambien se crea si remove llega antes que add. Webhooks repetidos y polling atrasado no reactivan el comentario ni sus automatizaciones. Las eliminaciones hechas desde la app usan la misma marca.
+- Pruebas: `node scripts/test-deleted-comments.mjs`, lint y build. El test cubre aislamiento entre cuentas, eventos repetidos, remove antes de add, polling atrasado, cancelacion, automatizaciones y resultados en vuelo.

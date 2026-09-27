@@ -1,4 +1,5 @@
 import { decryptMetaToken, executeMetaAction, type MetaActionInput } from "@/lib/meta";
+import { deletedCommentMessage, liveInboxItemFilter, recordDeletedComment } from "@/lib/deleted-comments";
 import { createServiceSupabaseClient } from "@/lib/supabase";
 import type { InboxAction, ReplyMode } from "@/lib/types";
 
@@ -100,7 +101,8 @@ export async function enqueueInboxAction({
   supabase: SupabaseServiceClient;
   workspaceId: string;
 }) {
-  const previousState = await readPreviousState({ input, supabase });
+  const previousState: Record<string, unknown> = await readPreviousState({ input, supabase });
+  if (previousState.action_state === "deleted") throw new Error(deletedCommentMessage);
   const inserted = await supabase
     .from("action_queue")
     .insert({
@@ -217,6 +219,20 @@ export async function processQueuedInboxActions({
         supabase,
         workspaceId: row.workspace_id,
       });
+
+      if (resolved.error?.status === 410) {
+        const cancelled = await supabase.from("action_queue").update({
+          status: "cancelled", last_error: deletedCommentMessage,
+          processed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).eq("id", row.id);
+        if (cancelled.error) throw new Error(cancelled.error.message);
+        await updateAutomationExecutionForQueue({
+          queueId: row.id, status: "cancelled", error: deletedCommentMessage, supabase,
+        });
+        await supabase.from("inbox_messages").update({ delivery_status: "failed" })
+          .eq("action_queue_id", row.id).eq("delivery_status", "pending");
+        continue;
+      }
 
       if (resolved.error || !resolved.canPersist) {
         throw new Error(resolved.error?.message ?? "No se pudo resolver la accion encolada.");
@@ -337,6 +353,7 @@ async function resolveActionInputFromItem({
       `
       id,
       workspace_id,
+      action_state,
       source,
       provider_thread_id,
       provider_comment_id,
@@ -392,6 +409,10 @@ async function resolveActionInputFromItem({
         error: { status: 403, message: "Item no pertenece al usuario autenticado." },
       };
     }
+  }
+
+  if (itemResult.data.action_state === "deleted") {
+    return { input, canPersist: false, error: { status: 410, message: deletedCommentMessage } };
   }
 
   if (internalActions.has(input.action)) {
@@ -670,6 +691,7 @@ async function applyOptimisticQueuedAction({
         unread_count: 0,
         preview: input.message.trim(),
       })
+      .or(liveInboxItemFilter)
       .eq("id", input.itemId);
     return;
   }
@@ -690,7 +712,8 @@ async function applyOptimisticQueuedAction({
     await supabase
       .from("inbox_items")
       .update(baseItemUpdate)
-      .eq("id", input.itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", input.itemId);
     return;
   }
 
@@ -701,7 +724,8 @@ async function applyOptimisticQueuedAction({
         ...baseItemUpdate,
         is_liked: input.action === "like",
       })
-      .eq("id", input.itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", input.itemId);
     return;
   }
 
@@ -712,7 +736,8 @@ async function applyOptimisticQueuedAction({
         ...baseItemUpdate,
         is_hidden: input.action === "hide",
       })
-      .eq("id", input.itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", input.itemId);
     return;
   }
 
@@ -736,13 +761,15 @@ async function applyOptimisticQueuedAction({
     await supabase
       .from("inbox_items")
       .update(baseItemUpdate)
-      .eq("id", input.itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", input.itemId);
     return;
   }
 
   await supabase
     .from("inbox_items")
     .update(baseItemUpdate)
+    .or(liveInboxItemFilter)
     .eq("id", input.itemId);
 }
 
@@ -868,7 +895,7 @@ async function updateAutomationExecutionForQueue({
 }: {
   error?: string | null;
   queueId: string;
-  status: "queued" | "succeeded" | "failed";
+  status: "queued" | "succeeded" | "failed" | "cancelled";
   supabase: SupabaseServiceClient;
 }) {
   const result = await supabase
@@ -914,6 +941,7 @@ async function keepItemPendingForRetry({
       action_queue_id: queueId,
       updated_at: new Date().toISOString(),
     })
+    .or(liveInboxItemFilter)
     .eq("id", input.itemId);
 
   if (input.action === "reply") {
@@ -1012,7 +1040,8 @@ async function restoreFailedItem({
     restoredFields.preview = previous.preview;
   }
 
-  await supabase.from("inbox_items").update(restoredFields).eq("id", input.itemId);
+  await supabase.from("inbox_items").update(restoredFields).or(liveInboxItemFilter)
+    .eq("id", input.itemId);
 
   if (input.action === "reply") {
     await supabase
@@ -1060,7 +1089,7 @@ async function persistInboxAction({
 }) {
   const existing = await supabase
     .from("inbox_items")
-    .select("id,contact_id,status")
+    .select("id,contact_id,status,workspace_id,account_id,provider_comment_id,provider_post_id")
     .eq("id", itemId)
     .maybeSingle();
 
@@ -1102,6 +1131,7 @@ async function persistInboxAction({
         action_queue_id: null,
         updated_at: updatedAt,
       })
+      .or(liveInboxItemFilter)
       .eq("id", itemId);
 
     return !error;
@@ -1120,8 +1150,12 @@ async function persistInboxAction({
   }
 
   if (action === "delete_comment") {
-    const { error } = await supabase.from("inbox_items").delete().eq("id", itemId);
-    return !error;
+    await recordDeletedComment({
+      supabase, workspaceId: existing.data.workspace_id,
+      accountId: existing.data.account_id, commentId: existing.data.provider_comment_id,
+      postId: existing.data.provider_post_id ?? undefined,
+    });
+    return true;
   }
 
   if (action === "like" || action === "unlike") {
@@ -1134,7 +1168,8 @@ async function persistInboxAction({
         action_queue_id: null,
         updated_at: updatedAt,
       })
-      .eq("id", itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", itemId);
 
     return !error;
   }
@@ -1149,7 +1184,8 @@ async function persistInboxAction({
         action_queue_id: null,
         updated_at: updatedAt,
       })
-      .eq("id", itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", itemId);
 
     return !error;
   }
@@ -1165,7 +1201,8 @@ async function persistInboxAction({
         action_queue_id: null,
         updated_at: updatedAt,
       })
-      .eq("id", itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", itemId);
 
     return !error;
   }
@@ -1186,7 +1223,8 @@ async function persistInboxAction({
         action_queue_id: null,
         updated_at: updatedAt,
       })
-      .eq("id", itemId);
+      .or(liveInboxItemFilter)
+    .eq("id", itemId);
 
     return !error;
   }
@@ -1225,6 +1263,7 @@ async function clearItemActionState({
       action_queue_id: null,
       updated_at: updatedAt,
     })
+    .or(liveInboxItemFilter)
     .eq("id", itemId);
 }
 

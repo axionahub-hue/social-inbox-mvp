@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { channels, inboxItems, quickReplies } from "@/lib/demo-data";
+import { liveInboxItemFilter } from "@/lib/deleted-comments";
 import { createBrowserSupabaseClient, hasSupabaseConfig } from "@/lib/supabase";
 import type {
   ChannelConnection,
@@ -901,6 +902,7 @@ export default function Home() {
     let inbox = (await supabase
       .from("inbox_items")
       .select(inboxSelect)
+      .or(liveInboxItemFilter)
       .eq("workspace_id", workspaceId)
       .order("received_at", { ascending: false })
       .limit(inboxPageSize)) as {
@@ -912,6 +914,7 @@ export default function Home() {
       inbox = (await supabase
         .from("inbox_items")
         .select(inboxSelectWithoutIngestSource)
+        .or(liveInboxItemFilter)
         .eq("workspace_id", workspaceId)
         .order("received_at", { ascending: false })
         .limit(inboxPageSize)) as {
@@ -924,6 +927,7 @@ export default function Home() {
       inbox = (await supabase
         .from("inbox_items")
         .select(inboxSelectWithoutOptionalColumns)
+        .or(liveInboxItemFilter)
         .eq("workspace_id", workspaceId)
         .order("received_at", { ascending: false })
         .limit(inboxPageSize)) as {

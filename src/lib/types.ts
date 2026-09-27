@@ -16,7 +16,7 @@ export type IngestSource =
   | "unknown";
 
 export type Sentiment = "hot" | "neutral" | "support";
-export type ActionState = "pending" | "failed";
+export type ActionState = "pending" | "failed" | "deleted";
 export type MessageDeliveryStatus = "pending" | "sent" | "failed" | "pending_delete";
 
 export type InboxItem = {
